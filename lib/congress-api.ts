@@ -32,21 +32,59 @@ export type SearchResult = {
 // best-effort listing filtered client-side by title match, which is fine for
 // an MVP but worth revisiting against the latest API docs before you scale
 // search usage - see https://api.congress.gov/ for current endpoints.
+// NOTE: congress.gov's public API does NOT offer full-text/keyword search -
+// there's no `q` parameter on the bill list endpoint. This does the best
+// available approximation: pull a large batch of the most recently updated
+// bills and match titles against the query words. That means very old or
+// long-dormant bills that haven't been touched recently may not show up
+// even if their title matches - a fundamental limitation of the public API,
+// not a bug in this code. See https://api.congress.gov/ for the source of
+// truth if this ever changes.
 export async function searchBills(query: string, congress = 119): Promise<SearchResult[]> {
+  // Shortcut: if the query looks like a bill citation ("hr 1234", "s1234",
+  // "HJRES 45"), fetch that exact bill directly. This is 100% reliable
+  // regardless of the "recently updated" window limitation above, since it's
+  // a direct lookup rather than a filtered list scan.
+  const citation = query.trim().toLowerCase().match(
+    /^(hr|s|hjres|sjres|hconres|sconres|hres|sres)\s*0*(\d+)$/
+  );
+  if (citation) {
+    const [, type, number] = citation;
+    try {
+      const raw = await getBill(congress, type, number);
+      if (raw?.bill) {
+        return [{
+          congress: raw.bill.congress,
+          type: raw.bill.type,
+          number: String(raw.bill.number),
+          title: raw.bill.title,
+        }];
+      }
+    } catch {
+      // Fall through to the keyword search below - the citation might just
+      // not exist in this congress, or might be a genuine keyword like "sres".
+    }
+  }
+
   const url = new URL(`${BASE_URL}/bill/${congress}`);
   url.searchParams.set("api_key", apiKey());
   url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "50");
+  url.searchParams.set("limit", "250"); // congress.gov's max page size
   url.searchParams.set("sort", "updateDate+desc");
 
   const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) throw new Error(`congress.gov search failed: ${res.status}`);
   const data = await res.json();
 
-  const needle = query.toLowerCase();
+  // Match if every word in the query appears somewhere in the title -
+  // more forgiving than requiring the exact phrase in the exact order.
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   return (data.bills ?? [])
-    .filter((b: any) => (b.title ?? "").toLowerCase().includes(needle))
-    .slice(0, 15)
+    .filter((b: any) => {
+      const title = (b.title ?? "").toLowerCase();
+      return words.every((w: string) => title.includes(w));
+    })
+    .slice(0, 20)
     .map((b: any) => ({
       congress: b.congress,
       type: b.type,

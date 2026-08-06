@@ -14,28 +14,49 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (q.trim().length < 2) return;
     setLoading(true);
-    const res = await fetch(`/api/bills/search?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    setResults(data.bills ?? []);
+    setError(null);
+    setSearched(true);
+    try {
+      const res = await fetch(`/api/bills/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? `Search failed (${res.status})`);
+        setResults([]);
+      } else {
+        setResults(data.bills ?? []);
+      }
+    } catch (err) {
+      setError("Could not reach the server - check your connection and try again.");
+      setResults([]);
+    }
     setLoading(false);
   }
 
   async function handleTrack(r: SearchResult) {
     const key = `${r.type}-${r.number}-${r.congress}`;
     setTrackingId(key);
-    await fetch("/api/bills/track", {
+    const res = await fetch("/api/bills/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ congress: r.congress, billType: r.type, billNumber: Number(r.number) }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Could not track that bill");
+      setTrackingId(null);
+      return;
+    }
     setTrackingId(null);
     setResults([]);
     setQ("");
+    setSearched(false);
     onTracked();
   }
 
@@ -52,6 +73,14 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
           {loading ? "Searching…" : "Search"}
         </button>
       </form>
+
+      {error && <p className="error-text" style={{ marginTop: 10 }}>{error}</p>}
+
+      {!loading && !error && searched && results.length === 0 && (
+        <p className="muted" style={{ marginTop: 10 }}>
+          No matches in recently updated bills. Try fewer or different words, or search a specific bill like "HR 1234" if you know the number.
+        </p>
+      )}
 
       {results.length > 0 && (
         <div style={{ marginTop: 14 }}>
