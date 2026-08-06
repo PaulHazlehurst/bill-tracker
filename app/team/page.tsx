@@ -12,8 +12,9 @@ import { createClient } from "@/lib/supabase/client";
 import BillCard, { TrackedBillRow } from "@/components/BillCard";
 import NavBar from "@/components/NavBar";
 import Spinner from "@/components/Spinner";
+import OrgLogoUploader from "@/components/OrgLogoUploader";
 
-type TeamRow = TrackedBillRow & { profiles: { email: string } | { email: string }[] | null };
+type TeamRow = TrackedBillRow & { user_id: string };
 type Member = { id: string; email: string };
 
 function initials(email: string) {
@@ -27,8 +28,11 @@ export default function TeamPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [selfId, setSelfId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [noOrg, setNoOrg] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -41,7 +45,7 @@ export default function TeamPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("organization_id, organizations(name)")
+        .select("organization_id, organizations(name, logo_url)")
         .eq("id", user.id)
         .single();
 
@@ -51,27 +55,41 @@ export default function TeamPage() {
         setLoading(false);
         return;
       }
+      setOrgId(orgId);
 
       const org = Array.isArray(profile?.organizations) ? profile?.organizations[0] : profile?.organizations;
       setOrgName((org as any)?.name ?? null);
+      setLogoUrl((org as any)?.logo_url ?? null);
 
       // Who's on the team, including yourself.
-      const { data: memberData } = await supabase
+      const { data: memberData, error: memberError } = await supabase
         .from("profiles")
         .select("id, email")
         .eq("organization_id", orgId)
         .order("email");
+      if (memberError) console.error("failed to load team members", memberError);
       setMembers((memberData as Member[]) ?? []);
 
       // RLS already scopes this to the caller's org - no need to filter
       // client-side, but doing so anyway keeps intent explicit.
-      const { data } = await supabase
+      // NOTE: this intentionally does NOT try to embed profiles(email) here -
+      // there's no foreign key between tracked_bills and profiles for
+      // PostgREST to use, so that embed silently fails the whole query.
+      // Instead we fetch user_id and match it against `members` above.
+      const { data, error: queryError } = await supabase
         .from("tracked_bills")
         .select(
-          "bill_id, notify_email, notify_sms, profiles(email), bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot)"
+          "bill_id, user_id, notify_email, notify_sms, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot)"
         )
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false });
+
+      if (queryError) {
+        console.error("failed to load team's tracked bills", queryError);
+        setError(queryError.message);
+        setLoading(false);
+        return;
+      }
 
       setRows((data as any) ?? []);
       setLoading(false);
@@ -93,6 +111,14 @@ export default function TeamPage() {
             <p className="muted" style={{ marginBottom: 20 }}>
               {orgName ? `Everything ${orgName} is tracking.` : "Everything your team is tracking."}
             </p>
+
+            {!loading && orgId && (
+              <div className="settings-section">
+                <h2>Team settings</h2>
+                <p className="settings-desc">Upload a logo for your team. Shown in the header for everyone in your organization.</p>
+                <OrgLogoUploader orgId={orgId} currentLogoUrl={logoUrl} onUploaded={setLogoUrl} />
+              </div>
+            )}
 
             {!loading && members.length > 0 && (
               <div className="settings-section">
@@ -118,15 +144,19 @@ export default function TeamPage() {
 
             {loading ? (
               <Spinner label="Loading your team's tracked bills…" />
+            ) : error ? (
+              <p className="error-text">Couldn't load your team's tracked bills: {error}</p>
             ) : rows.length === 0 ? (
               <p className="muted">No one on your team is tracking any bills yet.</p>
             ) : (
               rows.map((row, i) => {
-                const trackerEmail = Array.isArray(row.profiles) ? row.profiles[0]?.email : row.profiles?.email;
+                const trackerEmail = members.find((m) => m.id === row.user_id)?.email;
                 return (
                   <div key={`${row.bill_id}-${i}`}>
                     {trackerEmail && (
-                      <div className="muted" style={{ marginBottom: 4 }}>Added by {trackerEmail}</div>
+                      <div className="muted" style={{ marginBottom: 4 }}>
+                        Added by {trackerEmail}{row.user_id === selfId ? " (you)" : ""}
+                      </div>
                     )}
                     <BillCard row={row} editable={false} index={i} />
                   </div>

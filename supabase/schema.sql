@@ -5,6 +5,7 @@
 create table organizations (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
+  logo_url text,
   created_at timestamptz not null default now()
 );
 
@@ -85,6 +86,40 @@ create policy "orgs are publicly readable"
 create policy "authenticated users can create an organization"
   on organizations for insert
   with check (auth.role() = 'authenticated');
+
+-- Any member of an org can update its shared settings (currently just the
+-- logo) - there's no separate "admin" role in this schema, membership is
+-- the only permission tier, matching the rest of this app's team-shared model.
+create policy "org members can update their organization"
+  on organizations for update
+  using (id = public.current_user_org_id())
+  with check (id = public.current_user_org_id());
+
+-- ── Storage: organization logos ─────────────────────────────────────
+-- A public bucket for team logos. Logos aren't sensitive, so reads are
+-- public; uploads/replaces require being signed in. There's no per-org path
+-- restriction on write access (any authenticated user could technically
+-- overwrite another org's logo file) - acceptable for now since the app has
+-- no adversarial multi-tenant threat model yet, but worth tightening with a
+-- path-prefix check if that ever changes.
+insert into storage.buckets (id, name, public)
+values ('org-logos', 'org-logos', true)
+on conflict (id) do nothing;
+
+create policy "org logos are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'org-logos');
+
+create policy "authenticated users can upload org logos"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'org-logos');
+
+create policy "authenticated users can replace org logos"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'org-logos')
+  with check (bucket_id = 'org-logos');
 
 -- Looks up the signed-in user's organization_id WITHOUT going through RLS
 -- on profiles. Needed because two policies below need this value while
