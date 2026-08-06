@@ -14,8 +14,15 @@ const TERMINAL_STAGES = new Set(["enacted", "vetoed", "failed"]);
 export async function GET(req: NextRequest) {
   // Reject anyone who isn't Vercel Cron. Without this, hitting this URL
   // directly would let a stranger trigger congress.gov calls on your key.
+  // Vercel's own Cron scheduler sends this header automatically - that's
+  // the normal path. The ?secret= query param is only here so you can also
+  // trigger this by pasting a URL into your browser's address bar, for
+  // manual testing without a terminal.
   const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const querySecret = req.nextUrl.searchParams.get("secret");
+  const authorized =
+    auth === `Bearer ${process.env.CRON_SECRET}` || querySecret === process.env.CRON_SECRET;
+  if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

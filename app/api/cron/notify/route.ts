@@ -3,8 +3,13 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
 export async function GET(req: NextRequest) {
+  // See app/api/cron/poll/route.ts for why both a header and a query param
+  // are accepted here.
   const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const querySecret = req.nextUrl.searchParams.get("secret");
+  const authorized =
+    auth === `Bearer ${process.env.CRON_SECRET}` || querySecret === process.env.CRON_SECRET;
+  if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
