@@ -39,7 +39,7 @@ export default function LoginPage() {
 
   return (
     <div className="container" style={{ maxWidth: 380 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 500 }}>Log in</h1>
+      <h1 style={{ fontSize: '1.375rem', fontWeight: 500 }}>Log in</h1>
       <form onSubmit={handleSubmit} className="card">
         <div className="field">
           <label htmlFor="email">Email</label>
@@ -49,7 +49,7 @@ export default function LoginPage() {
           <label htmlFor="password">Password</label>
           <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 16 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: '0.8125rem', marginBottom: 16 }}>
           <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           Keep me logged in on this device
         </label>

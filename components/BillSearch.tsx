@@ -90,7 +90,7 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
             return (
               <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderTop: "1px solid var(--line)" }}>
                 <div>
-                  <div style={{ fontSize: 14 }}>{r.title}</div>
+                  <div style={{ fontSize: '0.875rem' }}>{r.title}</div>
                   <div className="muted">{r.type.toUpperCase()} {r.number} · {r.congress}th Congress</div>
                 </div>
                 <button className="ghost" onClick={() => handleTrack(r)} disabled={trackingId === key}>

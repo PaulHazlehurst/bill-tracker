@@ -86,7 +86,7 @@ export default function SignupPage() {
 
   return (
     <div className="container" style={{ maxWidth: 420 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 500 }}>Create your account</h1>
+      <h1 style={{ fontSize: '1.375rem', fontWeight: 500 }}>Create your account</h1>
       <form onSubmit={handleSubmit} className="card">
         <div className="field">
           <label htmlFor="email">Email</label>

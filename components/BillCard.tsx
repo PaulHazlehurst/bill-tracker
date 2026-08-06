@@ -3,28 +3,21 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+type BillDetail = {
+  title: string;
+  status_stage: string;
+  progress_pct: number;
+  latest_action: string | null;
+  latest_action_date: string | null;
+  congress_url: string | null;
+  raw_snapshot: any | null;
+};
+
 export type TrackedBillRow = {
   bill_id: string;
   notify_email: boolean;
   notify_sms: boolean;
-  bills:
-    | {
-        title: string;
-        status_stage: string;
-        progress_pct: number;
-        latest_action: string | null;
-        latest_action_date: string | null;
-        congress_url: string | null;
-      }
-    | {
-        title: string;
-        status_stage: string;
-        progress_pct: number;
-        latest_action: string | null;
-        latest_action_date: string | null;
-        congress_url: string | null;
-      }[]
-    | null;
+  bills: BillDetail | BillDetail[] | null;
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -38,13 +31,50 @@ const STAGE_LABELS: Record<string, string> = {
   failed: "Failed",
 };
 
-export default function BillCard({ row, editable = true }: { row: TrackedBillRow; editable?: boolean }) {
+function formatDate(d: string | null | undefined) {
+  if (!d) return null;
+  try {
+    return new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  } catch {
+    return d;
+  }
+}
+
+// Pulls the extra descriptive fields (sponsor, chamber, policy area,
+// cosponsor count) out of the raw congress.gov snapshot we already store -
+// no extra API calls needed, this data was fetched once when the bill was
+// first tracked.
+function extractMeta(raw: any) {
+  if (!raw) return null;
+  const sponsor = raw.sponsors?.[0];
+  return {
+    chamber: raw.originChamber ?? null,
+    introducedDate: formatDate(raw.introducedDate),
+    policyArea: raw.policyArea?.name ?? null,
+    sponsorName: sponsor?.fullName ?? (sponsor ? `${sponsor.firstName ?? ""} ${sponsor.lastName ?? ""}`.trim() : null),
+    sponsorParty: sponsor?.party ?? null,
+    sponsorState: sponsor?.state ?? null,
+    cosponsorCount: raw.cosponsors?.count ?? null,
+  };
+}
+
+export default function BillCard({
+  row,
+  editable = true,
+  index = 0,
+}: {
+  row: TrackedBillRow;
+  editable?: boolean;
+  index?: number;
+}) {
   const supabase = createClient();
   const [notifyEmail, setNotifyEmail] = useState(row.notify_email);
   const [notifySms, setNotifySms] = useState(row.notify_sms);
   const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
 
   if (!bill) return null;
+
+  const meta = extractMeta(bill.raw_snapshot);
 
   async function toggle(field: "notify_email" | "notify_sms", value: boolean) {
     if (field === "notify_email") setNotifyEmail(value);
@@ -62,11 +92,11 @@ export default function BillCard({ row, editable = true }: { row: TrackedBillRow
   }
 
   return (
-    <div className="card">
+    <div className="card hoverable card-enter" style={{ animationDelay: `${Math.min(index, 10) * 40}ms` }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
         <div>
           <span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
-          <h3 style={{ fontSize: 16, fontWeight: 500, margin: "8px 0 4px" }}>{bill.title}</h3>
+          <h3 style={{ fontSize: '1rem', fontWeight: 500, margin: "8px 0 4px" }}>{bill.title}</h3>
           {bill.latest_action && <p className="muted">{bill.latest_action}</p>}
         </div>
         {bill.congress_url && (
@@ -76,6 +106,20 @@ export default function BillCard({ row, editable = true }: { row: TrackedBillRow
         )}
       </div>
 
+      {meta && (
+        <div className="bill-meta">
+          {meta.chamber && <span>Chamber: <strong>{meta.chamber}</strong></span>}
+          {meta.sponsorName && (
+            <span>
+              Sponsor: <strong>{meta.sponsorName}{meta.sponsorParty && meta.sponsorState ? ` (${meta.sponsorParty}-${meta.sponsorState})` : ""}</strong>
+            </span>
+          )}
+          {meta.introducedDate && <span>Introduced: <strong>{meta.introducedDate}</strong></span>}
+          {meta.policyArea && <span>Policy area: <strong>{meta.policyArea}</strong></span>}
+          {typeof meta.cosponsorCount === "number" && <span>Cosponsors: <strong>{meta.cosponsorCount}</strong></span>}
+        </div>
+      )}
+
       <div style={{ margin: "14px 0 6px" }}>
         <div className="progress-track">
           <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />
@@ -83,7 +127,7 @@ export default function BillCard({ row, editable = true }: { row: TrackedBillRow
       </div>
 
       {editable && (
-        <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 13 }}>
+        <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: '0.8125rem' }}>
           <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <input type="checkbox" checked={notifyEmail} onChange={(e) => toggle("notify_email", e.target.checked)} />
             Email me

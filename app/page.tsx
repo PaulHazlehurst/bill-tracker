@@ -39,10 +39,10 @@ export default function LandingPage() {
       </nav>
 
       <div className="container" style={{ paddingTop: 64, paddingBottom: 64 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 500, maxWidth: 600 }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 500, maxWidth: 600 }}>
           Track federal bills without refreshing congress.gov all day.
         </h1>
-        <p className="muted" style={{ fontSize: 16, maxWidth: 520, marginTop: 12 }}>
+        <p className="muted" style={{ fontSize: '1rem', maxWidth: 520, marginTop: 12 }}>
           Search for a bill, track it, and get an email or text the moment
           its status changes. Share a team view so everyone in your
           organization sees the same list.
@@ -55,19 +55,19 @@ export default function LandingPage() {
 
         <div style={{ marginTop: 56, display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr", maxWidth: 720 }}>
           <div className="card">
-            <h3 style={{ fontSize: 15, fontWeight: 500, margin: "0 0 6px" }}>Progress at a glance</h3>
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: "0 0 6px" }}>Progress at a glance</h3>
             <p className="muted">Every tracked bill shows a visual progress bar from introduced through enacted.</p>
           </div>
           <div className="card">
-            <h3 style={{ fontSize: 15, fontWeight: 500, margin: "0 0 6px" }}>Email and text alerts</h3>
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: "0 0 6px" }}>Email and text alerts</h3>
             <p className="muted">Get notified only for the bills you actually chose to follow.</p>
           </div>
           <div className="card">
-            <h3 style={{ fontSize: 15, fontWeight: 500, margin: "0 0 6px" }}>Shared team view</h3>
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: "0 0 6px" }}>Shared team view</h3>
             <p className="muted">Join an organization at signup and see everything your team is tracking in one place.</p>
           </div>
           <div className="card">
-            <h3 style={{ fontSize: 15, fontWeight: 500, margin: "0 0 6px" }}>Export anytime</h3>
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: "0 0 6px" }}>Export anytime</h3>
             <p className="muted">Download your tracked bills, or your team's, as a CSV whenever you need it.</p>
           </div>
         </div>

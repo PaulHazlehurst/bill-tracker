@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 export default function NavBar() {
   const supabase = createClient();
@@ -41,10 +40,10 @@ export default function NavBar() {
         <div className="nav-links">
           <a href="/dashboard">My bills</a>
           <a href="/team">Team</a>
+          <a href="/settings">Settings</a>
         </div>
       </div>
       <div className="nav-right">
-        <ThemeSwitcher />
         {email && <span className="user-email">{email}</span>}
         <button className="ghost" onClick={handleLogout}>Log out</button>
       </div>

@@ -86,6 +86,22 @@ create policy "authenticated users can create an organization"
   on organizations for insert
   with check (auth.role() = 'authenticated');
 
+-- Looks up the signed-in user's organization_id WITHOUT going through RLS
+-- on profiles. Needed because two policies below need this value while
+-- themselves being evaluated as part of profiles/tracked_bills RLS checks -
+-- a plain subquery there would re-trigger the same policy checking itself,
+-- which Postgres detects as infinite recursion. SECURITY DEFINER runs this
+-- with the function owner's privileges, bypassing RLS just for this lookup.
+create or replace function public.current_user_org_id()
+returns uuid
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select organization_id from public.profiles where id = auth.uid()
+$$;
+
 -- Profiles: read your own; read teammates' (needed for the team page's
 -- "who's tracking this" list) but note this table has no notify prefs in it,
 -- so teammates' phone numbers are the only sensitive field exposed here -
@@ -99,7 +115,7 @@ create policy "users can view teammates' profiles"
   on profiles for select
   using (
     organization_id is not null
-    and organization_id = (select organization_id from profiles where id = auth.uid())
+    and organization_id = public.current_user_org_id()
   );
 
 create policy "users can update their own profile"
@@ -136,7 +152,7 @@ create policy "users can view their team's tracked bills"
   on tracked_bills for select
   using (
     organization_id is not null
-    and organization_id = (select organization_id from profiles where id = auth.uid())
+    and organization_id = public.current_user_org_id()
   );
 
 create policy "users can track bills for themselves"
