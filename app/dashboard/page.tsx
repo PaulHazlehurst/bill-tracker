@@ -1,5 +1,11 @@
 "use client";
 
+// These pages depend on the signed-in user's session, which only exists at
+// request time in the browser - there's no sensible static/build-time version
+// of them. This tells Next.js to render on each request instead of trying to
+// pre-build static HTML (which would run before any Supabase session exists).
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
