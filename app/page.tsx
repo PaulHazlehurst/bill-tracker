@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 // A plain public landing page - no session check required to view it, so
 // unlike the old version of this file, it doesn't need force-dynamic or a
@@ -24,12 +25,13 @@ export default function LandingPage() {
     <div>
       <nav className="nav">
         <span className="brand">Bill Tracker</span>
-        <div>
+        <div className="nav-right">
+          <ThemeSwitcher />
           {signedIn ? (
             <a href="/dashboard"><button className="primary">Go to dashboard</button></a>
           ) : (
             <>
-              <a href="/login" style={{ marginRight: 12 }}>Log in</a>
+              <a href="/login">Log in</a>
               <a href="/signup"><button className="primary">Sign up</button></a>
             </>
           )}

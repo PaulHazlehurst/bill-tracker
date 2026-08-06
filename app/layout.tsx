@@ -15,6 +15,19 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Runs before paint so the saved theme applies immediately - without
+            this, the page would flash the default theme for a moment before
+            React hydrates and ThemeSwitcher reads localStorage. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try {
+              var t = localStorage.getItem("billtracker-theme");
+              if (t) document.documentElement.setAttribute("data-theme", t);
+            } catch (e) {}`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

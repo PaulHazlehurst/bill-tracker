@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, setRememberMe } from "@/lib/supabase/client";
 
 type Org = { id: string; name: string };
 
@@ -35,6 +35,13 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    // Default new accounts to "remembered" - overrides any leftover
+    // unchecked flag from a previous session on this device. Create a
+    // fresh client after setting it, since the outer `supabase` instance
+    // was already created at mount with whatever flag existed then.
+    setRememberMe(true);
+    const supabase = createClient();
 
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
     if (signUpError || !data.user) {

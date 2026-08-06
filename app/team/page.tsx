@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BillCard, { TrackedBillRow } from "@/components/BillCard";
 import NavBar from "@/components/NavBar";
+import Spinner from "@/components/Spinner";
 
 type TeamRow = TrackedBillRow & { profiles: { email: string } | { email: string }[] | null };
 
@@ -80,7 +81,7 @@ export default function TeamPage() {
               <a href="/api/export?scope=team"><button className="ghost">Export CSV</button></a>
             </div>
             {loading ? (
-              <p className="muted">Loading…</p>
+              <Spinner label="Loading your team's tracked bills…" />
             ) : rows.length === 0 ? (
               <p className="muted">No one on your team is tracking any bills yet.</p>
             ) : (

@@ -1,22 +1,62 @@
-:root {
-  --ink: #1c2a2e;
-  --ink-soft: #52625f;
-  --paper: #f6f5f1;
-  --card: #ffffff;
-  --line: #dcd9d0;
+/* ── Theme tokens ────────────────────────────────────────────────── */
+/* Three themes, one shared set of variable names. Switching themes is
+   just swapping which block of variables is active - see ThemeSwitcher.tsx. */
+
+:root,
+[data-theme="parchment"] {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-soft: #eeece4;
+  --text: #1c2a28;
+  --text-soft: #52625f;
+  --border: #dcd9d0;
   --accent: #2f5d50;
   --accent-soft: #e4ede9;
-  --amber: #b4762c;
+  --accent-contrast: #ffffff;
   --danger: #a3392f;
+  --danger-soft: #f6e7e5;
 }
 
+[data-theme="midnight"] {
+  --bg: #14181a;
+  --surface: #1e2427;
+  --surface-soft: #262d30;
+  --text: #e9e6dd;
+  --text-soft: #9aa3a1;
+  --border: #2e3538;
+  --accent: #d1a054;
+  --accent-soft: #362c1c;
+  --accent-contrast: #1c1710;
+  --danger: #e0776b;
+  --danger-soft: #3a2320;
+}
+
+[data-theme="capitol"] {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --surface-soft: #e4e9ef;
+  --text: #1a2433;
+  --text-soft: #57657a;
+  --border: #d3dbe4;
+  --accent: #1f3a5f;
+  --accent-soft: #e2e9f2;
+  --accent-contrast: #ffffff;
+  --danger: #a3392f;
+  --danger-soft: #f6e7e5;
+}
+
+/* ── Base ────────────────────────────────────────────────────────── */
+
 * { box-sizing: border-box; }
+
+html { background: var(--bg); }
 
 body {
   margin: 0;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 a { color: inherit; }
@@ -27,57 +67,86 @@ a { color: inherit; }
   padding: 32px 20px 80px;
 }
 
+/* ── Nav ─────────────────────────────────────────────────────────── */
+
 .nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.nav a { text-decoration: none; font-size: 14px; color: var(--ink-soft); margin-left: 20px; }
-.nav .brand { font-weight: 600; font-size: 15px; color: var(--ink); margin-left: 0; }
+.nav-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.nav-right { display: flex; align-items: center; gap: 14px; }
+
+.nav a { text-decoration: none; font-size: 14px; color: var(--text-soft); }
+.nav a:hover { color: var(--text); }
+.nav .brand { font-weight: 500; font-size: 15px; color: var(--text); white-space: nowrap; }
+.nav .org-name {
+  font-size: 13px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+}
+.nav .user-email { font-size: 12px; color: var(--text-soft); }
+
+.nav-links { display: flex; gap: 18px; align-items: center; }
+
+/* ── Cards, fields, buttons ──────────────────────────────────────── */
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 14px;
 }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-.field label { font-size: 13px; color: var(--ink-soft); }
+.field label { font-size: 13px; color: var(--text-soft); }
 .field input, .field select {
   padding: 10px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
-  background: var(--card);
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--text);
 }
 
 button.primary {
   background: var(--accent);
-  color: white;
+  color: var(--accent-contrast);
   border: none;
   padding: 10px 18px;
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 button.primary:hover { opacity: 0.92; }
+button.primary:disabled { opacity: 0.6; cursor: default; }
 
 button.ghost {
   background: transparent;
-  border: 1px solid var(--line);
-  color: var(--ink);
+  border: 1px solid var(--border);
+  color: var(--text);
   padding: 8px 14px;
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
 }
+button.ghost:hover { border-color: var(--text-soft); }
+
+/* ── Progress bar ────────────────────────────────────────────────── */
 
 .progress-track {
   width: 100%;
@@ -90,17 +159,76 @@ button.ghost {
   height: 100%;
   background: var(--accent);
   border-radius: 4px;
-  transition: width 0.3s ease;
+  transition: width 0.4s ease;
 }
 
+/* Stage pill uses a monospace face, like a status stamp on a document -
+   the one deliberately distinctive touch on an otherwise plain UI. */
 .pill {
   display: inline-block;
-  font-size: 12px;
-  padding: 2px 9px;
-  border-radius: 999px;
+  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, monospace);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 4px;
   background: var(--accent-soft);
   color: var(--accent);
+  border: 1px solid var(--accent);
 }
 
 .error-text { color: var(--danger); font-size: 13px; margin-top: 4px; }
-.muted { color: var(--ink-soft); font-size: 13px; }
+.muted { color: var(--text-soft); font-size: 13px; }
+
+/* ── Spinner ─────────────────────────────────────────────────────── */
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.spinner.large { width: 28px; height: 28px; border-width: 3px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 1.6s; }
+}
+
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60vh;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+/* ── Theme switcher ──────────────────────────────────────────────── */
+
+.theme-switcher {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+.theme-switcher button {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+}
+.theme-switcher button[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

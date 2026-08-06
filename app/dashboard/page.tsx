@@ -12,12 +12,14 @@ import { createClient } from "@/lib/supabase/client";
 import BillCard, { TrackedBillRow } from "@/components/BillCard";
 import NavBar from "@/components/NavBar";
 import BillSearch from "@/components/BillSearch";
+import Spinner from "@/components/Spinner";
 
 export default function DashboardPage() {
   const supabase = createClient();
   const router = useRouter();
   const [tracked, setTracked] = useState<TrackedBillRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -25,12 +27,20 @@ export default function DashboardPage() {
       router.push("/login");
       return;
     }
-    const { data } = await supabase
+    const { data, error: queryError } = await supabase
       .from("tracked_bills")
       .select("bill_id, notify_email, notify_sms, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
+    if (queryError) {
+      console.error("failed to load tracked bills", queryError);
+      setError(queryError.message);
+      setLoading(false);
+      return;
+    }
+
+    setError(null);
     setTracked((data as any) ?? []);
     setLoading(false);
   }
@@ -55,8 +65,10 @@ export default function DashboardPage() {
             <h2 style={{ fontSize: 16, fontWeight: 500 }}>Currently tracking ({tracked.length})</h2>
             <a href="/api/export?scope=personal"><button className="ghost">Export CSV</button></a>
           </div>
-          {loading ? (
-            <p className="muted">Loading…</p>
+          {error ? (
+            <p className="error-text">Couldn't load your tracked bills: {error}</p>
+          ) : loading ? (
+            <Spinner label="Loading your tracked bills…" />
           ) : tracked.length === 0 ? (
             <p className="muted">Nothing tracked yet — search for a bill above to add one.</p>
           ) : (

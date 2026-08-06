@@ -7,14 +7,24 @@ export type TrackedBillRow = {
   bill_id: string;
   notify_email: boolean;
   notify_sms: boolean;
-  bills: {
-    title: string;
-    status_stage: string;
-    progress_pct: number;
-    latest_action: string | null;
-    latest_action_date: string | null;
-    congress_url: string | null;
-  } | null;
+  bills:
+    | {
+        title: string;
+        status_stage: string;
+        progress_pct: number;
+        latest_action: string | null;
+        latest_action_date: string | null;
+        congress_url: string | null;
+      }
+    | {
+        title: string;
+        status_stage: string;
+        progress_pct: number;
+        latest_action: string | null;
+        latest_action_date: string | null;
+        congress_url: string | null;
+      }[]
+    | null;
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -32,7 +42,7 @@ export default function BillCard({ row, editable = true }: { row: TrackedBillRow
   const supabase = createClient();
   const [notifyEmail, setNotifyEmail] = useState(row.notify_email);
   const [notifySms, setNotifySms] = useState(row.notify_sms);
-  const bill = row.bills;
+  const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
 
   if (!bill) return null;
 

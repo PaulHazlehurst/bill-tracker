@@ -70,6 +70,7 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
           onChange={(e) => setQ(e.target.value)}
         />
         <button className="primary" type="submit" disabled={loading}>
+          {loading && <span className="spinner" aria-hidden="true" style={{ borderTopColor: "var(--accent-contrast)" }} />}
           {loading ? "Searching…" : "Search"}
         </button>
       </form>

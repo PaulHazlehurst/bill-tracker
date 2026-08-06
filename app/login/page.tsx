@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, setRememberMe } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const supabase = createClient();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,6 +22,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    // Set this BEFORE creating the client that actually signs in, so the
+    // resulting session is written to the right storage from the start.
+    setRememberMe(remember);
+    const supabase = createClient();
+
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
@@ -43,6 +49,10 @@ export default function LoginPage() {
           <label htmlFor="password">Password</label>
           <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 16 }}>
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          Keep me logged in on this device
+        </label>
         {error && <p className="error-text">{error}</p>}
         <button className="primary" type="submit" disabled={loading}>
           {loading ? "Logging in…" : "Log in"}
