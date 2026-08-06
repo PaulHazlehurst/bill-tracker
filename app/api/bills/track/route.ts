@@ -24,32 +24,38 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabase.from("bills").select("id").eq("id", id).maybeSingle();
 
   if (!existing) {
+    let b: any;
     try {
       const raw = await getBill(congress, billType, billNumber);
-      const b = raw.bill;
-      const latestActionText = b.latestAction?.text ?? "";
-      const stage = inferStage(latestActionText);
-
-      const { error: insertError } = await supabase.from("bills").insert({
-        id,
-        congress,
-        bill_type: String(billType).toLowerCase(),
-        bill_number: billNumber,
-        title: b.title ?? `${String(billType).toUpperCase()} ${billNumber}`,
-        latest_action: latestActionText || null,
-        latest_action_date: b.latestAction?.actionDate ?? null,
-        status_stage: stage,
-        progress_pct: progressForStage(stage),
-        congress_url: b.url ?? null,
-        raw_snapshot: b,
-        last_polled_at: new Date().toISOString(),
-        next_poll_at: new Date(Date.now() + 30 * 60_000).toISOString(),
-        poll_priority: "normal",
-      });
-      if (insertError) throw insertError;
+      b = raw.bill;
     } catch (err) {
-      console.error("failed to cache new bill", err);
-      return NextResponse.json({ error: "could not fetch bill from congress.gov" }, { status: 502 });
+      console.error("congress.gov fetch failed", err);
+      return NextResponse.json({ error: "Could not fetch that bill from congress.gov - check the bill number and try again." }, { status: 502 });
+    }
+
+    const latestActionText = b.latestAction?.text ?? "";
+    const stage = inferStage(latestActionText);
+
+    const { error: insertError } = await supabase.from("bills").insert({
+      id,
+      congress,
+      bill_type: String(billType).toLowerCase(),
+      bill_number: billNumber,
+      title: b.title ?? `${String(billType).toUpperCase()} ${billNumber}`,
+      latest_action: latestActionText || null,
+      latest_action_date: b.latestAction?.actionDate ?? null,
+      status_stage: stage,
+      progress_pct: progressForStage(stage),
+      congress_url: b.url ?? null,
+      raw_snapshot: b,
+      last_polled_at: new Date().toISOString(),
+      next_poll_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+      poll_priority: "normal",
+    });
+
+    if (insertError) {
+      console.error("failed to save new bill", insertError);
+      return NextResponse.json({ error: "Fetched the bill, but couldn't save it: " + insertError.message }, { status: 500 });
     }
   }
 

@@ -115,6 +115,13 @@ create policy "bills readable by authenticated users"
   on bills for select
   using (auth.role() = 'authenticated');
 
+-- Any signed-in user can cache a new bill (this is what happens the first
+-- time anyone tracks a bill that isn't already in the local database).
+-- Safe to allow broadly since this is just public congress.gov data.
+create policy "authenticated users can cache new bills"
+  on bills for insert
+  with check (auth.role() = 'authenticated');
+
 create policy "bill events readable by authenticated users"
   on bill_events for select
   using (auth.role() = 'authenticated');
