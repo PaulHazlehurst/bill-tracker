@@ -43,30 +43,33 @@ export default function SignupPage() {
       return;
     }
 
-    let organizationId = orgChoice || null;
-    if (orgChoice === "__new__" && newOrgName.trim()) {
-      const { data: newOrg, error: orgErr } = await supabase
-        .from("organizations")
-        .insert({ name: newOrgName.trim() })
-        .select("id")
-        .single();
-      if (orgErr) {
-        setError("Could not create organization: " + orgErr.message);
-        setLoading(false);
-        return;
-      }
-      organizationId = newOrg.id;
-    }
-
-    const { error: profileErr } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      email,
-      phone: phone.trim() || null,
-      organization_id: organizationId,
+    const res = await fetch("/api/auth/complete-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: data.user.id,
+        email,
+        phone: phone.trim() || null,
+        organizationId: orgChoice && orgChoice !== "__new__" ? orgChoice : null,
+        newOrgName: orgChoice === "__new__" ? newOrgName.trim() : null,
+      }),
     });
 
-    if (profileErr) {
-      setError("Account created, but profile setup failed: " + profileErr.message);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(
+        data.session
+          ? body.error ?? "Account created, but profile setup failed"
+          : "Account created - check your email to confirm, then log in to finish setup."
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (!data.session) {
+      // Email confirmation is required - there's no session yet to send
+      // them to the dashboard with.
+      setError("Account created! Check your email to confirm, then log in.");
       setLoading(false);
       return;
     }

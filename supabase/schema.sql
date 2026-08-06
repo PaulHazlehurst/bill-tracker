@@ -75,10 +75,12 @@ alter table bills enable row level security;
 alter table bill_events enable row level security;
 alter table tracked_bills enable row level security;
 
--- Organizations: readable by any signed-in user (needed for the signup dropdown).
-create policy "orgs readable by authenticated users"
+-- Organizations: publicly readable (even by signed-out visitors) so the
+-- signup page's organization dropdown works before an account exists.
+-- Org names aren't sensitive, so this is a deliberate, safe simplification.
+create policy "orgs are publicly readable"
   on organizations for select
-  using (auth.role() = 'authenticated');
+  using (true);
 
 create policy "authenticated users can create an organization"
   on organizations for insert
