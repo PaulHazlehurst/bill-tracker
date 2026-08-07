@@ -630,3 +630,60 @@ button.ghost:active:not(:disabled) {
 @media (max-width: 640px) {
   .toolbar-input { width: 120px; }
 }
+
+/* ── Segmented control (signup team picker, settings team picker) ─── */
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.segmented button {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.8125rem;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.segmented button:last-child { border-right: none; }
+.segmented button.segmented-active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+
+/* ── Invite code chip, owner badge ──────────────────────────────── */
+
+.invite-code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+}
+
+.owner-badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.625rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+/* ── Density ─────────────────────────────────────────────────────── */
+
+html[data-density="compact"] .bill-table td,
+html[data-density="compact"] .bill-table th {
+  padding: 5px 10px;
+}
+html[data-density="compact"] .card { padding: 14px; }
+html[data-density="compact"] .member-row { padding: 6px 0; }
+html[data-density="compact"] .settings-section { margin-bottom: 18px; }

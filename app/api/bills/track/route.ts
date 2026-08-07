@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organization_id")
+    .select("organization_id, default_notify_email, default_notify_sms")
     .eq("id", user.id)
     .single();
 
@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
     bill_id: id,
     user_id: user.id,
     organization_id: profile?.organization_id ?? null,
+    notify_email: profile?.default_notify_email ?? true,
+    notify_sms: profile?.default_notify_sms ?? false,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

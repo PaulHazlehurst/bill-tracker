@@ -24,9 +24,13 @@ export default function TeamPage() {
   const [orgName, setOrgName] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [noOrg, setNoOrg] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -38,7 +42,7 @@ export default function TeamPage() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("organization_id, organizations(name, logo_url)")
+      .select("organization_id, organizations(name, logo_url, invite_code, created_by)")
       .eq("id", user.id)
       .single();
 
@@ -53,6 +57,8 @@ export default function TeamPage() {
     const org = Array.isArray(profile?.organizations) ? profile?.organizations[0] : profile?.organizations;
     setOrgName((org as any)?.name ?? null);
     setLogoUrl((org as any)?.logo_url ?? null);
+    setInviteCode((org as any)?.invite_code ?? null);
+    setOwnerId((org as any)?.created_by ?? null);
 
     const { data: memberData, error: memberError } = await supabase
       .from("profiles")
@@ -86,8 +92,34 @@ export default function TeamPage() {
     load();
   }, []);
 
+  function copyCode() {
+    if (!inviteCode) return;
+    navigator.clipboard.writeText(inviteCode).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1800);
+    });
+  }
+
+  async function handleRemove(member: Member) {
+    if (!window.confirm(`Remove ${member.email} from the team?`)) return;
+    setRemoving(member.id);
+    const res = await fetch("/api/team/remove-member", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: member.id }),
+    });
+    setRemoving(null);
+    if (res.ok) {
+      setMembers((prev) => prev.filter((m) => m.id !== member.id));
+    } else {
+      const body = await res.json().catch(() => ({}));
+      window.alert(body.error ?? "Couldn't remove that member.");
+    }
+  }
+
   const trackerEmails: Record<string, string> = {};
   members.forEach((m) => { trackerEmails[m.id] = m.email; });
+  const isOwner = selfId && ownerId === selfId;
 
   return (
     <div className="container-wide">
@@ -98,18 +130,25 @@ export default function TeamPage() {
             {orgName ? `Everything ${orgName} is tracking.` : "Everything your team is tracking."}
           </p>
         </div>
+        {inviteCode && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="muted" style={{ fontSize: '0.75rem' }}>Invite code:</span>
+            <code className="invite-code">{inviteCode}</code>
+            <button className="ghost" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
+          </div>
+        )}
       </div>
 
       {noOrg ? (
         <p className="muted">
-          You're not part of an organization yet. Join one from Settings to see what your team is tracking.
+          You're not part of a team yet. Create or join one from <a href="/settings">Settings</a>.
         </p>
       ) : (
         <>
           {!loading && orgId && (
             <div className="settings-section">
-              <h2>Team settings</h2>
-              <p className="settings-desc">Upload a logo for your team. Shown in the sidebar for everyone in your organization.</p>
+              <h2>Team logo</h2>
+              <p className="settings-desc">Shown in the sidebar for everyone in your organization.</p>
               <OrgLogoUploader orgId={orgId} currentLogoUrl={logoUrl} onUploaded={setLogoUrl} />
             </div>
           )}
@@ -122,12 +161,21 @@ export default function TeamPage() {
                   {members.map((m) => (
                     <div key={m.id} className="member-row">
                       <div className="member-avatar">{initials(m.email)}</div>
-                      <span>{m.email}</span>
-                      {m.id === selfId && <span className="muted">(you)</span>}
+                      <span style={{ flex: 1 }}>
+                        {m.email}
+                        {m.id === selfId && <span className="muted"> (you)</span>}
+                        {m.id === ownerId && <span className="owner-badge">Owner</span>}
+                      </span>
+                      {isOwner && m.id !== selfId && (
+                        <button className="ghost" style={{ fontSize: '0.6875rem', padding: "4px 8px" }} onClick={() => handleRemove(m)} disabled={removing === m.id}>
+                          {removing === m.id ? "Removing…" : "Remove"}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
+              {!ownerId && <p className="muted" style={{ marginTop: 8 }}>This team has no owner set, so no one can rename it or remove members right now.</p>}
             </div>
           )}
 

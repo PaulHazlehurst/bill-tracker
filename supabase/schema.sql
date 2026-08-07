@@ -6,6 +6,16 @@ create table organizations (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   logo_url text,
+  -- Shareable code so joining a team requires actually knowing it, instead
+  -- of anyone being able to pick any team name off an open list at signup -
+  -- that used to be possible and was a real access-control gap, not just a
+  -- style choice.
+  invite_code text not null unique default upper(substr(md5(random()::text || clock_timestamp()::text), 1, 8)),
+  -- Whoever created the team. The only permission tier this schema has -
+  -- there's no broader "admin" role, just "owner vs. everyone else" - used
+  -- to gate renaming the team, regenerating the invite code, and removing
+  -- members. See the trigger below for how this is actually enforced.
+  created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -15,6 +25,10 @@ create table profiles (
   email text not null,
   phone text,                       -- E.164, e.g. +14105551234; nullable, opt-in
   organization_id uuid references organizations(id) on delete set null,
+  -- Applied to newly tracked bills so people don't have to re-toggle these
+  -- every single time - purely a convenience default, editable per-bill after.
+  default_notify_email boolean not null default true,
+  default_notify_sms boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -91,13 +105,52 @@ create policy "authenticated users can create an organization"
   on organizations for insert
   with check (auth.role() = 'authenticated');
 
--- Any member of an org can update its shared settings (currently just the
--- logo) - there's no separate "admin" role in this schema, membership is
--- the only permission tier, matching the rest of this app's team-shared model.
-create policy "org members can update their organization"
+-- Any current member can attempt an update (needed so any member can
+-- upload a logo) - but the trigger below is what actually decides whether
+-- a given change is allowed, field by field. RLS alone can't express
+-- "anyone may change logo_url, but only the owner may change name" since
+-- Postgres row policies don't see individual column changes - a trigger can.
+create policy "org members can attempt organization updates"
   on organizations for update
   using (id = public.current_user_org_id())
   with check (id = public.current_user_org_id());
+
+-- Enforces: any member may change the logo. Changing anything else (name,
+-- invite_code, created_by) requires being the team's owner. Raises an
+-- exception for a disallowed change, which surfaces to the client as a
+-- normal Postgres error - this is real enforcement, not just a UI choice
+-- to hide the rename button from non-owners.
+create or replace function public.enforce_org_update_permissions()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  only_logo_changed boolean;
+begin
+  only_logo_changed :=
+    (new.name is not distinct from old.name)
+    and (new.invite_code is not distinct from old.invite_code)
+    and (new.created_by is not distinct from old.created_by);
+
+  if only_logo_changed then
+    if public.current_user_org_id() is distinct from old.id then
+      raise exception 'not a member of this organization';
+    end if;
+  else
+    if old.created_by is distinct from auth.uid() then
+      raise exception 'only the team owner can change that';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger org_update_permission_check
+  before update on organizations
+  for each row execute function public.enforce_org_update_permissions();
 
 -- ── Storage: organization logos ─────────────────────────────────────
 -- A public bucket for team logos. Logos aren't sensitive, so reads are

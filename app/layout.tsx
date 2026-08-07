@@ -33,6 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               if (t) document.documentElement.setAttribute("data-theme", t);
               var f = localStorage.getItem("billtracker-font-size");
               if (f) document.documentElement.setAttribute("data-font-size", f);
+              var d = localStorage.getItem("billtracker-density");
+              if (d && d !== "comfortable") document.documentElement.setAttribute("data-density", d);
             } catch (e) {}`,
           }}
         />
