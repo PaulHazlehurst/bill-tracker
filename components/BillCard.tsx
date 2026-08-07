@@ -11,9 +11,11 @@ type BillDetail = {
   latest_action_date: string | null;
   congress_url: string | null;
   raw_snapshot: any | null;
+  last_polled_at: string | null;
 };
 
 export type TrackedBillRow = {
+  id: string;
   bill_id: string;
   notify_email: boolean;
   notify_sms: boolean;
@@ -40,6 +42,18 @@ function formatDate(d: string | null | undefined) {
   }
 }
 
+function timeAgo(d: string | null | undefined) {
+  if (!d) return null;
+  const ms = Date.now() - new Date(d).getTime();
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
 // Pulls the extra descriptive fields (sponsor, chamber, policy area,
 // cosponsor count) out of the raw congress.gov snapshot we already store -
 // no extra API calls needed, this data was fetched once when the bill was
@@ -62,14 +76,17 @@ export default function BillCard({
   row,
   editable = true,
   index = 0,
+  onUntrack,
 }: {
   row: TrackedBillRow;
   editable?: boolean;
   index?: number;
+  onUntrack?: () => void;
 }) {
   const supabase = createClient();
   const [notifyEmail, setNotifyEmail] = useState(row.notify_email);
   const [notifySms, setNotifySms] = useState(row.notify_sms);
+  const [untracking, setUntracking] = useState(false);
   const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
 
   if (!bill) return null;
@@ -89,6 +106,18 @@ export default function BillCard({
         notifySms: field === "notify_sms" ? value : notifySms,
       }),
     });
+  }
+
+  async function handleUntrack() {
+    if (!window.confirm(`Stop tracking "${bill!.title}"? You can always track it again later.`)) return;
+    setUntracking(true);
+    const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(row.id)}`, { method: "DELETE" });
+    if (res.ok) {
+      onUntrack?.();
+    } else {
+      setUntracking(false);
+      window.alert("Couldn't untrack that bill - try again.");
+    }
   }
 
   return (
@@ -138,6 +167,17 @@ export default function BillCard({
           </label>
         </div>
       )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+        {timeAgo(bill.last_polled_at) && (
+          <span className="muted" style={{ fontSize: '0.6875rem' }}>Checked {timeAgo(bill.last_polled_at)}</span>
+        )}
+        {editable && (
+          <button className="ghost" onClick={handleUntrack} disabled={untracking} style={{ fontSize: '0.75rem', padding: "5px 10px" }}>
+            {untracking ? "Removing…" : "Stop tracking"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

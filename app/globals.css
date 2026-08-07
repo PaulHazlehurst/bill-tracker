@@ -377,3 +377,30 @@ button.ghost:active:not(:disabled) {
   font-weight: 500;
   flex-shrink: 0;
 }
+
+/* ── Mobile ──────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .container { padding: 20px 14px 60px; }
+
+  .nav { padding: 12px 14px; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .nav-left { flex-wrap: wrap; gap: 8px 10px; }
+  .nav-right { width: 100%; justify-content: space-between; }
+  .nav .org-name { border-left: none; padding-left: 0; }
+  .nav-links { gap: 12px; flex-wrap: wrap; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .card { padding: 16px; }
+
+  .bill-meta { flex-direction: column; gap: 4px; }
+
+  .member-row { flex-wrap: wrap; }
+
+  h1 { font-size: 1.25rem !important; }
+}
+
+@media (max-width: 400px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .theme-switcher, .font-size-switcher { flex-wrap: wrap; }
+}

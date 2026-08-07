@@ -29,7 +29,7 @@ export default function DashboardPage() {
     }
     const { data, error: queryError } = await supabase
       .from("tracked_bills")
-      .select("bill_id, notify_email, notify_sms, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot)")
+      .select("id, bill_id, notify_email, notify_sms, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot, last_polled_at)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
           ) : tracked.length === 0 ? (
             <p className="muted">Nothing tracked yet — search for a bill above to add one.</p>
           ) : (
-            tracked.map((row, i) => <BillCard key={row.bill_id} row={row} index={i} />)
+            tracked.map((row, i) => <BillCard key={row.bill_id} row={row} index={i} onUntrack={loadTracked} />)
           )}
         </div>
       </div>

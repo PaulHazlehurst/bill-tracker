@@ -59,6 +59,7 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="muted">Need an account? <a href="/signup">Sign up</a></p>
+      <p className="muted"><a href="/reset-password">Forgot your password?</a></p>
     </div>
   );
 }
