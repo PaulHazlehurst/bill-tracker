@@ -24,6 +24,7 @@ export default function SignupPage() {
   const [newOrgName, setNewOrgName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
     supabase.from("organizations").select("id, name").order("name").then(({ data }) => {
@@ -117,7 +118,11 @@ export default function SignupPage() {
           </div>
         )}
         {error && <p className="error-text">{error}</p>}
-        <button className="primary" type="submit" disabled={loading}>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: '0.8125rem', marginBottom: 16 }}>
+          <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} style={{ marginTop: 2 }} />
+          <span>I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span>
+        </label>
+        <button className="primary" type="submit" disabled={loading || !agreedToTerms}>
           {loading ? "Creating account…" : "Sign up"}
         </button>
       </form>

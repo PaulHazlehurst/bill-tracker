@@ -46,6 +46,7 @@ export default function NavBar() {
         <div className="nav-links">
           <a href="/dashboard">My bills</a>
           <a href="/team">Team</a>
+          <a href="/activity">Activity</a>
           <a href="/settings">Settings</a>
         </div>
       </div>

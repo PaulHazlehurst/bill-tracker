@@ -72,6 +72,11 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      <footer style={{ borderTop: "1px solid var(--border)", padding: "20px", textAlign: "center" }}>
+        <a href="/terms" className="muted" style={{ marginRight: 16 }}>Terms</a>
+        <a href="/privacy" className="muted">Privacy</a>
+      </footer>
     </div>
   );
 }

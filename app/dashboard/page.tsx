@@ -13,6 +13,7 @@ import BillCard, { TrackedBillRow } from "@/components/BillCard";
 import NavBar from "@/components/NavBar";
 import BillSearch from "@/components/BillSearch";
 import Spinner from "@/components/Spinner";
+import { STAGE_LABELS } from "@/lib/billMeta";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -20,6 +21,8 @@ export default function DashboardPage() {
   const [tracked, setTracked] = useState<TrackedBillRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -90,9 +93,22 @@ export default function DashboardPage() {
         )}
 
         <div style={{ marginTop: 28 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 500 }}>Currently tracking ({tracked.length})</h2>
-            <a href="/api/export?scope=personal"><button className="ghost">Export CSV</button></a>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} style={{ fontSize: '0.8125rem', padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }}>
+                <option value="all">All stages</option>
+                {Object.entries(STAGE_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ fontSize: '0.8125rem', padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }}>
+                <option value="newest">Newest tracked</option>
+                <option value="title">Title (A-Z)</option>
+                <option value="progress">Most progress</option>
+              </select>
+              <a href="/api/export?scope=personal"><button className="ghost">Export CSV</button></a>
+            </div>
           </div>
           {error ? (
             <p className="error-text">Couldn't load your tracked bills: {error}</p>
@@ -101,7 +117,24 @@ export default function DashboardPage() {
           ) : tracked.length === 0 ? (
             <p className="muted">Nothing tracked yet — search for a bill above to add one.</p>
           ) : (
-            tracked.map((row, i) => <BillCard key={row.bill_id} row={row} index={i} onUntrack={loadTracked} />)
+            (() => {
+              let list = tracked.filter((row) => {
+                if (stageFilter === "all") return true;
+                const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
+                return bill?.status_stage === stageFilter;
+              });
+              list = [...list].sort((a, b) => {
+                const billA = Array.isArray(a.bills) ? a.bills[0] : a.bills;
+                const billB = Array.isArray(b.bills) ? b.bills[0] : b.bills;
+                if (sortBy === "title") return (billA?.title ?? "").localeCompare(billB?.title ?? "");
+                if (sortBy === "progress") return (billB?.progress_pct ?? 0) - (billA?.progress_pct ?? 0);
+                return 0; // "newest" - already in that order from the query
+              });
+              if (list.length === 0) {
+                return <p className="muted">No tracked bills match that filter.</p>;
+              }
+              return list.map((row, i) => <BillCard key={row.bill_id} row={row} index={i} onUntrack={loadTracked} />);
+            })()
           )}
         </div>
       </div>
