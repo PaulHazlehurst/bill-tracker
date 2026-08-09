@@ -1,4 +1,5 @@
 import Sidebar from "@/components/Sidebar";
+import { UIProvider } from "@/components/UIProvider";
 
 // Wraps every authenticated page (dashboard, team, activity, settings, bill
 // detail) in a persistent sidebar. Because this is a layout, not a page,
@@ -6,9 +7,11 @@ import Sidebar from "@/components/Sidebar";
 // no re-fetching your org/logo on every click, no flicker.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main className="app-main">{children}</main>
-    </div>
+    <UIProvider>
+      <div className="app-shell">
+        <Sidebar />
+        <main className="app-main">{children}</main>
+      </div>
+    </UIProvider>
   );
 }

@@ -48,6 +48,17 @@ create table bills (
   last_polled_at timestamptz,
   next_poll_at timestamptz not null default now(),
   poll_priority text not null default 'normal',   -- 'hot' | 'normal' | 'dormant'
+  -- Related bills and the full action/vote history are each a SEPARATE
+  -- congress.gov API call beyond the main bill fetch. Fetching them for
+  -- every tracked bill during the daily poll would multiply our request
+  -- volume for data most people never look at. Instead these are fetched
+  -- ON DEMAND (when someone actually opens the bill detail page's Related
+  -- Bills / Votes & Actions sections) and cached here, refreshed only when
+  -- stale - see /api/bills/related and /api/bills/actions.
+  related_bills jsonb,
+  related_bills_fetched_at timestamptz,
+  actions_cache jsonb,
+  actions_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 

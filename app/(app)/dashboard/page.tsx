@@ -9,10 +9,14 @@ import { createClient } from "@/lib/supabase/client";
 import BillTable, { TableRow } from "@/components/BillTable";
 import BillSearch from "@/components/BillSearch";
 import Spinner from "@/components/Spinner";
+import { useUI } from "@/components/UIProvider";
+import EmptyState from "@/components/EmptyState";
+import { FileSearch } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const { toast } = useUI();
   const router = useRouter();
   const [tracked, setTracked] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,13 +56,18 @@ export default function DashboardPage() {
 
   async function handleUntrack(trackedBillId: string) {
     const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(trackedBillId)}`, { method: "DELETE" });
-    if (res.ok) setTracked((prev) => prev.filter((r) => r.id !== trackedBillId));
-    else window.alert("Couldn't untrack that bill - try again.");
+    if (res.ok) {
+      setTracked((prev) => prev.filter((r) => r.id !== trackedBillId));
+      toast("Stopped tracking", "info");
+    } else {
+      toast("Couldn't untrack that bill - try again.", "error");
+    }
   }
 
   async function handleBulkUntrack(ids: string[]) {
     await Promise.all(ids.map((id) => fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(id)}`, { method: "DELETE" })));
     setTracked((prev) => prev.filter((r) => !ids.includes(r.id)));
+    toast(`Stopped tracking ${ids.length} bill${ids.length > 1 ? "s" : ""}`, "info");
   }
 
   const counts = { active: 0, committee: 0, passed: 0, enacted: 0 };
@@ -153,7 +162,7 @@ export default function DashboardPage() {
         ) : loading ? (
           <Spinner label="Loading your tracked bills…" />
         ) : tracked.length === 0 ? (
-          <p className="muted">Nothing tracked yet — search for a bill above to add one.</p>
+          <EmptyState icon={FileSearch}>Nothing tracked yet — search for a bill above to add one.</EmptyState>
         ) : filtered.length === 0 ? (
           <p className="muted">No tracked bills match those filters.</p>
         ) : (

@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
-import { STAGE_LABELS, extractMeta, formatDate, timeAgo } from "@/lib/billMeta";
+import { useUI } from "@/components/UIProvider";
+import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo } from "@/lib/billMeta";
 
 type Bill = {
   id: string;
@@ -31,16 +32,41 @@ type BillEvent = {
   occurred_at: string;
 };
 
+type RelatedBill = {
+  congress: number;
+  type: string;
+  number: string;
+  title: string;
+  latestActionText: string | null;
+  relationshipType: string | null;
+};
+
 const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
+
+function VoteBadge({ text }: { text: string | null | undefined }) {
+  const vote = parseVoteInfo(text);
+  if (!vote) return null;
+  return (
+    <div className="vote-badge">
+      <span className="yea">{vote.yea} Yea</span>
+      <span>·</span>
+      <span className="nay">{vote.nay} Nay</span>
+      {vote.rollNumber && <span className="muted">· Roll call #{vote.rollNumber}</span>}
+    </div>
+  );
+}
 
 export default function BillDetailPage() {
   const supabase = createClient();
   const router = useRouter();
   const params = useParams();
+  const { toast, confirm } = useUI();
   const billId = params.id as string;
 
   const [bill, setBill] = useState<Bill | null>(null);
   const [events, setEvents] = useState<BillEvent[]>([]);
+  const [related, setRelated] = useState<RelatedBill[] | null>(null);
+  const [relatedLoading, setRelatedLoading] = useState(true);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -77,6 +103,12 @@ export default function BillDetailPage() {
       setTrackedRowId(null);
     }
     setLoading(false);
+
+    fetch(`/api/bills/related?congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => r.json())
+      .then((body) => setRelated(body.related ?? []))
+      .catch(() => setRelated([]))
+      .finally(() => setRelatedLoading(false));
   }
 
   useEffect(() => {
@@ -93,23 +125,25 @@ export default function BillDetailPage() {
     });
     setBusy(false);
     if (res.ok) {
+      toast("Now tracking this bill", "success");
       load();
     } else {
       const body = await res.json().catch(() => ({}));
-      window.alert(body.error ?? "Couldn't track that bill");
+      toast(body.error ?? "Couldn't track that bill", "error");
     }
   }
 
   async function handleUntrack() {
     if (!trackedRowId || !bill) return;
-    if (!window.confirm(`Stop tracking "${bill.title}"?`)) return;
+    if (!(await confirm(`Stop tracking "${bill.title}"?`, { confirmLabel: "Stop tracking", danger: true }))) return;
     setBusy(true);
     const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(trackedRowId)}`, { method: "DELETE" });
     setBusy(false);
     if (res.ok) {
       setTrackedRowId(null);
+      toast("Stopped tracking", "info");
     } else {
-      window.alert("Couldn't untrack that bill - try again.");
+      toast("Couldn't untrack that bill - try again.", "error");
     }
   }
 
@@ -142,111 +176,135 @@ export default function BillDetailPage() {
 
   const meta = extractMeta(bill.raw_snapshot);
   const stageIndex = STAGE_ORDER.indexOf(bill.status_stage);
+  const recentlyChecked = bill.last_polled_at && Date.now() - new Date(bill.last_polled_at).getTime() < 5 * 60_000;
 
   return (
     <div className="container-wide">
       <a href="/dashboard" className="muted" style={{ display: "inline-block", marginBottom: 16 }}>← Back to your bills</a>
 
-        <span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: "10px 0 6px" }}>{bill.title}</h1>
-        <p className="muted" style={{ marginBottom: 4 }}>
-          {bill.bill_type.toUpperCase()} {bill.bill_number} · {bill.congress}th Congress
+      <span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: "10px 0 6px" }}>{bill.title}</h1>
+      <p className="muted" style={{ marginBottom: 4 }}>
+        {bill.bill_type.toUpperCase()} {bill.bill_number} · {bill.congress}th Congress
+      </p>
+      {timeAgo(bill.last_polled_at) && (
+        <p className="muted" style={{ fontSize: '0.75rem' }}>
+          {recentlyChecked && <span className="live-dot" />}
+          Last checked {timeAgo(bill.last_polled_at)}
         </p>
-        {timeAgo(bill.last_polled_at) && (
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Last checked {timeAgo(bill.last_polled_at)}</p>
-        )}
+      )}
+      <VoteBadge text={bill.latest_action} />
 
-        {/* Stage tracker */}
-        <div className="card" style={{ marginTop: 20 }}>
-          <div className="progress-track" style={{ marginBottom: 10 }}>
-            <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />
+      {/* Stage tracker */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="progress-track" style={{ marginBottom: 10 }}>
+          <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+          {STAGE_ORDER.map((s, i) => (
+            <span
+              key={s}
+              className="muted"
+              style={{
+                fontSize: '0.6875rem',
+                color: i <= stageIndex ? "var(--accent)" : undefined,
+                fontWeight: i <= stageIndex ? 500 : undefined,
+              }}
+            >
+              {STAGE_LABELS[s]}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {meta && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Details</h2>
+          <div className="bill-meta" style={{ marginTop: 0 }}>
+            {meta.chamber && <span>Chamber: <strong>{meta.chamber}</strong></span>}
+            {meta.sponsorName && (
+              <span>Sponsor: <strong>{meta.sponsorName}{meta.sponsorParty && meta.sponsorState ? ` (${meta.sponsorParty}-${meta.sponsorState})` : ""}</strong></span>
+            )}
+            {meta.introducedDate && <span>Introduced: <strong>{meta.introducedDate}</strong></span>}
+            {meta.policyArea && <span>Policy area: <strong>{meta.policyArea}</strong></span>}
+            {typeof meta.cosponsorCount === "number" && <span>Cosponsors: <strong>{meta.cosponsorCount}</strong></span>}
+            {typeof meta.committeeCount === "number" && <span>Committees: <strong>{meta.committeeCount}</strong></span>}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
-            {STAGE_ORDER.map((s, i) => (
-              <span
-                key={s}
-                className="muted"
-                style={{
-                  fontSize: '0.6875rem',
-                  color: i <= stageIndex ? "var(--accent)" : undefined,
-                  fontWeight: i <= stageIndex ? 500 : undefined,
-                }}
-              >
-                {STAGE_LABELS[s]}
-              </span>
+          {meta.summary && <p style={{ marginTop: 12, fontSize: '0.875rem' }}>{meta.summary}</p>}
+          {bill.congress_url && (
+            <a href={bill.congress_url} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: '0.8125rem' }}>
+              View full text and details on congress.gov →
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Related bills */}
+      {!relatedLoading && related && related.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Related bills</h2>
+          <p className="settings-desc">Companion or identical bills identified by Congress or CRS.</p>
+          <div>
+            {related.map((r, i) => (
+              <div key={i} className="related-bill-row">
+                <a href={`https://www.congress.gov/bill/${r.congress}th-congress/${r.type.toLowerCase()}/${r.number}`} target="_blank" rel="noreferrer" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {r.type.toUpperCase()} {r.number}: {r.title}
+                </a>
+                {r.relationshipType && <span className="related-bill-tag">{r.relationshipType}</span>}
+              </div>
             ))}
           </div>
         </div>
+      )}
 
-        {meta && (
-          <div className="card">
-            <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Details</h2>
-            <div className="bill-meta" style={{ marginTop: 0 }}>
-              {meta.chamber && <span>Chamber: <strong>{meta.chamber}</strong></span>}
-              {meta.sponsorName && (
-                <span>Sponsor: <strong>{meta.sponsorName}{meta.sponsorParty && meta.sponsorState ? ` (${meta.sponsorParty}-${meta.sponsorState})` : ""}</strong></span>
-              )}
-              {meta.introducedDate && <span>Introduced: <strong>{meta.introducedDate}</strong></span>}
-              {meta.policyArea && <span>Policy area: <strong>{meta.policyArea}</strong></span>}
-              {typeof meta.cosponsorCount === "number" && <span>Cosponsors: <strong>{meta.cosponsorCount}</strong></span>}
-              {typeof meta.committeeCount === "number" && <span>Committees: <strong>{meta.committeeCount}</strong></span>}
+      {/* Track / notify controls */}
+      <div className="card">
+        <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Tracking</h2>
+        {trackedRowId ? (
+          <>
+            <div style={{ display: "flex", gap: 16, marginBottom: 12, fontSize: '0.8125rem' }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={notifyEmail} onChange={(e) => toggle("notify_email", e.target.checked)} />
+                Email me
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={notifySms} onChange={(e) => toggle("notify_sms", e.target.checked)} />
+                Text me
+              </label>
             </div>
-            {meta.summary && <p style={{ marginTop: 12, fontSize: '0.875rem' }}>{meta.summary}</p>}
-            {bill.congress_url && (
-              <a href={bill.congress_url} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: '0.8125rem' }}>
-                View full text and details on congress.gov →
-              </a>
-            )}
+            <button className="ghost" onClick={handleUntrack} disabled={busy}>
+              {busy ? "Removing…" : "Stop tracking"}
+            </button>
+          </>
+        ) : (
+          <button className="primary" onClick={handleTrack} disabled={busy}>
+            {busy ? "Adding…" : "Track this bill"}
+          </button>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div className="card">
+        <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Timeline</h2>
+        {events.length === 0 ? (
+          <p className="muted">
+            No changes recorded yet. This fills in automatically once the daily check detects an update to this bill's status.
+          </p>
+        ) : (
+          <div className="member-list">
+            {events.map((ev) => (
+              <div key={ev.id} className="member-row" style={{ alignItems: "flex-start" }}>
+                <div className="member-avatar" style={{ marginTop: 2 }}>•</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.875rem' }}>{ev.summary}</div>
+                  <div className="muted" style={{ fontSize: '0.6875rem' }}>{formatDate(ev.occurred_at)}</div>
+                  <VoteBadge text={ev.summary} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* Track / notify controls */}
-        <div className="card">
-          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Tracking</h2>
-          {trackedRowId ? (
-            <>
-              <div style={{ display: "flex", gap: 16, marginBottom: 12, fontSize: '0.8125rem' }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="checkbox" checked={notifyEmail} onChange={(e) => toggle("notify_email", e.target.checked)} />
-                  Email me
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="checkbox" checked={notifySms} onChange={(e) => toggle("notify_sms", e.target.checked)} />
-                  Text me
-                </label>
-              </div>
-              <button className="ghost" onClick={handleUntrack} disabled={busy}>
-                {busy ? "Removing…" : "Stop tracking"}
-              </button>
-            </>
-          ) : (
-            <button className="primary" onClick={handleTrack} disabled={busy}>
-              {busy ? "Adding…" : "Track this bill"}
-            </button>
-          )}
-        </div>
-
-        {/* Timeline */}
-        <div className="card">
-          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Timeline</h2>
-          {events.length === 0 ? (
-            <p className="muted">
-              No changes recorded yet. This fills in automatically once the daily check detects an update to this bill's status.
-            </p>
-          ) : (
-            <div className="member-list">
-              {events.map((ev) => (
-                <div key={ev.id} className="member-row" style={{ alignItems: "flex-start" }}>
-                  <div className="member-avatar" style={{ marginTop: 2 }}>•</div>
-                  <div>
-                    <div style={{ fontSize: '0.875rem' }}>{ev.summary}</div>
-                    <div className="muted" style={{ fontSize: '0.6875rem' }}>{formatDate(ev.occurred_at)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      </div>
     </div>
   );
 }

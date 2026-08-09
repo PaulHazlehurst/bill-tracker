@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { STAGE_LABELS, extractMeta, timeAgo } from "@/lib/billMeta";
+import { STAGE_LABELS, extractMeta, timeAgo, parseVoteInfo } from "@/lib/billMeta";
+import { useUI } from "@/components/UIProvider";
+import { ThumbsUp, ThumbsDown, Eye, Minus } from "lucide-react";
+
+const POSITION_ICONS: Record<string, any> = { support: ThumbsUp, oppose: ThumbsDown, watching: Eye, none: Minus };
 
 type BillDetail = {
   title: string;
@@ -62,6 +66,7 @@ export default function BillTable({
   onBulkUntrack?: (trackedBillIds: string[]) => void;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { confirm } = useUI();
   const [busyId, setBusyId] = useState<string | null>(null);
   const displayRows = rows;
 
@@ -106,13 +111,13 @@ export default function BillTable({
 
   async function handleUntrack(row: TableRow) {
     const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
-    if (!window.confirm(`Stop tracking "${bill?.title}"?`)) return;
+    if (!(await confirm(`Stop tracking "${bill?.title}"?`, { confirmLabel: "Stop tracking", danger: true }))) return;
     onUntrack?.(row.id);
   }
 
   async function handleBulkUntrack() {
     if (selected.size === 0) return;
-    if (!window.confirm(`Stop tracking ${selected.size} bill${selected.size > 1 ? "s" : ""}?`)) return;
+    if (!(await confirm(`Stop tracking ${selected.size} bill${selected.size > 1 ? "s" : ""}?`, { confirmLabel: "Stop tracking", danger: true }))) return;
     onBulkUntrack?.(Array.from(selected));
     setSelected(new Set());
   }
@@ -184,7 +189,10 @@ export default function BillTable({
                         <option value="watching">Watching</option>
                       </select>
                     ) : (
-                      <span className={`badge-position badge-${row.position}`}>{POSITION_LABELS[row.position]}</span>
+                      <span className={`badge-position badge-${row.position}`}>
+                        {(() => { const Icon = POSITION_ICONS[row.position]; return Icon ? <Icon size={11} style={{ marginRight: 4, verticalAlign: -1 }} /> : null; })()}
+                        {POSITION_LABELS[row.position]}
+                      </span>
                     )}
                   </td>
                   <td><span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span></td>

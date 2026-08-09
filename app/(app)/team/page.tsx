@@ -8,6 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import BillTable, { TableRow } from "@/components/BillTable";
 import Spinner from "@/components/Spinner";
 import OrgLogoUploader from "@/components/OrgLogoUploader";
+import { useUI } from "@/components/UIProvider";
+import EmptyState from "@/components/EmptyState";
+import { Users2 } from "lucide-react";
 
 type Member = { id: string; email: string };
 
@@ -17,6 +20,7 @@ function initials(email: string) {
 
 export default function TeamPage() {
   const supabase = createClient();
+  const { toast, confirm } = useUI();
   const router = useRouter();
   const [rows, setRows] = useState<TableRow[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -101,7 +105,7 @@ export default function TeamPage() {
   }
 
   async function handleRemove(member: Member) {
-    if (!window.confirm(`Remove ${member.email} from the team?`)) return;
+    if (!(await confirm(`Remove ${member.email} from the team?`, { confirmLabel: "Remove", danger: true }))) return;
     setRemoving(member.id);
     const res = await fetch("/api/team/remove-member", {
       method: "POST",
@@ -111,9 +115,10 @@ export default function TeamPage() {
     setRemoving(null);
     if (res.ok) {
       setMembers((prev) => prev.filter((m) => m.id !== member.id));
+      toast(`Removed ${member.email}`, "success");
     } else {
       const body = await res.json().catch(() => ({}));
-      window.alert(body.error ?? "Couldn't remove that member.");
+      toast(body.error ?? "Couldn't remove that member.", "error");
     }
   }
 
@@ -189,7 +194,7 @@ export default function TeamPage() {
           ) : error ? (
             <p className="error-text">Couldn't load your team's tracked bills: {error}</p>
           ) : rows.length === 0 ? (
-            <p className="muted">No one on your team is tracking any bills yet.</p>
+            <EmptyState icon={Users2}>No one on your team is tracking any bills yet.</EmptyState>
           ) : (
             <BillTable rows={rows} editable={false} trackerEmails={trackerEmails} selfId={selfId} />
           )}

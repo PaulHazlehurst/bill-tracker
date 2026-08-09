@@ -93,7 +93,38 @@ export async function searchBills(query: string, congress = 119): Promise<Search
     }));
 }
 
-export function inferStage(latestActionText: string): string {
+export type RelatedBill = {
+  congress: number;
+  type: string;
+  number: string;
+  title: string;
+  latestActionText: string | null;
+  relationshipType: string | null;
+};
+
+// Fetches companion/related bills (e.g. the Senate version of a House
+// bill), as identified by CRS, the House, or the Senate. Only called when
+// someone actually opens a bill's detail page - not part of the batch
+// poller - so the extra request cost is bounded by real usage, not
+// multiplied across every tracked bill on every poll cycle.
+export async function getRelatedBills(congress: number, billType: string, billNumber: number | string): Promise<RelatedBill[]> {
+  const url = new URL(`${BASE_URL}/bill/${congress}/${billType.toLowerCase()}/${billNumber}/relatedbills`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`congress.gov related bills fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  return (data.relatedBills ?? []).map((b: any) => ({
+    congress: b.congress,
+    type: b.type,
+    number: String(b.number),
+    title: b.title,
+    latestActionText: b.latestAction?.text ?? null,
+    relationshipType: b.relationshipDetails?.[0]?.type ?? null,
+  }));
+}
   const text = (latestActionText ?? "").toLowerCase();
   if (text.includes("became public law") || text.includes("signed by president")) return "enacted";
   if (text.includes("vetoed")) return "vetoed";

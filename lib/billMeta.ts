@@ -33,6 +33,33 @@ export const STAGE_LABELS: Record<string, string> = {
   failed: "Failed",
 };
 
+// congress.gov embeds vote tallies directly in an action's text, e.g.
+// "Passed Senate without amendment by Yea-Nay Vote. 79 - 19. Record Vote
+// Number: 71." - so we can extract real vote results from text we already
+// store, with no extra API call. Returns null if the text doesn't describe
+// a recorded vote.
+export type VoteInfo = { yea: number; nay: number; rollNumber: string | null; passed: boolean };
+
+export function parseVoteInfo(text: string | null | undefined): VoteInfo | null {
+  if (!text) return null;
+  const tally = text.match(/(\d+)\s*[-–]\s*(\d+)/);
+  if (!tally) return null;
+  // Only treat this as a vote if the surrounding text actually mentions one -
+  // otherwise something like a bare "H.R. 1234" could false-positive.
+  if (!/vote/i.test(text)) return null;
+
+  const yea = parseInt(tally[1], 10);
+  const nay = parseInt(tally[2], 10);
+  const rollMatch = text.match(/(?:Record Vote|Roll(?:call)? Vote|Vote) Number:?\s*(\d+)/i);
+
+  return {
+    yea,
+    nay,
+    rollNumber: rollMatch ? rollMatch[1] : null,
+    passed: /passed|agreed to|adopted/i.test(text),
+  };
+}
+
 // Pulls the extra descriptive fields (sponsor, chamber, policy area,
 // cosponsor count) out of the raw congress.gov snapshot we already store -
 // no extra API calls needed, this data was fetched once when the bill was

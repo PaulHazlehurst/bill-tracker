@@ -687,3 +687,108 @@ html[data-density="compact"] .bill-table th {
 html[data-density="compact"] .card { padding: 14px; }
 html[data-density="compact"] .member-row { padding: 6px 0; }
 html[data-density="compact"] .settings-section { margin-bottom: 18px; }
+
+/* ── Toasts + confirm modal (replaces window.alert/confirm) ────────── */
+
+.toast-stack {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+}
+.toast {
+  padding: 11px 16px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+  animation: toast-in 0.2s ease;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.toast-success { border-color: var(--pos-support); color: var(--pos-support); }
+.toast-error { border-color: var(--danger); color: var(--danger); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 110;
+  padding: 20px;
+}
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  animation: fade-in-up 0.15s ease;
+}
+button.danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+button.danger:hover { opacity: 0.9; }
+
+/* ── Vote result badge ───────────────────────────────────────────── */
+
+.vote-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  margin-top: 6px;
+}
+.vote-badge .yea { color: var(--pos-support); font-weight: 600; }
+.vote-badge .nay { color: var(--pos-oppose); font-weight: 600; }
+
+/* ── Related bills ───────────────────────────────────────────────── */
+
+.related-bill-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+.related-bill-row:first-child { border-top: none; }
+.related-bill-tag {
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+/* ── Live-ness touches ───────────────────────────────────────────── */
+
+.live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--pos-support);
+  margin-right: 5px;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

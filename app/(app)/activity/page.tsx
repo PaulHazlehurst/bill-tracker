@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
+import EmptyState from "@/components/EmptyState";
+import { Activity as ActivityIcon } from "lucide-react";
 import { formatDate, timeAgo } from "@/lib/billMeta";
 
 type ActivityRow = {
@@ -76,9 +78,9 @@ export default function ActivityPage() {
       ) : error ? (
         <p className="error-text">Couldn't load activity: {error}</p>
       ) : rows.length === 0 ? (
-        <p className="muted">
+        <EmptyState icon={ActivityIcon}>
           No activity yet. This fills in automatically as the daily check detects changes to bills you're tracking.
-        </p>
+        </EmptyState>
       ) : (
         <div className="member-list">
           {rows.map((row) => {

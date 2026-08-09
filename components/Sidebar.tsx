@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { FileText, Users, Activity, Settings, Menu, LogOut } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "My bills", icon: "☰" },
-  { href: "/team", label: "Team", icon: "◈" },
-  { href: "/activity", label: "Activity", icon: "◷" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
+  { href: "/dashboard", label: "My bills", Icon: FileText },
+  { href: "/team", label: "Team", Icon: Users },
+  { href: "/activity", label: "Activity", Icon: Activity },
+  { href: "/settings", label: "Settings", Icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -50,7 +51,7 @@ export default function Sidebar() {
   return (
     <>
       <button className="sidebar-toggle" onClick={() => setMobileOpen((v) => !v)} aria-label="Toggle menu">
-        ☰
+        <Menu size={18} />
       </button>
 
       {mobileOpen && <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />}
@@ -76,7 +77,7 @@ export default function Sidebar() {
               href={item.href}
               className={`sidebar-link${pathname === item.href ? " sidebar-link-active" : ""}`}
             >
-              <span className="sidebar-icon" aria-hidden="true">{item.icon}</span>
+              <item.Icon size={16} className="sidebar-icon" aria-hidden="true" />
               {item.label}
             </a>
           ))}
@@ -84,7 +85,9 @@ export default function Sidebar() {
 
         <div className="sidebar-footer">
           {email && <div className="sidebar-email">{email}</div>}
-          <button className="ghost" onClick={handleLogout} style={{ width: "100%" }}>Log out</button>
+          <button className="ghost" onClick={handleLogout} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <LogOut size={14} /> Log out
+          </button>
         </div>
       </aside>
     </>

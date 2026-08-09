@@ -10,11 +10,13 @@ import ThemeSwitcher from "@/components/ThemeSwitcher";
 import FontSizeSwitcher from "@/components/FontSizeSwitcher";
 import DensitySwitcher from "@/components/DensitySwitcher";
 import Spinner from "@/components/Spinner";
+import { useUI } from "@/components/UIProvider";
 
 type TeamMode = "none" | "create" | "join";
 
 export default function SettingsPage() {
   const supabase = createClient();
+  const { toast, confirm } = useUI();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -146,12 +148,17 @@ export default function SettingsPage() {
   }
 
   async function handleLeaveTeam() {
-    if (!window.confirm(isOwner
-      ? "You're the owner - leaving means the team keeps going without an owner (no one will be able to rename it or manage members). Leave anyway?"
-      : "Leave this team?")) return;
+    const ok = await confirm(
+      isOwner
+        ? "You're the owner - leaving means the team keeps going without an owner (no one will be able to rename it or manage members). Leave anyway?"
+        : "Leave this team?",
+      { confirmLabel: "Leave team", danger: true }
+    );
+    if (!ok) return;
     setTeamBusy(true);
     await supabase.from("profiles").update({ organization_id: null }).eq("id", userId);
     setTeamBusy(false);
+    toast("Left the team", "info");
     load();
   }
 
@@ -170,7 +177,7 @@ export default function SettingsPage() {
   }
 
   async function handleRegenerateCode() {
-    if (!window.confirm("Generate a new invite code? The old code will stop working.")) return;
+    if (!(await confirm("Generate a new invite code? The old code will stop working.", { confirmLabel: "Regenerate" }))) return;
     setTeamBusy(true);
     setTeamError(null);
     const newCode = Math.random().toString(36).slice(2, 10).toUpperCase();
@@ -181,6 +188,7 @@ export default function SettingsPage() {
       return;
     }
     setInviteCode(newCode);
+    toast("New invite code generated", "success");
   }
 
   function copyCode() {
