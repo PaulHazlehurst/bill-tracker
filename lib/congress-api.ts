@@ -125,6 +125,8 @@ export async function getRelatedBills(congress: number, billType: string, billNu
     relationshipType: b.relationshipDetails?.[0]?.type ?? null,
   }));
 }
+
+export function inferStage(latestActionText: string): string {
   const text = (latestActionText ?? "").toLowerCase();
   if (text.includes("became public law") || text.includes("signed by president")) return "enacted";
   if (text.includes("vetoed")) return "vetoed";
