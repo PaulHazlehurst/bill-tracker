@@ -29,6 +29,11 @@ create table profiles (
   -- every single time - purely a convenience default, editable per-bill after.
   default_notify_email boolean not null default true,
   default_notify_sms boolean not null default false,
+  -- Master opt-in gate. Even if a tracked_bills row has notify_email = true,
+  -- no email actually goes out unless this is also true - a real "I want to
+  -- receive email from this app" decision, not just an inherited default.
+  -- Off by default: no one should get an email before deliberately asking for it.
+  email_notifications_enabled boolean not null default false,
   created_at timestamptz not null default now()
 );
 

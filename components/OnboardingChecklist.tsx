@@ -13,10 +13,12 @@ type Step = { done: boolean; label: string; href: string; cta: string };
 // someone's actually set up, rather than needing to be manually dismissed.
 export default function OnboardingChecklist({
   hasTrackedBill,
+  hasEmailEnabled,
   hasTeam,
   hasPhone,
 }: {
   hasTrackedBill: boolean;
+  hasEmailEnabled: boolean;
   hasTeam: boolean;
   hasPhone: boolean;
 }) {
@@ -28,6 +30,7 @@ export default function OnboardingChecklist({
 
   const steps: Step[] = [
     { done: hasTrackedBill, label: "Track your first bill", href: "#track", cta: "Search above ↑" },
+    { done: hasEmailEnabled, label: "Turn on email notifications", href: "/settings", cta: "Go to Settings" },
     { done: hasTeam, label: "Join or create a team", href: "/settings", cta: "Go to Settings" },
     { done: hasPhone, label: "Add a phone number for text alerts", href: "/settings", cta: "Go to Settings" },
   ];

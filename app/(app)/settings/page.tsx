@@ -23,6 +23,8 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("");
   const [defaultNotifyEmail, setDefaultNotifyEmail] = useState(true);
   const [defaultNotifySms, setDefaultNotifySms] = useState(false);
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
 
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
@@ -52,7 +54,7 @@ export default function SettingsPage() {
 
     const { data: profile, error: loadError } = await supabase
       .from("profiles")
-      .select("phone, organization_id, default_notify_email, default_notify_sms, organizations(name, invite_code, created_by)")
+      .select("phone, organization_id, default_notify_email, default_notify_sms, email_notifications_enabled, organizations(name, invite_code, created_by)")
       .eq("id", user.id)
       .single();
 
@@ -66,6 +68,7 @@ export default function SettingsPage() {
     setPhone(profile?.phone ?? "");
     setDefaultNotifyEmail(profile?.default_notify_email ?? true);
     setDefaultNotifySms(profile?.default_notify_sms ?? false);
+    setEmailNotificationsEnabled(profile?.email_notifications_enabled ?? false);
     setOrgId(profile?.organization_id ?? null);
 
     const org = Array.isArray(profile?.organizations) ? profile?.organizations[0] : profile?.organizations;
@@ -98,6 +101,7 @@ export default function SettingsPage() {
         phone: phone.trim() || null,
         default_notify_email: defaultNotifyEmail,
         default_notify_sms: defaultNotifySms,
+        email_notifications_enabled: emailNotificationsEnabled,
       })
       .eq("id", userId);
 
@@ -108,6 +112,18 @@ export default function SettingsPage() {
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function handleSendTestEmail() {
+    setSendingTest(true);
+    const res = await fetch("/api/test-email", { method: "POST" });
+    setSendingTest(false);
+    if (res.ok) {
+      toast("Test email sent - check your inbox", "success");
+    } else {
+      const body = await res.json().catch(() => ({}));
+      toast(body.error ?? "Couldn't send test email", "error");
+    }
   }
 
   async function handleCreateTeam(e: React.FormEvent) {
@@ -242,17 +258,34 @@ export default function SettingsPage() {
 
           <div className="settings-section">
             <h2>Account</h2>
-            <form onSubmit={handleSaveAccount} className="card">
-              <div className="field">
+            <div className="card">
+              <div className="field" style={{ marginBottom: 0 }}>
                 <label>Email</label>
                 <div>{email}</div>
                 <p className="muted" style={{ margin: "2px 0 0" }}>Contact support to change your email for now.</p>
               </div>
-              <div className="field">
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <h2>Notifications</h2>
+            <p className="settings-desc">Off by default - nothing gets emailed or texted to you until you turn it on here.</p>
+            <form onSubmit={handleSaveAccount} className="card">
+              <label className="notif-master-toggle">
+                <input type="checkbox" checked={emailNotificationsEnabled} onChange={(e) => setEmailNotificationsEnabled(e.target.checked)} />
+                <div>
+                  <div style={{ fontWeight: 500 }}>Enable email notifications</div>
+                  <div className="muted" style={{ fontSize: '0.75rem' }}>Required before any bill-update email can be sent to you.</div>
+                </div>
+              </label>
+
+              <div className="field" style={{ marginTop: 16 }}>
                 <label htmlFor="phone">Phone number (for text alerts)</label>
                 <input id="phone" type="tel" placeholder="+1 410 555 1234" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <p className="muted" style={{ margin: "2px 0 0" }}>Adding a number and turning on "Text me" per bill is what enables texts - no separate master switch needed since it's already opt-in by requiring both.</p>
               </div>
-              <div className="field" style={{ marginBottom: 8 }}>
+
+              <div className="field" style={{ marginTop: 12, marginBottom: 8 }}>
                 <label>Default notifications for newly tracked bills</label>
               </div>
               <div style={{ display: "flex", gap: 16, marginBottom: 16, fontSize: '0.8125rem' }}>
@@ -265,11 +298,17 @@ export default function SettingsPage() {
                   Text me by default
                 </label>
               </div>
+
               {error && <p className="error-text">{error}</p>}
               {saved && <p className="muted" style={{ color: "var(--accent)" }}>Saved.</p>}
-              <button className="primary" type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
-              </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button className="primary" type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save changes"}
+                </button>
+                <button className="ghost" type="button" onClick={handleSendTestEmail} disabled={sendingTest}>
+                  {sendingTest ? "Sending…" : "Send test email"}
+                </button>
+              </div>
             </form>
           </div>
 

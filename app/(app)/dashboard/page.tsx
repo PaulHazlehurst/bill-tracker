@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [recentlyViewed, setRecentlyViewed] = useState<RecentBill[]>([]);
   const [hasTeam, setHasTeam] = useState(false);
   const [hasPhone, setHasPhone] = useState(false);
+  const [hasEmailEnabled, setHasEmailEnabled] = useState(false);
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -66,11 +67,12 @@ export default function DashboardPage() {
     // complicating the select above with a join that isn't otherwise needed.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("organization_id, phone")
+      .select("organization_id, phone, email_notifications_enabled")
       .eq("id", user.id)
       .single();
     setHasTeam(!!profile?.organization_id);
     setHasPhone(!!profile?.phone);
+    setHasEmailEnabled(!!profile?.email_notifications_enabled);
   }
 
   useEffect(() => {
@@ -138,7 +140,7 @@ export default function DashboardPage() {
       </div>
 
       {!loading && (
-        <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasTeam={hasTeam} hasPhone={hasPhone} />
+        <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={hasEmailEnabled} hasTeam={hasTeam} hasPhone={hasPhone} />
       )}
 
       <BillSearch onTracked={loadTracked} />
