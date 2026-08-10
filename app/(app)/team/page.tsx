@@ -10,6 +10,7 @@ import TableSkeleton from "@/components/TableSkeleton";
 import CountUp from "@/components/CountUp";
 import ActivityMini from "@/components/ActivityMini";
 import PositionBreakdown from "@/components/PositionBreakdown";
+import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OrgLogoUploader from "@/components/OrgLogoUploader";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
@@ -141,6 +142,17 @@ export default function TeamPage() {
   let contestedCount = 0;
   const positionCounts: Record<string, number> = { support: 0, oppose: 0, watching: 0, none: 0 };
   rows.forEach((r) => { positionCounts[r.position] = (positionCounts[r.position] ?? 0) + 1; });
+  // Party counts use one entry per DISTINCT bill, not per tracker row - a
+  // bill tracked by three people should count once toward "sponsors by
+  // party", not three times.
+  const partyCounts: Record<string, number> = { D: 0, R: 0, I: 0 };
+  Object.values(byBill).forEach((group) => {
+    const bill = Array.isArray(group[0].bills) ? group[0].bills[0] : group[0].bills;
+    const party = ((bill as any)?.raw_snapshot?.sponsors?.[0]?.party ?? "").toUpperCase();
+    if (party === "D") partyCounts.D++;
+    else if (party === "R") partyCounts.R++;
+    else if (party) partyCounts.I++;
+  });
   Object.values(byBill).forEach((group) => {
     if (group.length < 2) return;
     const positions = new Set(group.map((g) => g.position).filter((p) => p !== "none"));
@@ -198,6 +210,11 @@ export default function TeamPage() {
             <div className="widget-grid">
               <ActivityMini scope="team" />
               <PositionBreakdown counts={positionCounts} />
+              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+                <div className="card">
+                  <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+                </div>
+              )}
             </div>
           )}
 

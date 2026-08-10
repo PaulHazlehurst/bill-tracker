@@ -59,6 +59,10 @@ create table bills (
   related_bills_fetched_at timestamptz,
   actions_cache jsonb,
   actions_fetched_at timestamptz,
+  -- Cosponsor party breakdown (e.g. {"D": 12, "R": 8, "I": 1}) - same
+  -- on-demand-and-cached pattern as related_bills/actions_cache above.
+  cosponsor_breakdown jsonb,
+  cosponsor_breakdown_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 

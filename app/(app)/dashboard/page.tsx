@@ -13,6 +13,7 @@ import TableSkeleton from "@/components/TableSkeleton";
 import CountUp from "@/components/CountUp";
 import ActivityMini from "@/components/ActivityMini";
 import PositionBreakdown from "@/components/PositionBreakdown";
+import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
 import { FileSearch } from "lucide-react";
@@ -82,10 +83,15 @@ export default function DashboardPage() {
 
   const counts = { active: 0, committee: 0, passed: 0, enacted: 0 };
   const positionCounts: Record<string, number> = { support: 0, oppose: 0, watching: 0, none: 0 };
+  const partyCounts: Record<string, number> = { D: 0, R: 0, I: 0 };
   tracked.forEach((row) => {
     const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
     const stage = bill?.status_stage;
     positionCounts[row.position] = (positionCounts[row.position] ?? 0) + 1;
+    const sponsorParty = (bill?.raw_snapshot?.sponsors?.[0]?.party ?? "").toUpperCase();
+    if (sponsorParty === "D") partyCounts.D++;
+    else if (sponsorParty === "R") partyCounts.R++;
+    else if (sponsorParty) partyCounts.I++;
     if (!stage) return;
     if (stage === "enacted") counts.enacted++;
     else if (stage === "passed_house" || stage === "passed_senate" || stage === "to_president") counts.passed++;
@@ -140,6 +146,11 @@ export default function DashboardPage() {
         <div className="widget-grid">
           <ActivityMini scope="personal" />
           <PositionBreakdown counts={positionCounts} />
+          {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+            <div className="card">
+              <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+            </div>
+          )}
         </div>
       )}
 

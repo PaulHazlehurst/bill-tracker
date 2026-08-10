@@ -1,52 +1,64 @@
 /* ── Theme tokens ────────────────────────────────────────────────── */
 /* Three themes, one shared set of variable names. Switching themes is
-   just swapping which block of variables is active - see ThemeSwitcher.tsx. */
+   just swapping which block of variables is active - see ThemeSwitcher.tsx.
+   Party colors are fixed across all themes (like the position colors) since
+   they need to stay recognizable regardless of which theme is active. */
 
 :root {
   --font-display: "Fraunces", Georgia, serif;
+  --party-dem: #2563eb;
+  --party-dem-soft: #e2ebfd;
+  --party-rep: #dc2626;
+  --party-rep-soft: #fbe4e2;
+  --party-ind: #7c3aed;
+  --party-ind-soft: #eee5fc;
+  --shadow-sm: 0 1px 3px rgba(20, 20, 15, 0.06);
+  --shadow-md: 0 6px 20px rgba(20, 20, 15, 0.10);
 }
 
 :root,
 [data-theme="parchment"] {
-  --bg: #f6f5f1;
+  --bg: #f7f6f2;
   --surface: #ffffff;
-  --surface-soft: #eeece4;
-  --text: #1c2a28;
-  --text-soft: #52625f;
-  --border: #dcd9d0;
-  --accent: #2f5d50;
-  --accent-soft: #e4ede9;
+  --surface-soft: #edeade;
+  --text: #16211d;
+  --text-soft: #566259;
+  --border: #d9d4c4;
+  --accent: #0f7a5c;
+  --accent-soft: #dcf0e7;
   --accent-contrast: #ffffff;
-  --danger: #a3392f;
-  --danger-soft: #f6e7e5;
+  --danger: #c23b2e;
+  --danger-soft: #f8e3e0;
 }
 
 [data-theme="midnight"] {
-  --bg: #14181a;
-  --surface: #1e2427;
-  --surface-soft: #262d30;
-  --text: #e9e6dd;
-  --text-soft: #9aa3a1;
-  --border: #2e3538;
-  --accent: #d1a054;
-  --accent-soft: #362c1c;
-  --accent-contrast: #1c1710;
-  --danger: #e0776b;
-  --danger-soft: #3a2320;
+  --bg: #0e1113;
+  --surface: #191d20;
+  --surface-soft: #22272b;
+  --text: #f0ede4;
+  --text-soft: #a3aca9;
+  --border: #2b3236;
+  --accent: #e8ab41;
+  --accent-soft: #3a2c14;
+  --accent-contrast: #17130a;
+  --danger: #ea7a6c;
+  --danger-soft: #3d211e;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="capitol"] {
-  --bg: #eef1f5;
+  --bg: #eef1f6;
   --surface: #ffffff;
-  --surface-soft: #e4e9ef;
-  --text: #1a2433;
-  --text-soft: #57657a;
-  --border: #d3dbe4;
-  --accent: #1f3a5f;
-  --accent-soft: #e2e9f2;
+  --surface-soft: #e1e8f2;
+  --text: #101a2c;
+  --text-soft: #4c5b76;
+  --border: #ccd7e6;
+  --accent: #1d4ed8;
+  --accent-soft: #dde6fb;
   --accent-contrast: #ffffff;
-  --danger: #a3392f;
-  --danger-soft: #f6e7e5;
+  --danger: #c23b2e;
+  --danger-soft: #f8e3e0;
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
@@ -70,7 +82,9 @@ a { color: inherit; }
 
 h1, h2, h3, .brand {
   font-family: var(--font-display), Georgia, serif;
+  letter-spacing: -0.01em;
 }
+h1 { letter-spacing: -0.02em; }
 
 .container {
   max-width: 880px;
@@ -118,6 +132,7 @@ h1, h2, h3, .brand {
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
@@ -264,7 +279,7 @@ button.ghost:hover { border-color: var(--text-soft); }
 }
 .card.hoverable:hover {
   border-color: var(--text-soft);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -292,8 +307,10 @@ button.ghost:active:not(:disabled) {
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
   border-radius: 10px;
   padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
 }
 .stat-card .stat-value {
   font-family: var(--font-display), Georgia, serif;
@@ -588,18 +605,21 @@ button.ghost:active:not(:disabled) {
 /* ── Position (stance) badges ───────────────────────────────────── */
 
 :root {
-  --pos-support: #2f7d4f;
-  --pos-support-soft: #e5f3ea;
-  --pos-oppose: #b5423a;
-  --pos-oppose-soft: #f7e8e6;
-  --pos-watching: #a5760f;
-  --pos-watching-soft: #f6eddb;
+  --pos-support: #16915f;
+  --pos-support-soft: #dcf3e8;
+  --pos-oppose: #d6392a;
+  --pos-oppose-soft: #fbe2df;
+  --pos-watching: #c17d0a;
+  --pos-watching-soft: #faedd6;
   --pos-none: var(--text-soft);
 }
 [data-theme="midnight"] {
-  --pos-support-soft: #1b3324;
-  --pos-oppose-soft: #3a211f;
-  --pos-watching-soft: #382c14;
+  --pos-support: #34c281;
+  --pos-oppose: #f0796a;
+  --pos-watching: #f0b342;
+  --pos-support-soft: #17301f;
+  --pos-oppose-soft: #3a201d;
+  --pos-watching-soft: #3a2c12;
 }
 
 .badge-position {
@@ -849,12 +869,9 @@ button.danger:hover { opacity: 0.9; }
 
 .widget-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
   margin-top: 24px;
-}
-@media (max-width: 760px) {
-  .widget-grid { grid-template-columns: 1fr; }
 }
 
 .recent-viewed-chips {
@@ -953,4 +970,62 @@ button.ghost:hover:not(:disabled) {
   .feature-card:hover, .stat-card:hover, button.primary:hover, button.ghost:hover {
     transform: none !important;
   }
+}
+
+/* ── Momentum signal chips ───────────────────────────────────────── */
+
+.signal-chip {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--surface-soft);
+}
+.signal-chip .signal-value {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.375rem;
+  color: var(--text);
+}
+.signal-chip .signal-label {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+.signal-chip .signal-hint {
+  font-size: 0.6875rem;
+  margin-top: 4px;
+}
+.signal-support .signal-value { color: var(--pos-support); }
+.signal-support .signal-hint { color: var(--pos-support); }
+.signal-oppose .signal-value { color: var(--pos-oppose); }
+.signal-oppose .signal-hint { color: var(--pos-oppose); }
+.signal-watching .signal-value { color: var(--pos-watching); }
+.signal-watching .signal-hint { color: var(--pos-watching); }
+
+/* ── Vote history rows ───────────────────────────────────────────── */
+
+.vote-history-row {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+.vote-history-row:first-child { border-top: none; }
+
+/* ── Prominent external link button ─────────────────────────────── */
+
+.external-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.external-link-btn:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
 }

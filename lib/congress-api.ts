@@ -126,6 +126,71 @@ export async function getRelatedBills(congress: number, billType: string, billNu
   }));
 }
 
+export type BillAction = {
+  actionDate: string;
+  text: string;
+  type: string | null;
+  hasRecordedVote: boolean;
+};
+
+// Fetches the FULL action history for a bill - not just the latest action
+// we already store. This is what makes a real "vote history" possible:
+// our own bill_events log only captures whatever the once-daily poller
+// happened to catch, but this endpoint has every recorded action congress.gov
+// has, including votes that happened between poll cycles or before this
+// bill was ever tracked. Called on-demand (bill detail page) and cached in
+// the bills table - see /api/bills/actions.
+export async function getBillActions(congress: number, billType: string, billNumber: number | string): Promise<BillAction[]> {
+  const url = new URL(`${BASE_URL}/bill/${congress}/${billType.toLowerCase()}/${billNumber}/actions`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "250");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`congress.gov actions fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  return (data.actions ?? []).map((a: any) => ({
+    actionDate: a.actionDate,
+    text: a.text,
+    type: a.type ?? null,
+    hasRecordedVote: Array.isArray(a.recordedVotes) && a.recordedVotes.length > 0,
+  }));
+}
+
+export type CosponsorBreakdown = { D: number; R: number; I: number; total: number; capped: boolean };
+
+// Party split of cosponsors - requires a separate API call from the main
+// bill fetch (congress.gov's bill detail only gives a cosponsor COUNT, not
+// the party of each one). Fetches up to 250 (congress.gov's max page size);
+// if a bill has more than that, `capped` is true and the breakdown is a
+// representative sample rather than exhaustive - disclosed in the UI rather
+// than silently presented as complete.
+export async function getCosponsorBreakdown(congress: number, billType: string, billNumber: number | string): Promise<CosponsorBreakdown> {
+  const url = new URL(`${BASE_URL}/bill/${congress}/${billType.toLowerCase()}/${billNumber}/cosponsors`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "250");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`congress.gov cosponsors fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  const list = data.cosponsors ?? [];
+  const totalAvailable = data.pagination?.count ?? list.length;
+  const counts: CosponsorBreakdown = { D: 0, R: 0, I: 0, total: 0, capped: totalAvailable > list.length };
+
+  for (const c of list) {
+    const party = (c.party ?? "").toUpperCase();
+    if (party === "D") counts.D++;
+    else if (party === "R") counts.R++;
+    else counts.I++;
+    counts.total++;
+  }
+
+  return counts;
+}
+
 export function inferStage(latestActionText: string): string {
   const text = (latestActionText ?? "").toLowerCase();
   if (text.includes("became public law") || text.includes("signed by president")) return "enacted";

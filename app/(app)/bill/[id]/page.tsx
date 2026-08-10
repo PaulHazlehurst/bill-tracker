@@ -11,7 +11,9 @@ import { useUI } from "@/components/UIProvider";
 import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
 import { recordView } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
-import { TrendingUp, FileText, Users, Circle } from "lucide-react";
+import { TrendingUp, FileText, Users, Circle, ExternalLink } from "lucide-react";
+import PartyBreakdownChart from "@/components/PartyBreakdownChart";
+import MomentumSignals from "@/components/MomentumSignals";
 
 const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
 
@@ -46,6 +48,13 @@ type RelatedBill = {
   relationshipType: string | null;
 };
 
+type BillActionItem = {
+  actionDate: string;
+  text: string;
+  type: string | null;
+  hasRecordedVote: boolean;
+};
+
 const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
 
 function VoteBadge({ text }: { text: string | null | undefined }) {
@@ -73,6 +82,10 @@ export default function BillDetailPage() {
   const [events, setEvents] = useState<BillEvent[]>([]);
   const [related, setRelated] = useState<RelatedBill[] | null>(null);
   const [relatedLoading, setRelatedLoading] = useState(true);
+  const [cosponsorBreakdown, setCosponsorBreakdown] = useState<{ D: number; R: number; I: number; capped: boolean } | null>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(true);
+  const [actions, setActions] = useState<BillActionItem[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(true);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -111,11 +124,23 @@ export default function BillDetailPage() {
     }
     setLoading(false);
 
-    fetch(`/api/bills/related?congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+    fetch(`/api/bills/related?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
       .then((r) => r.json())
       .then((body) => setRelated(body.related ?? []))
       .catch(() => setRelated([]))
       .finally(() => setRelatedLoading(false));
+
+    fetch(`/api/bills/cosponsor-breakdown?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => r.json())
+      .then((body) => setCosponsorBreakdown(body.breakdown ?? null))
+      .catch(() => setCosponsorBreakdown(null))
+      .finally(() => setBreakdownLoading(false));
+
+    fetch(`/api/bills/actions?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => r.json())
+      .then((body) => setActions(body.actions ?? []))
+      .catch(() => setActions([]))
+      .finally(() => setActionsLoading(false));
   }
 
   useEffect(() => {
@@ -201,6 +226,13 @@ export default function BillDetailPage() {
         </p>
       )}
       <VoteBadge text={bill.latest_action} />
+      {bill.congress_url && (
+        <div style={{ marginTop: 10 }}>
+          <a href={bill.congress_url} target="_blank" rel="noreferrer" className="external-link-btn">
+            <ExternalLink size={13} /> View on congress.gov
+          </a>
+        </div>
+      )}
 
       {/* Stage tracker */}
       <div className="card" style={{ marginTop: 20 }}>
@@ -238,11 +270,6 @@ export default function BillDetailPage() {
             {typeof meta.committeeCount === "number" && <span>Committees: <strong>{meta.committeeCount}</strong></span>}
           </div>
           {meta.summary && <p style={{ marginTop: 12, fontSize: '0.875rem' }}>{meta.summary}</p>}
-          {bill.congress_url && (
-            <a href={bill.congress_url} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: '0.8125rem' }}>
-              View full text and details on congress.gov →
-            </a>
-          )}
         </div>
       )}
 
@@ -260,6 +287,46 @@ export default function BillDetailPage() {
                 {r.relationshipType && <span className="related-bill-tag">{r.relationshipType}</span>}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cosponsors by party */}
+      {!breakdownLoading && cosponsorBreakdown && (
+        <div className="card">
+          <PartyBreakdownChart
+            counts={{ D: cosponsorBreakdown.D, R: cosponsorBreakdown.R, I: cosponsorBreakdown.I }}
+            title="Cosponsors by party"
+            capped={cosponsorBreakdown.capped}
+          />
+        </div>
+      )}
+
+      {/* Momentum signals - transparent facts, not a prediction */}
+      <div className="card">
+        <MomentumSignals
+          introducedDate={bill.raw_snapshot?.introducedDate}
+          latestActionDate={bill.latest_action_date}
+          cosponsorBreakdown={cosponsorBreakdown}
+          cosponsorEventCount={events.filter((e) => e.event_type === "cosponsor_change").length}
+        />
+      </div>
+
+      {/* Vote history - the FULL history, not just what our poller happened to catch */}
+      {!actionsLoading && actions.some((a) => a.hasRecordedVote || parseVoteInfo(a.text)) && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Vote history</h2>
+          <p className="settings-desc">Every recorded vote on this bill, most recent first.</p>
+          <div>
+            {actions
+              .filter((a) => a.hasRecordedVote || parseVoteInfo(a.text))
+              .map((a, i) => (
+                <div key={i} className="vote-history-row">
+                  <div>{a.text}</div>
+                  <div className="muted" style={{ fontSize: '0.6875rem', marginTop: 2 }}>{formatDate(a.actionDate)}</div>
+                  <VoteBadge text={a.text} />
+                </div>
+              ))}
           </div>
         </div>
       )}
