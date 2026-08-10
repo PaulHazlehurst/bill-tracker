@@ -50,11 +50,18 @@ export default function SettingsPage() {
     setUserId(user.id);
     setEmail(user.email ?? null);
 
-    const { data: profile } = await supabase
+    const { data: profile, error: loadError } = await supabase
       .from("profiles")
       .select("phone, organization_id, default_notify_email, default_notify_sms, organizations(name, invite_code, created_by)")
       .eq("id", user.id)
       .single();
+
+    if (loadError) {
+      console.error("failed to load settings", loadError);
+      setError(loadError.message);
+      setLoading(false);
+      return;
+    }
 
     setPhone(profile?.phone ?? "");
     setDefaultNotifyEmail(profile?.default_notify_email ?? true);
@@ -132,7 +139,13 @@ export default function SettingsPage() {
       .select("id")
       .eq("invite_code", joinCode.trim().toUpperCase())
       .maybeSingle();
-    if (findErr || !org) {
+    if (findErr) {
+      console.error("invite code lookup failed", findErr);
+      setTeamError("Couldn't look up that code: " + findErr.message);
+      setTeamBusy(false);
+      return;
+    }
+    if (!org) {
       setTeamError("That invite code doesn't match any team.");
       setTeamBusy(false);
       return;
@@ -205,6 +218,8 @@ export default function SettingsPage() {
 
       {loading ? (
         <Spinner label="Loading settings…" />
+      ) : error ? (
+        <p className="error-text">Couldn't load settings: {error}</p>
       ) : (
         <>
           <div className="settings-section">

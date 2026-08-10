@@ -61,7 +61,7 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
   }
 
   return (
-    <div className="card">
+    <div className="card" id="track">
       <form onSubmit={handleSearch} style={{ display: "flex", gap: 8 }}>
         <input
           style={{ flex: 1, padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 6 }}

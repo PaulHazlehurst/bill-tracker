@@ -1029,3 +1029,35 @@ button.ghost:hover:not(:disabled) {
   background: var(--accent);
   color: var(--accent-contrast);
 }
+
+/* ── Onboarding checklist ────────────────────────────────────────── */
+
+.onboarding-card {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.onboarding-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+.onboarding-dismiss:hover { color: var(--text); }
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: 0.8125rem;
+}
+.onboarding-check-done { color: var(--pos-support); flex-shrink: 0; }
+.onboarding-check-todo { color: var(--text-soft); flex-shrink: 0; }
+.onboarding-step-done { text-decoration: line-through; color: var(--text-soft); }
+.onboarding-cta {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}

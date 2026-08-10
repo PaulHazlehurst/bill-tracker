@@ -51,11 +51,18 @@ export default function TeamPage() {
     }
     setSelfId(user.id);
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("organization_id, organizations(name, logo_url, invite_code, created_by)")
       .eq("id", user.id)
       .single();
+
+    if (profileError) {
+      console.error("failed to load team profile", profileError);
+      setError(profileError.message);
+      setLoading(false);
+      return;
+    }
 
     const oid = profile?.organization_id;
     if (!oid) {
@@ -179,7 +186,9 @@ export default function TeamPage() {
         )}
       </div>
 
-      {noOrg ? (
+      {error && !noOrg ? (
+        <p className="error-text">Couldn't load your team: {error}</p>
+      ) : noOrg ? (
         <p className="muted">
           You're not part of a team yet. Create or join one from <a href="/settings">Settings</a>.
         </p>

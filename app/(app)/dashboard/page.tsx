@@ -14,6 +14,7 @@ import CountUp from "@/components/CountUp";
 import ActivityMini from "@/components/ActivityMini";
 import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
 import { FileSearch } from "lucide-react";
@@ -35,6 +36,8 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [search, setSearch] = useState("");
   const [recentlyViewed, setRecentlyViewed] = useState<RecentBill[]>([]);
+  const [hasTeam, setHasTeam] = useState(false);
+  const [hasPhone, setHasPhone] = useState(false);
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -58,6 +61,16 @@ export default function DashboardPage() {
     setError(null);
     setTracked((data as any) ?? []);
     setLoading(false);
+
+    // For the onboarding checklist - a small, separate query rather than
+    // complicating the select above with a join that isn't otherwise needed.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organization_id, phone")
+      .eq("id", user.id)
+      .single();
+    setHasTeam(!!profile?.organization_id);
+    setHasPhone(!!profile?.phone);
   }
 
   useEffect(() => {
@@ -123,6 +136,10 @@ export default function DashboardPage() {
           <p className="muted" style={{ marginTop: 4 }}>Search for a bill below to start tracking it.</p>
         </div>
       </div>
+
+      {!loading && (
+        <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasTeam={hasTeam} hasPhone={hasPhone} />
+      )}
 
       <BillSearch onTracked={loadTracked} />
 
