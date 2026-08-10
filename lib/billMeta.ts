@@ -22,6 +22,12 @@ export function timeAgo(d: string | null | undefined) {
   return `${days}d ago`;
 }
 
+export const EVENT_TYPE_ICONS: Record<string, string> = {
+  status_change: "trending-up",
+  new_action: "file-text",
+  cosponsor_change: "users",
+};
+
 export const STAGE_LABELS: Record<string, string> = {
   introduced: "Introduced",
   committee: "In committee",

@@ -55,6 +55,13 @@ export async function GET(req: NextRequest) {
 
       const isDifferent = latestActionText !== bill.latest_action || stage !== bill.status_stage;
 
+      // Cosponsor count is already sitting in this same response - we don't
+      // need a second API call to compare it against last time. This is
+      // what makes the activity feed richer without costing any extra quota.
+      const oldCosponsors = bill.raw_snapshot?.cosponsors?.count ?? null;
+      const newCosponsors = b.cosponsors?.count ?? null;
+      const cosponsorsChanged = oldCosponsors !== null && newCosponsors !== null && newCosponsors !== oldCosponsors;
+
       const nextTier = TERMINAL_STAGES.has(stage) ? "dormant" : bill.poll_priority || "normal";
       const nextPollAt = new Date(Date.now() + TIER_INTERVAL_MIN[nextTier] * 60_000).toISOString();
 
@@ -78,6 +85,16 @@ export async function GET(req: NextRequest) {
           bill_id: bill.id,
           event_type: stage !== bill.status_stage ? "status_change" : "new_action",
           summary: latestActionText || "Status updated",
+        });
+      }
+
+      if (cosponsorsChanged) {
+        changed++;
+        const delta = newCosponsors - oldCosponsors;
+        await supabase.from("bill_events").insert({
+          bill_id: bill.id,
+          event_type: "cosponsor_change",
+          summary: `Cosponsor count ${delta > 0 ? "increased" : "decreased"} from ${oldCosponsors} to ${newCosponsors}`,
         });
       }
     } catch (err) {

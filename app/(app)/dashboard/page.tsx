@@ -9,15 +9,23 @@ import { createClient } from "@/lib/supabase/client";
 import BillTable, { TableRow } from "@/components/BillTable";
 import BillSearch from "@/components/BillSearch";
 import Spinner from "@/components/Spinner";
+import TableSkeleton from "@/components/TableSkeleton";
+import CountUp from "@/components/CountUp";
+import ActivityMini from "@/components/ActivityMini";
+import PositionBreakdown from "@/components/PositionBreakdown";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
 import { FileSearch } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
+import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
+import { useTicker } from "@/lib/useTicker";
 
 export default function DashboardPage() {
   const supabase = createClient();
   const { toast } = useUI();
   const router = useRouter();
+  useTicker(); // keeps "Checked Xm ago" style timestamps fresh without a reload
+
   const [tracked, setTracked] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +33,7 @@ export default function DashboardPage() {
   const [positionFilter, setPositionFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
   const [search, setSearch] = useState("");
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentBill[]>([]);
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -52,6 +61,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadTracked();
+    setRecentlyViewed(getRecentlyViewed());
   }, []);
 
   async function handleUntrack(trackedBillId: string) {
@@ -71,9 +81,11 @@ export default function DashboardPage() {
   }
 
   const counts = { active: 0, committee: 0, passed: 0, enacted: 0 };
+  const positionCounts: Record<string, number> = { support: 0, oppose: 0, watching: 0, none: 0 };
   tracked.forEach((row) => {
     const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
     const stage = bill?.status_stage;
+    positionCounts[row.position] = (positionCounts[row.position] ?? 0) + 1;
     if (!stage) return;
     if (stage === "enacted") counts.enacted++;
     else if (stage === "passed_house" || stage === "passed_senate" || stage === "to_president") counts.passed++;
@@ -117,10 +129,28 @@ export default function DashboardPage() {
             { label: "Enacted", value: counts.enacted },
           ].map((s) => (
             <div key={s.label} className="stat-card">
-              <div className="stat-value">{s.value}</div>
+              <div className="stat-value"><CountUp value={s.value} /></div>
               <div className="stat-label">{s.label}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && !error && tracked.length > 0 && (
+        <div className="widget-grid">
+          <ActivityMini scope="personal" />
+          <PositionBreakdown counts={positionCounts} />
+        </div>
+      )}
+
+      {recentlyViewed.length > 0 && (
+        <div className="settings-section" style={{ marginTop: 24 }}>
+          <h2>Recently viewed</h2>
+          <div className="recent-viewed-chips">
+            {recentlyViewed.map((r) => (
+              <a key={r.billId} href={`/bill/${r.billId}`} className="recent-viewed-chip" title={r.title}>{r.title}</a>
+            ))}
+          </div>
         </div>
       )}
 
@@ -160,7 +190,7 @@ export default function DashboardPage() {
         {error ? (
           <p className="error-text">Couldn't load your tracked bills: {error}</p>
         ) : loading ? (
-          <Spinner label="Loading your tracked bills…" />
+          <TableSkeleton />
         ) : tracked.length === 0 ? (
           <EmptyState icon={FileSearch}>Nothing tracked yet — search for a bill above to add one.</EmptyState>
         ) : filtered.length === 0 ? (

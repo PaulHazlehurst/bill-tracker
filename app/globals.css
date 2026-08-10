@@ -792,3 +792,165 @@ button.danger:hover { opacity: 0.9; }
 }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* ── Activity mini widget ────────────────────────────────────────── */
+
+.activity-mini-row {
+  display: flex;
+  gap: 8px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+.activity-mini-row:first-child { border-top: none; }
+
+/* ── Position breakdown bar ──────────────────────────────────────── */
+
+.position-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface-soft);
+  margin-bottom: 10px;
+}
+.position-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+.position-legend strong { color: var(--text); font-weight: 600; }
+.position-legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+/* ── Skeleton loading ────────────────────────────────────────────── */
+
+.skeleton-block {
+  background: linear-gradient(90deg, var(--surface-soft) 25%, var(--border) 37%, var(--surface-soft) 63%);
+  background-size: 400% 100%;
+  border-radius: 4px;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block { animation: none; background: var(--surface-soft); }
+}
+
+/* ── Dashboard widget grid ──────────────────────────────────────── */
+
+.widget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+@media (max-width: 760px) {
+  .widget-grid { grid-template-columns: 1fr; }
+}
+
+.recent-viewed-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.recent-viewed-chip {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--text);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+.recent-viewed-chip:hover { border-color: var(--accent); }
+
+/* ── Hover "perk up" interactions ───────────────────────────────────
+   Applied deliberately: landing page feature cards, stat cards, and
+   buttons - places where a little life feels inviting. Deliberately NOT
+   applied to the dense data table or form cards (Settings, etc.), where
+   things shifting under the cursor would just be distracting rather than
+   delightful. */
+
+.feature-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  cursor: default;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+  border-color: var(--accent);
+}
+.feature-card .feature-icon {
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.feature-card:hover .feature-icon {
+  transform: scale(1.12);
+  color: var(--accent);
+}
+
+.stat-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+button.primary, button.ghost {
+  transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+button.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+button.ghost:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.landing-nav-link {
+  position: relative;
+  transition: color 0.15s ease;
+}
+.landing-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -3px;
+  width: 0;
+  height: 1.5px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.landing-nav-link:hover { color: var(--text); }
+.landing-nav-link:hover::after { width: 100%; }
+
+.step-number {
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.step:hover .step-number {
+  transform: scale(1.1);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-card, .feature-card .feature-icon, .stat-card, button.primary, button.ghost, .step-number {
+    transition: none !important;
+  }
+  .feature-card:hover, .stat-card:hover, button.primary:hover, button.ghost:hover {
+    transform: none !important;
+  }
+}

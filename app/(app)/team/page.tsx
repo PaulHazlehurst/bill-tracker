@@ -6,11 +6,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BillTable, { TableRow } from "@/components/BillTable";
-import Spinner from "@/components/Spinner";
+import TableSkeleton from "@/components/TableSkeleton";
+import CountUp from "@/components/CountUp";
+import ActivityMini from "@/components/ActivityMini";
+import PositionBreakdown from "@/components/PositionBreakdown";
 import OrgLogoUploader from "@/components/OrgLogoUploader";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
 import { Users2 } from "lucide-react";
+import { useTicker } from "@/lib/useTicker";
 
 type Member = { id: string; email: string };
 
@@ -22,6 +26,8 @@ export default function TeamPage() {
   const supabase = createClient();
   const { toast, confirm } = useUI();
   const router = useRouter();
+  useTicker();
+
   const [rows, setRows] = useState<TableRow[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [selfId, setSelfId] = useState<string | null>(null);
@@ -126,6 +132,23 @@ export default function TeamPage() {
   members.forEach((m) => { trackerEmails[m.id] = m.email; });
   const isOwner = selfId && ownerId === selfId;
 
+  // Team alignment stats - pure client-side aggregation of data already
+  // loaded above, no extra query and definitely no extra congress.gov call.
+  const byBill: Record<string, TableRow[]> = {};
+  rows.forEach((r) => { (byBill[r.bill_id] ??= []).push(r); });
+  const totalBills = Object.keys(byBill).length;
+  let consensusCount = 0;
+  let contestedCount = 0;
+  const positionCounts: Record<string, number> = { support: 0, oppose: 0, watching: 0, none: 0 };
+  rows.forEach((r) => { positionCounts[r.position] = (positionCounts[r.position] ?? 0) + 1; });
+  Object.values(byBill).forEach((group) => {
+    if (group.length < 2) return;
+    const positions = new Set(group.map((g) => g.position).filter((p) => p !== "none"));
+    if (positions.size === 0) return;
+    if (positions.has("support") && positions.has("oppose")) contestedCount++;
+    else if (positions.size === 1) consensusCount++;
+  });
+
   return (
     <div className="container-wide">
       <div className="page-header">
@@ -150,8 +173,36 @@ export default function TeamPage() {
         </p>
       ) : (
         <>
+          {!loading && rows.length > 0 && (
+            <div className="stat-grid" style={{ marginTop: 8, marginBottom: 8 }}>
+              <div className="stat-card">
+                <div className="stat-value"><CountUp value={totalBills} /></div>
+                <div className="stat-label">Bills tracked</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value"><CountUp value={members.length} /></div>
+                <div className="stat-label">Team members</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value"><CountUp value={consensusCount} /></div>
+                <div className="stat-label">Team consensus</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value"><CountUp value={contestedCount} /></div>
+                <div className="stat-label">Contested</div>
+              </div>
+            </div>
+          )}
+
+          {!loading && rows.length > 0 && (
+            <div className="widget-grid">
+              <ActivityMini scope="team" />
+              <PositionBreakdown counts={positionCounts} />
+            </div>
+          )}
+
           {!loading && orgId && (
-            <div className="settings-section">
+            <div className="settings-section" style={{ marginTop: 24 }}>
               <h2>Team logo</h2>
               <p className="settings-desc">Shown in the sidebar for everyone in your organization.</p>
               <OrgLogoUploader orgId={orgId} currentLogoUrl={logoUrl} onUploaded={setLogoUrl} />
@@ -190,7 +241,7 @@ export default function TeamPage() {
           </div>
 
           {loading ? (
-            <Spinner label="Loading your team's tracked bills…" />
+            <TableSkeleton />
           ) : error ? (
             <p className="error-text">Couldn't load your team's tracked bills: {error}</p>
           ) : rows.length === 0 ? (

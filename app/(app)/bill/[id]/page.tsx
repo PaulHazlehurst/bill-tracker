@@ -8,7 +8,12 @@ import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import { useUI } from "@/components/UIProvider";
-import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo } from "@/lib/billMeta";
+import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
+import { recordView } from "@/lib/recentlyViewed";
+import { useTicker } from "@/lib/useTicker";
+import { TrendingUp, FileText, Users, Circle } from "lucide-react";
+
+const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
 
 type Bill = {
   id: string;
@@ -62,6 +67,7 @@ export default function BillDetailPage() {
   const params = useParams();
   const { toast, confirm } = useUI();
   const billId = params.id as string;
+  useTicker();
 
   const [bill, setBill] = useState<Bill | null>(null);
   const [events, setEvents] = useState<BillEvent[]>([]);
@@ -94,6 +100,7 @@ export default function BillDetailPage() {
     }
 
     setBill(billData as Bill);
+    recordView(billId, billData.title);
     setEvents((eventData as BillEvent[]) ?? []);
     if (trackedData) {
       setTrackedRowId(trackedData.id);
@@ -292,16 +299,19 @@ export default function BillDetailPage() {
           </p>
         ) : (
           <div className="member-list">
-            {events.map((ev) => (
-              <div key={ev.id} className="member-row" style={{ alignItems: "flex-start" }}>
-                <div className="member-avatar" style={{ marginTop: 2 }}>•</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.875rem' }}>{ev.summary}</div>
-                  <div className="muted" style={{ fontSize: '0.6875rem' }}>{formatDate(ev.occurred_at)}</div>
-                  <VoteBadge text={ev.summary} />
+            {events.map((ev) => {
+              const Icon = TIMELINE_ICONS[EVENT_TYPE_ICONS[ev.event_type]] ?? Circle;
+              return (
+                <div key={ev.id} className="member-row" style={{ alignItems: "flex-start" }}>
+                  <Icon size={14} className="muted" style={{ marginTop: 3, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem' }}>{ev.summary}</div>
+                    <div className="muted" style={{ fontSize: '0.6875rem' }}>{formatDate(ev.occurred_at)}</div>
+                    <VoteBadge text={ev.summary} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
