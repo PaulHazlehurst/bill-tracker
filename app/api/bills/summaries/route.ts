@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { getBillActions } from "@/lib/congress-api";
+import { getBillSummaries } from "@/lib/congress-api";
 
 const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000; // 7 days - doubled from 3 to halve repeat-fetch frequency as usage grows
 
-// GET ?billId=&congress=&billType=&billNumber=
-// Same cache-on-the-bills-row pattern as /api/bills/related. This is what
-// powers the "Vote history" section on the bill detail page - the FULL
-// action history, not just whatever our once-daily poller happened to
-// catch in bill_events.
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -24,28 +19,28 @@ export async function GET(req: NextRequest) {
 
   const { data: cached } = await supabase
     .from("bills")
-    .select("actions_cache, actions_fetched_at")
+    .select("summaries, summaries_fetched_at")
     .eq("id", billId)
     .single();
 
-  const isFresh = cached?.actions_fetched_at &&
-    Date.now() - new Date(cached.actions_fetched_at).getTime() < STALE_AFTER_MS;
+  const isFresh = cached?.summaries_fetched_at &&
+    Date.now() - new Date(cached.summaries_fetched_at).getTime() < STALE_AFTER_MS;
 
-  if (isFresh && cached?.actions_cache) {
-    return NextResponse.json({ actions: cached.actions_cache });
+  if (isFresh && cached?.summaries) {
+    return NextResponse.json({ summaries: cached.summaries });
   }
 
   try {
-    const actions = await getBillActions(Number(congress), billType, billNumber);
+    const summaries = await getBillSummaries(Number(congress), billType, billNumber);
     const admin = createAdminClient();
     await admin.from("bills").update({
-      actions_cache: actions,
-      actions_fetched_at: new Date().toISOString(),
+      summaries,
+      summaries_fetched_at: new Date().toISOString(),
     }).eq("id", billId);
-    return NextResponse.json({ actions });
+    return NextResponse.json({ summaries });
   } catch (err) {
-    console.error("actions fetch failed", err);
-    if (cached?.actions_cache) return NextResponse.json({ actions: cached.actions_cache, stale: true });
-    return NextResponse.json({ error: "could not fetch action history" }, { status: 502 });
+    console.error("summaries fetch failed", err);
+    if (cached?.summaries) return NextResponse.json({ summaries: cached.summaries, stale: true });
+    return NextResponse.json({ error: "could not fetch summaries" }, { status: 502 });
   }
 }

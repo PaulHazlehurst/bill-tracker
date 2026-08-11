@@ -80,6 +80,14 @@ create table bills (
   -- won't have a confident match, and that's disclosed rather than guessed at.
   hearing_details jsonb,
   hearing_details_fetched_at timestamptz,
+  -- Official CRS-authored plain-language summaries.
+  summaries jsonb,
+  summaries_fetched_at timestamptz,
+  -- Lobbying filings (LDA.gov) whose issue text appears to mention this
+  -- bill - best-effort text match, not a guaranteed-complete list. See
+  -- lib/lda-api.ts for the honesty note on why.
+  lobbying_activity jsonb,
+  lobbying_activity_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getCommitteeActivity } from "@/lib/congress-api";
 
-const STALE_AFTER_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000; // 7 days - doubled from 3 to halve repeat-fetch frequency as usage grows
 
 // GET ?billId=&congress=&billType=&billNumber=
 // Same cache-on-the-bills-row pattern as related/actions/cosponsors.

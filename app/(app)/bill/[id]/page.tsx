@@ -69,7 +69,19 @@ type HearingDetailItem = {
   location: string | null;
   witnesses: { name: string; position: string | null; organization: string | null }[];
   videoUrl: string | null;
-  documentCount: number;
+  documents: { name: string; description: string | null; type: string | null; url: string | null }[];
+};
+
+type BillSummaryItem = { text: string; actionDesc: string; actionDate: string; updateDate: string };
+
+type LobbyingFilingItem = {
+  filingUuid: string;
+  filingYear: number;
+  filingType: string;
+  registrantName: string;
+  clientName: string;
+  issueDescription: string;
+  documentUrl: string;
 };
 
 const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
@@ -107,6 +119,9 @@ export default function BillDetailPage() {
   const [committeesLoading, setCommitteesLoading] = useState(true);
   const [hearingDetails, setHearingDetails] = useState<HearingDetailItem[]>([]);
   const [hearingDetailsLoading, setHearingDetailsLoading] = useState(true);
+  const [summaries, setSummaries] = useState<BillSummaryItem[]>([]);
+  const [summariesLoading, setSummariesLoading] = useState(true);
+  const [lobbyingFilings, setLobbyingFilings] = useState<LobbyingFilingItem[]>([]);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -179,6 +194,20 @@ export default function BillDetailPage() {
       .then((body) => setHearingDetails(body.hearings ?? []))
       .catch(() => setHearingDetails([]))
       .finally(() => setHearingDetailsLoading(false));
+
+    fetch(`/api/bills/summaries?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => r.json())
+      .then((body) => setSummaries(body.summaries ?? []))
+      .catch(() => setSummaries([]))
+      .finally(() => setSummariesLoading(false));
+
+    // Best-effort and quiet - see the honesty note in lib/lda-api.ts. A
+    // failure or empty result here should never be visibly alarming; most
+    // bills won't have matched lobbying activity, and that's normal.
+    fetch(`/api/bills/lobbying-activity?billId=${billId}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => (r.ok ? r.json() : { filings: [] }))
+      .then((body) => setLobbyingFilings(body.filings ?? []))
+      .catch(() => setLobbyingFilings([]));
   }
 
   useEffect(() => {
@@ -307,7 +336,31 @@ export default function BillDetailPage() {
             {typeof meta.cosponsorCount === "number" && <span>Cosponsors: <strong>{meta.cosponsorCount}</strong></span>}
             {typeof meta.committeeCount === "number" && <span>Committees: <strong>{meta.committeeCount}</strong></span>}
           </div>
-          {meta.summary && <p style={{ marginTop: 12, fontSize: '0.875rem' }}>{meta.summary}</p>}
+        </div>
+      )}
+
+      {/* Summary - official CRS-authored plain language, the single most
+          useful "what does this bill actually do" content on the page.
+          Shows the most recent version; earlier ones (if the bill changed
+          significantly) are available but collapsed by default. */}
+      {!summariesLoading && summaries.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
+          <p className="settings-desc">{summaries[0].actionDesc} · official, from the Congressional Research Service</p>
+          <p style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>{summaries[0].text}</p>
+          {summaries.length > 1 && (
+            <details style={{ marginTop: 10 }}>
+              <summary className="muted" style={{ fontSize: '0.75rem', cursor: "pointer" }}>
+                {summaries.length - 1} earlier summar{summaries.length - 1 > 1 ? "ies" : "y"}
+              </summary>
+              {summaries.slice(1).map((s, i) => (
+                <div key={i} style={{ marginTop: 10 }}>
+                  <p className="muted" style={{ fontSize: '0.75rem', marginBottom: 4 }}>{s.actionDesc}</p>
+                  <p style={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>{s.text}</p>
+                </div>
+              ))}
+            </details>
+          )}
         </div>
       )}
 
@@ -340,11 +393,49 @@ export default function BillDetailPage() {
         </div>
       )}
 
+      {/* Lobbying activity (LDA.gov) - shown only when we found something,
+          silent otherwise. Best-effort text match, not exhaustive - see
+          lib/lda-api.ts. */}
+      {lobbyingFilings.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Lobbying activity</h2>
+          <p className="settings-desc">
+            Filings that mention this bill, via LDA.gov (the official House/Senate lobbying disclosure database). Best-effort text match - may not be exhaustive.
+          </p>
+          <div>
+            {lobbyingFilings.map((f) => (
+              <div key={f.filingUuid} className="hearing-row">
+                <div className="hearing-header">
+                  <span className="hearing-committee">{f.clientName}</span>
+                  <span className="hearing-date">via {f.registrantName} · {f.filingYear}</span>
+                </div>
+                <div className="hearing-title">{f.issueDescription}</div>
+                <a href={f.documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
+                  View filing →
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Hearings - dated committee activity history, enriched with witness
           detail wherever we could confidently match a specific meeting
           record (see findMatchingHearingDetails). Both layers shown
-          together: the reliable dates always show, rich detail only when found. */}
-      {!committeesLoading && committees.some((c) => c.activities.some((a) => a.name === "Hearings by")) && (
+          together: the reliable dates always show, rich detail only when found.
+          Always renders once loaded (even with nothing to show) so this
+          doesn't silently disappear and look like a missing feature. */}
+      {committeesLoading ? (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
+          <p className="muted" style={{ fontSize: '0.8125rem' }}>Checking committee records…</p>
+        </div>
+      ) : !committees.some((c) => c.activities.some((a) => a.name === "Hearings by")) ? (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
+          <p className="muted" style={{ fontSize: '0.8125rem' }}>No hearings recorded for this bill yet. Most bills never reach one.</p>
+        </div>
+      ) : (
         <div className="card">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
           <p className="settings-desc">
@@ -383,10 +474,19 @@ export default function BillDetailPage() {
                           ))}
                         </div>
                       )}
-                      {detail && detail.documentCount > 0 && (
-                        <p className="muted" style={{ fontSize: '0.75rem', marginTop: 4 }}>
-                          {detail.documentCount} meeting document{detail.documentCount > 1 ? "s" : ""} available on congress.gov
-                        </p>
+                      {detail && detail.documents.length > 0 && (
+                        <div style={{ marginTop: 6 }}>
+                          {detail.documents.map((doc, di) => (
+                            <div key={di} style={{ fontSize: '0.75rem', marginTop: 2 }}>
+                              {doc.url ? (
+                                <a href={doc.url} target="_blank" rel="noreferrer">{doc.name}</a>
+                              ) : (
+                                <span className="muted">{doc.name}</span>
+                              )}
+                              {doc.type && <span className="muted"> · {doc.type}</span>}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   );

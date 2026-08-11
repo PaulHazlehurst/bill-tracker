@@ -244,7 +244,7 @@ export type HearingDetail = {
   location: string | null;
   witnesses: { name: string; position: string | null; organization: string | null }[];
   videoUrl: string | null;
-  documentCount: number;
+  documents: { name: string; description: string | null; type: string | null; url: string | null }[];
 };
 
 async function getCommitteeMeetingDetail(url: string): Promise<any> {
@@ -270,7 +270,7 @@ export async function findMatchingHearingDetails(
   billType: string,
   billNumber: number | string,
   committeeActivity: CommitteeActivity[],
-  maxHearings = 5
+  maxHearings = 3
 ): Promise<HearingDetail[]> {
   const hearingDates: { date: string; chamber: string; committeeName: string }[] = [];
   for (const c of committeeActivity) {
@@ -291,7 +291,7 @@ export async function findMatchingHearingDetails(
     const chamberForApi = h.chamber === "Joint" ? "house" : h.chamber.toLowerCase(); // committee-meeting endpoint doesn't have a "joint" path
     const candidates = await listCommitteeMeetingsOnDate(congress, chamberForApi, h.date);
 
-    for (const candidate of candidates.slice(0, 10)) { // bound worst-case detail fetches for a single busy day
+    for (const candidate of candidates.slice(0, 5)) { // bound worst-case detail fetches for a single busy day
       const detail = await getCommitteeMeetingDetail(candidate.url);
       if (!detail) continue;
 
@@ -317,13 +317,46 @@ export async function findMatchingHearingDetails(
           organization: w.organization ?? null,
         })),
         videoUrl: detail.videos?.[0]?.url ?? null,
-        documentCount: (detail.meetingDocuments ?? []).length,
+        documents: (detail.meetingDocuments ?? []).map((d: any) => ({
+          name: d.name ?? "Document",
+          description: d.description ?? null,
+          type: d.documentType ?? d.type ?? null,
+          url: d.url ?? null,
+        })),
       });
       break; // found the match for this date, no need to check remaining candidates
     }
   }
 
   return results;
+}
+
+export type BillSummary = { text: string; actionDesc: string; actionDate: string; updateDate: string };
+
+// Official CRS-authored plain-language summaries. Same service, same key,
+// nothing new to configure - this was just an endpoint we hadn't used yet.
+// A bill can have several summaries over its life (one per version, e.g.
+// "Introduced in House" vs "Reported to Senate") - returns all of them,
+// most recent first, so the UI can show the latest and let someone expand
+// earlier ones if the bill has changed substantially.
+export async function getBillSummaries(congress: number, billType: string, billNumber: number | string): Promise<BillSummary[]> {
+  const url = new URL(`${BASE_URL}/bill/${congress}/${billType.toLowerCase()}/${billNumber}/summaries`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "20");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`congress.gov summaries fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  return (data.summaries ?? [])
+    .map((s: any) => ({
+      text: (s.text ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(), // CRS summaries come as HTML - strip tags for plain display
+      actionDesc: s.actionDesc ?? "",
+      actionDate: s.actionDate ?? "",
+      updateDate: s.updateDate ?? "",
+    }))
+    .sort((a: BillSummary, b: BillSummary) => (a.actionDate < b.actionDate ? 1 : -1));
 }
 
 export function inferStage(latestActionText: string): string {

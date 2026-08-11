@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getCosponsorBreakdown } from "@/lib/congress-api";
 
-const STALE_AFTER_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000; // 7 days - doubled from 3 to halve repeat-fetch frequency as usage grows
 
 // GET ?billId=&congress=&billType=&billNumber=
 // Same cache-on-the-bills-row pattern as related/actions. Powers the
@@ -22,9 +22,17 @@ export async function GET(req: NextRequest) {
 
   const { data: cached } = await supabase
     .from("bills")
-    .select("cosponsor_breakdown, cosponsor_breakdown_fetched_at")
+    .select("cosponsor_breakdown, cosponsor_breakdown_fetched_at, raw_snapshot")
     .eq("id", billId)
     .single();
+
+  // Skip the real API call entirely if we already know from data we fetched
+  // when the bill was first tracked that it has zero cosponsors - no reason
+  // to ask for a party breakdown of nothing.
+  const knownCosponsorCount = cached?.raw_snapshot?.cosponsors?.count;
+  if (knownCosponsorCount === 0) {
+    return NextResponse.json({ breakdown: { D: 0, R: 0, I: 0, total: 0, capped: false } });
+  }
 
   const isFresh = cached?.cosponsor_breakdown_fetched_at &&
     Date.now() - new Date(cached.cosponsor_breakdown_fetched_at).getTime() < STALE_AFTER_MS;
