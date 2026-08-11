@@ -27,7 +27,7 @@ const BASE_URL = "https://lda.gov/api/v1";
 // match" than to trust or process a near-unfiltered result.
 const UNFILTERED_COUNT_THRESHOLD = 5000;
 
-function headers() {
+function headers(): Record<string, string> {
   const key = process.env.LDA_API_KEY;
   return key ? { Authorization: `ApiKey ${key}` } : {};
 }
