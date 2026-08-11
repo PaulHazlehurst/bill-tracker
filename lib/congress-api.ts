@@ -191,6 +191,141 @@ export async function getCosponsorBreakdown(congress: number, billType: string, 
   return counts;
 }
 
+export type CommitteeActivity = {
+  committeeName: string;
+  chamber: string;
+  activities: { date: string; name: string }[];
+};
+
+// The reliable, cheap layer: official dated history of committee activity
+// on a bill - "Hearings by X Committee on 2025-04-02", "Markup by...", etc.
+// No matching/guessing involved, so no risk of attaching the wrong hearing
+// to the wrong bill.
+export async function getCommitteeActivity(congress: number, billType: string, billNumber: number | string): Promise<CommitteeActivity[]> {
+  const url = new URL(`${BASE_URL}/bill/${congress}/${billType.toLowerCase()}/${billNumber}/committees`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "100");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`congress.gov committees fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  return (data.committees ?? []).map((c: any) => ({
+    committeeName: c.name,
+    chamber: c.chamber,
+    activities: (c.activities ?? []).map((a: any) => ({ date: a.date, name: a.name })),
+  }));
+}
+
+type CommitteeMeetingListItem = { eventId: string; url: string };
+
+async function listCommitteeMeetingsOnDate(congress: number, chamber: string, date: string): Promise<CommitteeMeetingListItem[]> {
+  // congress.gov's list endpoint takes a datetime range, not an exact-date
+  // filter, so we ask for just that one calendar day.
+  const url = new URL(`${BASE_URL}/committee-meeting/${congress}/${chamber.toLowerCase()}`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "50");
+  url.searchParams.set("fromDateTime", `${date}T00:00:00Z`);
+  url.searchParams.set("toDateTime", `${date}T23:59:59Z`);
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.committeeMeetings ?? []).map((m: any) => ({ eventId: m.eventId, url: m.url }));
+}
+
+export type HearingDetail = {
+  date: string;
+  committeeName: string;
+  title: string | null;
+  meetingType: string | null;
+  location: string | null;
+  witnesses: { name: string; position: string | null; organization: string | null }[];
+  videoUrl: string | null;
+  documentCount: number;
+};
+
+async function getCommitteeMeetingDetail(url: string): Promise<any> {
+  const withKey = new URL(url);
+  withKey.searchParams.set("api_key", apiKey());
+  withKey.searchParams.set("format", "json");
+  const res = await fetch(withKey.toString(), { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.committeeMeeting ?? null;
+}
+
+// The richer, more expensive layer. For each "Hearings by" date we already
+// confirmed via getCommitteeActivity, this looks for the SPECIFIC committee
+// meeting record and only accepts a match if that record's own related-bills
+// list actually names this bill - not a guess based on matching committee
+// name and date alone. Capped (maxHearings, per-day candidate limit) so a
+// bill with an unusually long hearing history can't trigger a runaway
+// number of requests; only the most recent hearings get the rich-detail
+// treatment, older ones still show up via the plain date/committee history.
+export async function findMatchingHearingDetails(
+  congress: number,
+  billType: string,
+  billNumber: number | string,
+  committeeActivity: CommitteeActivity[],
+  maxHearings = 5
+): Promise<HearingDetail[]> {
+  const hearingDates: { date: string; chamber: string; committeeName: string }[] = [];
+  for (const c of committeeActivity) {
+    for (const a of c.activities) {
+      if (a.name === "Hearings by") {
+        hearingDates.push({ date: a.date, chamber: c.chamber, committeeName: c.committeeName });
+      }
+    }
+  }
+  // Most recent first - if there are more hearings than our cap, prioritize
+  // the ones someone's actually likely to care about right now.
+  hearingDates.sort((a, b) => (a.date < b.date ? 1 : -1));
+  const toCheck = hearingDates.slice(0, maxHearings);
+
+  const results: HearingDetail[] = [];
+
+  for (const h of toCheck) {
+    const chamberForApi = h.chamber === "Joint" ? "house" : h.chamber.toLowerCase(); // committee-meeting endpoint doesn't have a "joint" path
+    const candidates = await listCommitteeMeetingsOnDate(congress, chamberForApi, h.date);
+
+    for (const candidate of candidates.slice(0, 10)) { // bound worst-case detail fetches for a single busy day
+      const detail = await getCommitteeMeetingDetail(candidate.url);
+      if (!detail) continue;
+
+      const relatedBills = detail.relatedItems?.bills ?? detail.relatedItems?.bill ?? [];
+      const isMatch = (Array.isArray(relatedBills) ? relatedBills : [relatedBills]).some(
+        (b: any) => b && Number(b.congress) === Number(congress) &&
+          (b.type ?? "").toLowerCase() === billType.toLowerCase() &&
+          Number(b.number) === Number(billNumber)
+      );
+      if (!isMatch) continue;
+
+      results.push({
+        date: h.date,
+        committeeName: h.committeeName,
+        title: detail.title ?? null,
+        meetingType: detail.type ?? null,
+        location: detail.location?.building && detail.location?.room
+          ? `${detail.location.building}, Room ${detail.location.room}`
+          : null,
+        witnesses: (detail.witnesses ?? []).map((w: any) => ({
+          name: w.name ?? "Unknown",
+          position: w.position ?? null,
+          organization: w.organization ?? null,
+        })),
+        videoUrl: detail.videos?.[0]?.url ?? null,
+        documentCount: (detail.meetingDocuments ?? []).length,
+      });
+      break; // found the match for this date, no need to check remaining candidates
+    }
+  }
+
+  return results;
+}
+
 export function inferStage(latestActionText: string): string {
   const text = (latestActionText ?? "").toLowerCase();
   if (text.includes("became public law") || text.includes("signed by president")) return "enacted";

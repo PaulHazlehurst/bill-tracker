@@ -55,6 +55,23 @@ type BillActionItem = {
   hasRecordedVote: boolean;
 };
 
+type CommitteeActivityItem = {
+  committeeName: string;
+  chamber: string;
+  activities: { date: string; name: string }[];
+};
+
+type HearingDetailItem = {
+  date: string;
+  committeeName: string;
+  title: string | null;
+  meetingType: string | null;
+  location: string | null;
+  witnesses: { name: string; position: string | null; organization: string | null }[];
+  videoUrl: string | null;
+  documentCount: number;
+};
+
 const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
 
 function VoteBadge({ text }: { text: string | null | undefined }) {
@@ -86,6 +103,10 @@ export default function BillDetailPage() {
   const [breakdownLoading, setBreakdownLoading] = useState(true);
   const [actions, setActions] = useState<BillActionItem[]>([]);
   const [actionsLoading, setActionsLoading] = useState(true);
+  const [committees, setCommittees] = useState<CommitteeActivityItem[]>([]);
+  const [committeesLoading, setCommitteesLoading] = useState(true);
+  const [hearingDetails, setHearingDetails] = useState<HearingDetailItem[]>([]);
+  const [hearingDetailsLoading, setHearingDetailsLoading] = useState(true);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -141,6 +162,23 @@ export default function BillDetailPage() {
       .then((body) => setActions(body.actions ?? []))
       .catch(() => setActions([]))
       .finally(() => setActionsLoading(false));
+
+    fetch(`/api/bills/committee-activity?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => r.json())
+      .then((body) => setCommittees(body.committees ?? []))
+      .catch(() => setCommittees([]))
+      .finally(() => setCommitteesLoading(false));
+
+    // The expensive part of this (listing and checking committee-meeting
+    // candidates) only happens server-side if the committee activity we
+    // already cached actually has a "Hearings by" entry to look for - a
+    // bill with no hearings costs almost nothing here even though this
+    // fetch always fires. See findMatchingHearingDetails in congress-api.ts.
+    fetch(`/api/bills/hearing-details?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => r.json())
+      .then((body) => setHearingDetails(body.hearings ?? []))
+      .catch(() => setHearingDetails([]))
+      .finally(() => setHearingDetailsLoading(false));
   }
 
   useEffect(() => {
@@ -299,6 +337,63 @@ export default function BillDetailPage() {
             title="Cosponsors by party"
             capped={cosponsorBreakdown.capped}
           />
+        </div>
+      )}
+
+      {/* Hearings - dated committee activity history, enriched with witness
+          detail wherever we could confidently match a specific meeting
+          record (see findMatchingHearingDetails). Both layers shown
+          together: the reliable dates always show, rich detail only when found. */}
+      {!committeesLoading && committees.some((c) => c.activities.some((a) => a.name === "Hearings by")) && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
+          <p className="settings-desc">
+            Official committee activity from congress.gov.
+            {!hearingDetailsLoading && hearingDetails.length > 0 && " Detail (witnesses, documents) shown where we could confidently match a specific meeting."}
+          </p>
+          <div>
+            {committees.flatMap((c) =>
+              c.activities
+                .filter((a) => a.name === "Hearings by")
+                .map((a, i) => {
+                  const detail = hearingDetails.find((h) => h.date === a.date && h.committeeName === c.committeeName);
+                  return (
+                    <div key={`${c.committeeName}-${a.date}-${i}`} className="hearing-row">
+                      <div className="hearing-header">
+                        <span className="hearing-committee">{c.committeeName}</span>
+                        <span className="hearing-date">{formatDate(a.date)}</span>
+                        {detail && <span className="hearing-detail-badge">Detail found</span>}
+                      </div>
+                      {detail?.title && <div className="hearing-title">{detail.title}</div>}
+                      {detail?.location && <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>{detail.location}</div>}
+                      {detail?.videoUrl && (
+                        <a href={detail.videoUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
+                          Watch video →
+                        </a>
+                      )}
+                      {detail && detail.witnesses.length > 0 && (
+                        <div className="witness-list">
+                          {detail.witnesses.map((w, wi) => (
+                            <div key={wi} className="witness-row">
+                              <span className="witness-name">{w.name}</span>
+                              {(w.position || w.organization) && (
+                                <div className="witness-role">{[w.position, w.organization].filter(Boolean).join(", ")}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {detail && detail.documentCount > 0 && (
+                        <p className="muted" style={{ fontSize: '0.75rem', marginTop: 4 }}>
+                          {detail.documentCount} meeting document{detail.documentCount > 1 ? "s" : ""} available on congress.gov
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+            )}
+          </div>
+          {hearingDetailsLoading && <p className="muted" style={{ fontSize: '0.75rem', marginTop: 8 }}>Looking for additional hearing detail…</p>}
         </div>
       )}
 

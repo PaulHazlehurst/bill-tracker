@@ -68,6 +68,18 @@ create table bills (
   -- on-demand-and-cached pattern as related_bills/actions_cache above.
   cosponsor_breakdown jsonb,
   cosponsor_breakdown_fetched_at timestamptz,
+  -- Committee/hearing activity: dated history (e.g. "Hearings by X Committee
+  -- on 2025-04-02") straight from the bill's own committee record - reliable,
+  -- official, cheap.
+  committee_activity jsonb,
+  committee_activity_fetched_at timestamptz,
+  -- Richer hearing detail (witnesses, meeting documents, video) - only
+  -- populated for hearings we could confidently match to a specific
+  -- committee-meeting record (matched by that record actually listing this
+  -- bill, not by guessing from committee name/date alone). Some hearings
+  -- won't have a confident match, and that's disclosed rather than guessed at.
+  hearing_details jsonb,
+  hearing_details_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 
