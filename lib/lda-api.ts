@@ -45,7 +45,16 @@ export type LobbyingFiling = {
 // Searches for lobbying filings whose "specific issue" text mentions this
 // bill. Only called on-demand (bill detail page), never as part of the
 // batch poller.
-export async function searchFilingsForBill(billCitation: string): Promise<LobbyingFiling[]> {
+//
+// `congress` matters more than it might look: bill NUMBERS reset every
+// Congress, so "H.R. 1234" in the 119th Congress and "H.R. 1234" in the
+// 115th Congress are completely different bills. Matching on the bare
+// citation text alone (which is all the earlier version of this function
+// did) meant a 2025 bill could pull in filings from 2008-2018 that just
+// happened to reuse the same number in an unrelated Congress - a real bug,
+// not just noise. Filtering results to the years that Congress was
+// actually in session fixes it.
+export async function searchFilingsForBill(billCitation: string, congress: number): Promise<LobbyingFiling[]> {
   const url = new URL(`${BASE_URL}/filings/`);
   url.searchParams.set("filing_specific_lobbying_issues", billCitation);
   url.searchParams.set("page_size", "25");
@@ -59,11 +68,23 @@ export async function searchFilingsForBill(billCitation: string): Promise<Lobbyi
     return [];
   }
 
+  // The 1st Congress began in 1789 and each one spans exactly 2 years.
+  const congressStartYear = 1789 + (congress - 1) * 2;
+  const validYears = new Set([congressStartYear, congressStartYear + 1]);
+
+  // Word-boundary match instead of a plain substring - ".includes()" would
+  // wrongly match "H.R. 1234" inside "H.R. 12345" or "H.R. 1234A". Escape
+  // the citation since it contains regex-special characters like periods.
+  const escaped = billCitation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const citationPattern = new RegExp(`\\b${escaped}\\b(?!\\d)`, "i");
+
   const results: LobbyingFiling[] = [];
   for (const filing of data.results ?? []) {
+    if (!validYears.has(filing.filing_year)) continue;
+
     for (const activity of filing.lobbying_activities ?? []) {
       const desc: string = activity.description ?? "";
-      if (desc.toLowerCase().includes(billCitation.toLowerCase())) {
+      if (citationPattern.test(desc)) {
         results.push({
           filingUuid: filing.filing_uuid,
           filingYear: filing.filing_year,

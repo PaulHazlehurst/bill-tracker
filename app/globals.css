@@ -1100,7 +1100,18 @@ button.ghost:hover:not(:disabled) {
   font-size: 0.8125rem;
   margin-top: 4px;
   color: var(--text-soft);
+  overflow-wrap: break-word;
 }
+.lobbying-issue-preview {
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 100%;
+}
+.lobbying-issue-preview::-webkit-details-marker { display: none; }
+details[open] .lobbying-issue-preview { white-space: normal; }
 .hearing-detail-badge {
   display: inline-block;
   font-size: 0.625rem;

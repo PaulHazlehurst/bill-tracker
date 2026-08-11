@@ -204,7 +204,7 @@ export default function BillDetailPage() {
     // Best-effort and quiet - see the honesty note in lib/lda-api.ts. A
     // failure or empty result here should never be visibly alarming; most
     // bills won't have matched lobbying activity, and that's normal.
-    fetch(`/api/bills/lobbying-activity?billId=${billId}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+    fetch(`/api/bills/lobbying-activity?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
       .then((r) => (r.ok ? r.json() : { filings: [] }))
       .then((body) => setLobbyingFilings(body.filings ?? []))
       .catch(() => setLobbyingFilings([]));
@@ -409,7 +409,10 @@ export default function BillDetailPage() {
                   <span className="hearing-committee">{f.clientName}</span>
                   <span className="hearing-date">via {f.registrantName} · {f.filingYear}</span>
                 </div>
-                <div className="hearing-title">{f.issueDescription}</div>
+                <details>
+                  <summary className="hearing-title lobbying-issue-preview">{f.issueDescription}</summary>
+                  <p style={{ fontSize: '0.8125rem', marginTop: 6, lineHeight: 1.5 }}>{f.issueDescription}</p>
+                </details>
                 <a href={f.documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
                   View filing →
                 </a>
