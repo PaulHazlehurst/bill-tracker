@@ -244,7 +244,17 @@ export type HearingDetail = {
   title: string | null;
   meetingType: string | null;
   location: string | null;
-  witnesses: { name: string; position: string | null; organization: string | null }[];
+  witnesses: {
+    name: string;
+    position: string | null;
+    organization: string | null;
+    // The closest thing to "what this witness actually said" that's
+    // realistically available close to when the hearing happens - the full
+    // official transcript typically takes 3 months to 2 years to publish,
+    // at each committee's discretion, so it's not something a live feature
+    // can depend on. Prepared statements are often posted within days.
+    statementUrl: string | null;
+  }[];
   videoUrl: string | null;
   documents: { name: string; description: string | null; type: string | null; url: string | null }[];
 };
@@ -313,11 +323,16 @@ export async function findMatchingHearingDetails(
         location: detail.location?.building && detail.location?.room
           ? `${detail.location.building}, Room ${detail.location.room}`
           : null,
-        witnesses: (detail.witnesses ?? []).map((w: any) => ({
-          name: w.name ?? "Unknown",
-          position: w.position ?? null,
-          organization: w.organization ?? null,
-        })),
+        witnesses: (detail.witnesses ?? []).map((w: any) => {
+          const docs = Array.isArray(w.witnessDocuments) ? w.witnessDocuments : [];
+          const statement = docs.find((d: any) => (d.documentType ?? "").toLowerCase().includes("statement")) ?? docs[0];
+          return {
+            name: w.name ?? "Unknown",
+            position: w.position ?? null,
+            organization: w.organization ?? null,
+            statementUrl: statement?.url ?? null,
+          };
+        }),
         videoUrl: detail.videos?.[0]?.url ?? null,
         documents: (detail.meetingDocuments ?? []).map((d: any) => ({
           name: d.name ?? "Document",

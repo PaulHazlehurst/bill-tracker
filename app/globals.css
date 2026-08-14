@@ -486,6 +486,10 @@ button.ghost:active:not(:disabled) {
   flex: 1;
   min-width: 0;
   padding: 32px 36px 80px;
+  background-image:
+    radial-gradient(ellipse 800px 400px at 90% 0%, var(--accent-soft) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 400px at 0% 30%, var(--pos-watching-soft) 0%, transparent 55%);
+  background-repeat: no-repeat;
 }
 
 .container-wide { max-width: 1120px; margin: 0 auto; }
@@ -1241,7 +1245,10 @@ tr:hover .row-external-link { opacity: 1; }
 /* ── Dashboard overview section (synergistic layout) ────────────── */
 
 .overview-section {
+  position: relative;
+  overflow: hidden;
   background: var(--surface);
+  background-image: radial-gradient(ellipse 700px 300px at 100% -20%, var(--accent-soft), transparent);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px 20px 8px;
@@ -1407,4 +1414,132 @@ tr:hover .row-external-link { opacity: 1; }
 .usage-self-label {
   font-size: 0.6875rem;
   color: var(--text-soft);
+}
+
+.stat-card-icon {
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.witness-statement-link {
+  font-size: 0.75rem;
+  display: inline-block;
+  margin-top: 3px;
+}
+
+/* ── Trending Bills widget ───────────────────────────────────────── */
+
+.trending-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.trending-row:first-child { border-top: none; }
+.trending-rank {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.875rem;
+  color: var(--text-soft);
+  width: 16px;
+  flex-shrink: 0;
+}
+.trending-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.trending-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pos-support);
+  flex-shrink: 0;
+}
+
+/* ── Bill journey tracker ────────────────────────────────────────── */
+
+.journey-track {
+  position: relative;
+  padding-top: 4px;
+}
+.journey-line {
+  position: absolute;
+  top: 16px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.journey-line-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: width 0.6s ease;
+}
+.journey-steps {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  z-index: 1;
+}
+.journey-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.journey-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text-soft);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.journey-circle.journey-done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.journey-circle.journey-current {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  animation: journey-pulse 2s ease-in-out infinite;
+}
+@keyframes journey-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--accent-soft); }
+  50% { box-shadow: 0 0 0 7px var(--accent-soft); }
+}
+.journey-label {
+  font-size: 0.625rem;
+  color: var(--text-soft);
+  text-align: center;
+  max-width: 76px;
+  line-height: 1.25;
+}
+.journey-label-active { color: var(--text); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-circle.journey-current { animation: none; }
+  .journey-line-fill { transition: none; }
+}
+
+@media (max-width: 560px) {
+  .journey-label { display: none; }
 }

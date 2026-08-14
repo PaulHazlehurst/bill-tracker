@@ -95,6 +95,7 @@ export async function GET(req: NextRequest) {
           bill_id: bill.id,
           event_type: "cosponsor_change",
           summary: `Cosponsor count ${delta > 0 ? "increased" : "decreased"} from ${oldCosponsors} to ${newCosponsors}`,
+          cosponsor_delta: delta,
         });
       }
     } catch (err) {

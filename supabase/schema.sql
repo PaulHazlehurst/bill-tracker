@@ -96,10 +96,14 @@ create table bills (
 create table bill_events (
   id uuid primary key default gen_random_uuid(),
   bill_id text not null references bills(id) on delete cascade,
-  event_type text not null,         -- status_change | new_action
+  event_type text not null,         -- status_change | new_action | cosponsor_change
   summary text not null,
   occurred_at timestamptz not null default now(),
-  notified_at timestamptz
+  notified_at timestamptz,
+  -- Structured delta for cosponsor_change events specifically - powers the
+  -- Trending Bills widget. Parsing this back out of the free-text summary
+  -- would be fragile; this is set directly by the poller instead.
+  cosponsor_delta integer
 );
 
 -- Join table: who's tracking which bill. organization_id is captured at

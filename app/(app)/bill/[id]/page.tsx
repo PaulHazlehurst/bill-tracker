@@ -11,7 +11,7 @@ import { useUI } from "@/components/UIProvider";
 import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
 import { recordView } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
-import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer } from "lucide-react";
+import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check } from "lucide-react";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import MomentumSignals from "@/components/MomentumSignals";
 
@@ -67,7 +67,7 @@ type HearingDetailItem = {
   title: string | null;
   meetingType: string | null;
   location: string | null;
-  witnesses: { name: string; position: string | null; organization: string | null }[];
+  witnesses: { name: string; position: string | null; organization: string | null; statementUrl: string | null }[];
   videoUrl: string | null;
   documents: { name: string; description: string | null; type: string | null; url: string | null }[];
 };
@@ -306,23 +306,29 @@ export default function BillDetailPage() {
 
       {/* Stage tracker */}
       <div className="card" style={{ marginTop: 20 }}>
-        <div className="progress-track" style={{ marginBottom: 10 }}>
-          <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
-          {STAGE_ORDER.map((s, i) => (
-            <span
-              key={s}
-              className="muted"
-              style={{
-                fontSize: '0.6875rem',
-                color: i <= stageIndex ? "var(--accent)" : undefined,
-                fontWeight: i <= stageIndex ? 500 : undefined,
-              }}
-            >
-              {STAGE_LABELS[s]}
-            </span>
-          ))}
+        <div className="journey-track">
+          <div className="journey-line">
+            <div
+              className="journey-line-fill"
+              style={{ width: `${(Math.max(stageIndex, 0) / (STAGE_ORDER.length - 1)) * 100}%` }}
+            />
+          </div>
+          <div className="journey-steps">
+            {STAGE_ORDER.map((s, i) => {
+              const done = i < stageIndex;
+              const current = i === stageIndex;
+              return (
+                <div key={s} className="journey-step">
+                  <div className={`journey-circle ${done ? "journey-done" : current ? "journey-current" : "journey-future"}`}>
+                    {done ? <Check size={12} /> : i + 1}
+                  </div>
+                  <div className={`journey-label ${i <= stageIndex ? "journey-label-active" : ""}`}>
+                    {STAGE_LABELS[s]}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -447,6 +453,7 @@ export default function BillDetailPage() {
           <p className="settings-desc">
             Official committee activity from congress.gov.
             {!hearingDetailsLoading && hearingDetails.length > 0 && " Detail (witnesses, documents) shown where we could confidently match a specific meeting."}
+            {" "}Full hearing transcripts aren't shown here - they're published by GPO at each committee's discretion, typically months to years later. Witness prepared statements, when available, are usually posted within days and linked below.
           </p>
           <div>
             {committees.flatMap((c) =>
@@ -475,6 +482,11 @@ export default function BillDetailPage() {
                               <span className="witness-name">{w.name}</span>
                               {(w.position || w.organization) && (
                                 <div className="witness-role">{[w.position, w.organization].filter(Boolean).join(", ")}</div>
+                              )}
+                              {w.statementUrl && (
+                                <a href={w.statementUrl} target="_blank" rel="noreferrer" className="witness-statement-link">
+                                  Read prepared statement →
+                                </a>
                               )}
                             </div>
                           ))}

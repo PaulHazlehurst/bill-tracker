@@ -15,9 +15,11 @@ import ActivityMini from "@/components/ActivityMini";
 import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import Reveal from "@/components/Reveal";
+import TrendingBills from "@/components/TrendingBills";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
-import { FileSearch } from "lucide-react";
+import { FileSearch, FileText, Gavel, CheckCircle2, Award } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
@@ -166,51 +168,57 @@ export default function DashboardPage() {
       <BillSearch onTracked={loadTracked} />
 
       {!loading && !error && tracked.length > 0 && (
-        <div className="settings-section overview-section">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <h2>Overview</h2>
-            {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
-              <span className="overview-headline">
-                <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} on your bills this week
-              </span>
-            )}
-          </div>
+        <Reveal>
+          <div className="settings-section overview-section">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h2>Overview</h2>
+              {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
+                <span className="overview-headline">
+                  <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} on your bills this week
+                </span>
+              )}
+            </div>
 
-          <div className="stat-grid" style={{ marginTop: 4 }}>
-            {[
-              { label: "Introduced", value: counts.active },
-              { label: "In committee", value: counts.committee },
-              { label: "Passed a chamber", value: counts.passed },
-              { label: "Enacted", value: counts.enacted },
-            ].map((s) => (
-              <div key={s.label} className="stat-card">
-                <div className="stat-value"><CountUp value={s.value} /></div>
-                <div className="stat-label">{s.label}</div>
-              </div>
-            ))}
-          </div>
+            <div className="stat-grid" style={{ marginTop: 4 }}>
+              {[
+                { label: "Introduced", value: counts.active, Icon: FileText },
+                { label: "In committee", value: counts.committee, Icon: Gavel },
+                { label: "Passed a chamber", value: counts.passed, Icon: CheckCircle2 },
+                { label: "Enacted", value: counts.enacted, Icon: Award },
+              ].map((s) => (
+                <div key={s.label} className="stat-card">
+                  <s.Icon size={15} className="stat-card-icon" />
+                  <div className="stat-value"><CountUp value={s.value} /></div>
+                  <div className="stat-label">{s.label}</div>
+                </div>
+              ))}
+            </div>
 
-          <div className="widget-grid">
-            <ActivityMini scope="personal" />
-            <PositionBreakdown counts={positionCounts} />
-            {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-              <div className="card">
-                <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
-              </div>
-            )}
+            <div className="widget-grid">
+              <ActivityMini scope="personal" />
+              <PositionBreakdown counts={positionCounts} />
+              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+                <div className="card">
+                  <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+                </div>
+              )}
+              <TrendingBills />
+            </div>
           </div>
-        </div>
+        </Reveal>
       )}
 
       {recentlyViewed.length > 0 && (
-        <div className="settings-section" style={{ marginTop: 24 }}>
-          <h2>Recently viewed</h2>
-          <div className="recent-viewed-chips">
-            {recentlyViewed.map((r) => (
-              <a key={r.billId} href={`/bill/${r.billId}`} className="recent-viewed-chip" title={r.title}>{r.title}</a>
-            ))}
+        <Reveal delay={80}>
+          <div className="settings-section" style={{ marginTop: 24 }}>
+            <h2>Recently viewed</h2>
+            <div className="recent-viewed-chips">
+              {recentlyViewed.map((r) => (
+                <a key={r.billId} href={`/bill/${r.billId}`} className="recent-viewed-chip" title={r.title}>{r.title}</a>
+              ))}
+            </div>
           </div>
-        </div>
+        </Reveal>
       )}
 
       <div style={{ marginTop: 28 }}>
