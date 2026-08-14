@@ -74,6 +74,8 @@ type HearingDetailItem = {
 
 type BillSummaryItem = { text: string; actionDesc: string; actionDate: string; updateDate: string };
 
+type RecordMentionItem = { title: string; date: string | null; section: string | null; url: string | null };
+
 type LobbyingFilingItem = {
   filingUuid: string;
   filingYear: number;
@@ -122,6 +124,8 @@ export default function BillDetailPage() {
   const [summaries, setSummaries] = useState<BillSummaryItem[]>([]);
   const [summariesLoading, setSummariesLoading] = useState(true);
   const [lobbyingFilings, setLobbyingFilings] = useState<LobbyingFilingItem[]>([]);
+  const [recordMentions, setRecordMentions] = useState<RecordMentionItem[]>([]);
+  const [recordMentionsLoading, setRecordMentionsLoading] = useState(true);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -208,6 +212,14 @@ export default function BillDetailPage() {
       .then((r) => (r.ok ? r.json() : { filings: [] }))
       .then((body) => setLobbyingFilings(body.filings ?? []))
       .catch(() => setLobbyingFilings([]));
+
+    // Best-effort, quiet on failure - GovInfo's Search Service is a
+    // "public preview" per their own docs, see lib/govinfo-api.ts.
+    fetch(`/api/bills/congressional-record?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => (r.ok ? r.json() : { mentions: [] }))
+      .then((body) => setRecordMentions(body.mentions ?? []))
+      .catch(() => setRecordMentions([]))
+      .finally(() => setRecordMentionsLoading(false));
   }
 
   useEffect(() => {
@@ -425,6 +437,35 @@ export default function BillDetailPage() {
                 <a href={f.documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
                   View filing →
                 </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Congressional Record mentions - what a representative actually
+          said on the floor about this bill, official and verbatim. GovInfo's
+          Search Service is a "public preview" per their own docs, so this
+          is best-effort like the lobbying section above it. */}
+      {!recordMentionsLoading && recordMentions.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Congressional Record mentions</h2>
+          <p className="settings-desc">
+            Floor speeches and remarks that mention this bill, straight from the official record. Best-effort search - may not be exhaustive.
+          </p>
+          <div>
+            {recordMentions.map((m, i) => (
+              <div key={i} className="hearing-row">
+                <div className="hearing-header">
+                  <span className="hearing-committee">{m.title}</span>
+                  {m.date && <span className="hearing-date">{formatDate(m.date)}</span>}
+                </div>
+                {m.section && <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>{m.section}</div>}
+                {m.url && (
+                  <a href={m.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
+                    Read the record →
+                  </a>
+                )}
               </div>
             ))}
           </div>

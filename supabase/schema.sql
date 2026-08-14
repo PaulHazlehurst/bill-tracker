@@ -88,6 +88,10 @@ create table bills (
   -- lib/lda-api.ts for the honesty note on why.
   lobbying_activity jsonb,
   lobbying_activity_fetched_at timestamptz,
+  -- Congressional Record mentions (GovInfo Search Service, "public
+  -- preview" per their own docs) - floor speeches/remarks about this bill.
+  congressional_record_mentions jsonb,
+  congressional_record_mentions_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 
