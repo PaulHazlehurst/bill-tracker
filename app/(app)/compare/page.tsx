@@ -117,13 +117,13 @@ export default function ComparePage() {
                   <span className="muted">Sponsor party</span>
                   <span>{partyLabel}</span>
                 </div>
-                {typeof meta.cosponsorCount === "number" && (
+                {meta && typeof meta.cosponsorCount === "number" && (
                   <div className="compare-row">
                     <span className="muted">Cosponsors</span>
                     <span>{meta.cosponsorCount}</span>
                   </div>
                 )}
-                {meta.policyArea && (
+                {meta?.policyArea && (
                   <div className="compare-row">
                     <span className="muted">Policy area</span>
                     <span>{meta.policyArea}</span>
