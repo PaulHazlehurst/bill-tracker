@@ -64,6 +64,7 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
     <div className="card" id="track">
       <form onSubmit={handleSearch} style={{ display: "flex", gap: 8 }}>
         <input
+          id="bill-search-input"
           style={{ flex: 1, padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 6 }}
           placeholder="Search bills by keyword, e.g. 'infrastructure'"
           value={q}

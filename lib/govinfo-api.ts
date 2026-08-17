@@ -49,10 +49,25 @@ export async function searchCongressionalRecord(billCitation: string, congress: 
   const data = await res.json();
 
   const results = data.results ?? [];
-  return results.slice(0, 10).map((r: any) => ({
-    title: r.title ?? "Congressional Record entry",
-    date: r.dateIssued ?? null,
-    section: r.section ?? null,
-    url: r.download?.pdfLink ?? r.download?.txtLink ?? r.granuleLink ?? null,
-  }));
+  return results.slice(0, 10).map((r: any) => {
+    // The API's own download links (pdfLink, txtLink) require an api_key
+    // query param to resolve - fine for our server to fetch, but not safe
+    // or correct to hand to a person as a clickable link (that would mean
+    // exposing our API key in a URL they could see, copy, or share).
+    // GovInfo's public website has its own no-key-required "details" page
+    // for the same content, built from the package/granule ID - that's
+    // what we actually want to link to.
+    const packageId = r.packageId ?? r.package?.packageId ?? null;
+    const granuleId = r.granuleId ?? null;
+    const publicUrl = packageId
+      ? `https://www.govinfo.gov/app/details/${packageId}${granuleId ? `/${granuleId}` : ""}`
+      : null;
+
+    return {
+      title: r.title ?? "Congressional Record entry",
+      date: r.dateIssued ?? null,
+      section: r.section ?? null,
+      url: publicUrl,
+    };
+  });
 }

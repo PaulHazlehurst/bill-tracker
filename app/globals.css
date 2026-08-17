@@ -277,6 +277,10 @@ button.ghost:hover { border-color: var(--text-soft); }
 .card {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
+.card:hover {
+  border-color: var(--text-soft);
+  box-shadow: var(--shadow-md);
+}
 .card.hoverable:hover {
   border-color: var(--text-soft);
   box-shadow: var(--shadow-md);
@@ -464,10 +468,12 @@ button.ghost:active:not(:disabled) {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px; border-radius: 7px;
   font-size: 0.875rem; color: var(--text-soft); text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, padding-left 0.15s ease;
 }
-.sidebar-link:hover { background: var(--surface-soft); color: var(--text); }
+.sidebar-link:hover { background: var(--surface-soft); color: var(--text); padding-left: 16px; }
 .sidebar-link-active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
-.sidebar-icon { width: 16px; text-align: center; opacity: 0.85; }
+.sidebar-icon { width: 16px; text-align: center; opacity: 0.85; transition: transform 0.15s ease; }
+.sidebar-link:hover .sidebar-icon { transform: scale(1.12); }
 
 .sidebar-footer {
   padding: 14px 16px;
@@ -591,9 +597,12 @@ button.ghost:active:not(:disabled) {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  transition: background 0.15s ease;
 }
 .bill-table tr:last-child td { border-bottom: none; }
 .bill-table tbody tr:hover td { background: var(--surface-soft); }
+.bill-table tbody tr { transition: transform 0.15s ease; }
+.bill-table tbody tr:hover { transform: translateX(2px); }
 .bill-table-title a {
   color: var(--text);
   font-weight: 500;
@@ -896,8 +905,9 @@ button.danger:hover { opacity: 0.9; }
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.recent-viewed-chip:hover { border-color: var(--accent); }
+.recent-viewed-chip:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 
 /* ── Hover "perk up" interactions ───────────────────────────────────
    Applied deliberately: landing page feature cards, stat cards, and
@@ -1543,3 +1553,109 @@ tr:hover .row-external-link { opacity: 1; }
 @media (max-width: 560px) {
   .journey-label { display: none; }
 }
+
+/* ── Page transitions ────────────────────────────────────────────── */
+
+.page-transition {
+  animation: page-enter 0.35s ease both;
+}
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-transition { animation: none; }
+}
+
+/* ── Capitol watermark ───────────────────────────────────────────── */
+
+.capitol-watermark {
+  position: fixed;
+  bottom: -40px;
+  right: -60px;
+  width: 520px;
+  height: 390px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.05;
+  color: var(--text);
+}
+.capitol-watermark svg { width: 100%; height: 100%; fill: currentColor; }
+
+/* Everything inside .app-main needs to sit above the watermark. */
+.container-wide { position: relative; z-index: 1; }
+
+@media (max-width: 900px) {
+  .capitol-watermark { width: 340px; height: 255px; opacity: 0.04; }
+}
+
+/* ── Confetti + enacted celebration ─────────────────────────────── */
+
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 300;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  animation: confetti-fall 2.2s ease-in forwards;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+
+.enacted-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--pos-support-soft), var(--accent-soft));
+  border: 1px solid var(--pos-support);
+  margin-bottom: 16px;
+}
+.enacted-banner strong { color: var(--pos-support); }
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+}
+
+/* ── Compare page ────────────────────────────────────────────────── */
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.compare-column {
+  display: flex;
+  flex-direction: column;
+}
+.compare-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  margin-bottom: 14px;
+  display: block;
+  line-height: 1.4;
+}
+.compare-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+.compare-row:first-of-type { border-top: none; }

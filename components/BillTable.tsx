@@ -126,14 +126,19 @@ export default function BillTable({
 
   return (
     <div>
-      {editable && selected.size > 0 && (
+      {selected.size > 0 && (
         <div className="bulk-bar">
           <span>{selected.size} selected</span>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="ghost" onClick={() => downloadCsv(displayRows.filter((r) => selected.has(r.id)), "selected-bills.csv")}>
               Export selected
             </button>
-            <button className="ghost" onClick={handleBulkUntrack}>Stop tracking selected</button>
+            {selected.size >= 2 && selected.size <= 4 && (
+              <a href={`/compare?ids=${displayRows.filter((r) => selected.has(r.id)).map((r) => r.bill_id).join(",")}`}>
+                <button className="primary">Compare selected</button>
+              </a>
+            )}
+            {editable && <button className="ghost" onClick={handleBulkUntrack}>Stop tracking selected</button>}
           </div>
         </div>
       )}
@@ -142,11 +147,9 @@ export default function BillTable({
         <table className="bill-table">
           <thead>
             <tr>
-              {editable && (
-                <th style={{ width: 32 }}>
-                  <input type="checkbox" checked={selected.size === displayRows.length && displayRows.length > 0} onChange={toggleSelectAll} />
-                </th>
-              )}
+              <th style={{ width: 32 }}>
+                <input type="checkbox" checked={selected.size === displayRows.length && displayRows.length > 0} onChange={toggleSelectAll} />
+              </th>
               <th>Bill</th>
               <th>Position</th>
               <th>Status</th>
@@ -167,11 +170,9 @@ export default function BillTable({
 
               return (
                 <tr key={row.id}>
-                  {editable && (
-                    <td>
-                      <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
-                    </td>
-                  )}
+                  <td>
+                    <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
+                  </td>
                   <td className="bill-table-title">
                     <a href={`/bill/${row.bill_id}`}>{bill.title}</a>
                     {bill.congress_url && (

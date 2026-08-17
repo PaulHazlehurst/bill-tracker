@@ -95,7 +95,7 @@ export default function ApiUsagePage() {
             const usedFraction = hasOfficial ? 1 - officialRemaining! / officialLimit! : null;
 
             const staticLabel = svc.key === "lda_gov"
-              ? (ldaKeyConfigured ? "~120 requests / minute (with key)" : "~15 requests / minute (anonymous - no LDA_API_KEY set)")
+              ? (ldaKeyConfigured ? "120 requests / minute (with key)" : "15 requests / minute (anonymous - no LDA_API_KEY set)")
               : svc.staticLimitLabel;
 
             return (

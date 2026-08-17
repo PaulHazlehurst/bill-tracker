@@ -1,6 +1,9 @@
 import Sidebar from "@/components/Sidebar";
 import { UIProvider } from "@/components/UIProvider";
 import CommandPalette from "@/components/CommandPalette";
+import ShortcutsHelp from "@/components/ShortcutsHelp";
+import PageTransition from "@/components/PageTransition";
+import CapitolWatermark from "@/components/CapitolWatermark";
 
 // Wraps every authenticated page (dashboard, team, activity, settings, bill
 // detail) in a persistent sidebar. Because this is a layout, not a page,
@@ -11,9 +14,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <UIProvider>
       <div className="app-shell">
         <Sidebar />
-        <main className="app-main">{children}</main>
+        <main className="app-main">
+          <CapitolWatermark />
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
       <CommandPalette />
+      <ShortcutsHelp />
     </UIProvider>
   );
 }

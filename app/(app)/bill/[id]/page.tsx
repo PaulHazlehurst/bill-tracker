@@ -10,8 +10,11 @@ import Spinner from "@/components/Spinner";
 import { useUI } from "@/components/UIProvider";
 import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
 import { recordView } from "@/lib/recentlyViewed";
+import { hasSeenEnactedCelebration, markEnactedCelebrationSeen } from "@/lib/celebrationTracker";
+import Confetti from "@/components/Confetti";
+import { PartyPopper } from "lucide-react";
 import { useTicker } from "@/lib/useTicker";
-import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check } from "lucide-react";
+import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check, Share2 } from "lucide-react";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import MomentumSignals from "@/components/MomentumSignals";
 
@@ -110,6 +113,8 @@ export default function BillDetailPage() {
   useTicker();
 
   const [bill, setBill] = useState<Bill | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [events, setEvents] = useState<BillEvent[]>([]);
   const [related, setRelated] = useState<RelatedBill[] | null>(null);
   const [relatedLoading, setRelatedLoading] = useState(true);
@@ -154,6 +159,11 @@ export default function BillDetailPage() {
 
     setBill(billData as Bill);
     recordView(billId, billData.title);
+
+    if (billData.status_stage === "enacted" && !hasSeenEnactedCelebration(billId)) {
+      setShowCelebration(true);
+      markEnactedCelebrationSeen(billId);
+    }
     setEvents((eventData as BillEvent[]) ?? []);
     if (trackedData) {
       setTrackedRowId(trackedData.id);
@@ -244,6 +254,14 @@ export default function BillDetailPage() {
     }
   }
 
+  function handleCopyShareLink() {
+    const url = `${window.location.origin}/share/bill/${billId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    });
+  }
+
   async function handleUntrack() {
     if (!trackedRowId || !bill) return;
     if (!(await confirm(`Stop tracking "${bill.title}"?`, { confirmLabel: "Stop tracking", danger: true }))) return;
@@ -293,6 +311,16 @@ export default function BillDetailPage() {
     <div className="container-wide">
       <a href="/dashboard" className="muted" style={{ display: "inline-block", marginBottom: 16 }}>← Back to your bills</a>
 
+      {showCelebration && (
+        <>
+          <Confetti />
+          <div className="enacted-banner no-print">
+            <PartyPopper size={20} className="muted" style={{ color: "var(--pos-support)" }} />
+            <span><strong>This bill is now law.</strong> Congratulations on tracking it all the way through.</span>
+          </div>
+        </>
+      )}
+
       <span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: "10px 0 6px" }}>{bill.title}</h1>
       <p className="muted" style={{ marginBottom: 4 }}>
@@ -313,6 +341,9 @@ export default function BillDetailPage() {
         )}
         <button className="ghost" onClick={() => window.print()}>
           <Printer size={13} style={{ marginRight: 6, verticalAlign: -2 }} /> Print brief
+        </button>
+        <button className="ghost" onClick={handleCopyShareLink}>
+          <Share2 size={13} style={{ marginRight: 6, verticalAlign: -2 }} /> {shareCopied ? "Link copied!" : "Share"}
         </button>
       </div>
 

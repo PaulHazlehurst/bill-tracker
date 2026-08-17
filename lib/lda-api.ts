@@ -4,30 +4,20 @@
 // of Public Records - a legal disclosure requirement, not a service that
 // can just shut down like OpenSecrets did.
 //
-// HONESTY NOTE on the search parameter below: I could not empirically
-// confirm the exact query parameter name for searching filings by issue
-// text - three candidates I tested against the live API all returned
-// identical unfiltered results, which is ambiguous (could mean the guess
-// is wrong, or could mean an intermediate cache was ignoring my query
-// strings entirely - the API's own response metadata suggested the latter).
-// Multiple independent third-party tools built against this exact API do
-// describe this filter as real and working. Went with the best-supported
-// guess; see the safety check in searchFilingsForBill below - if the
-// result count suggests the filter didn't apply, this bails out rather
-// than processing/paginating through anything close to the full ~2 million
-// record dataset. If this comes back empty in production even for bills
-// you know have lobbying activity, that's the first thing to revisit -
-// email lobbyinfo@mail.house.gov or lobby@sec.senate.gov to get the exact
-// parameter name and I'll fix it precisely rather than guess again.
+// filing_specific_lobbying_issues is confirmed correct against LDA.gov's
+// own published API docs - the earlier uncertainty about this (three
+// candidate parameters all appearing to return identical unfiltered
+// results when tested directly) turned out to be an artifact of the
+// testing environment, not a wrong guess.
+//
+// One real bug that same documentation caught: LDA's search syntax treats
+// space-separated words as OR'd terms unless wrapped in quotes - so a bare
+// "H.R. 18" was searching for "H.R." OR "18", not the exact citation. Now
+// sent as a quoted phrase.
 
 import { trackedFetch } from "@/lib/apiUsageTracker";
 
 const BASE_URL = "https://lda.gov/api/v1";
-
-// A response with a count anywhere near the full dataset size means our
-// filter almost certainly didn't apply - safer to report "no confident
-// match" than to trust or process a near-unfiltered result.
-const UNFILTERED_COUNT_THRESHOLD = 5000;
 
 function headers(): Record<string, string> {
   const key = process.env.LDA_API_KEY;
@@ -50,56 +40,56 @@ export type LobbyingFiling = {
 //
 // `congress` matters more than it might look: bill NUMBERS reset every
 // Congress, so "H.R. 1234" in the 119th Congress and "H.R. 1234" in the
-// 115th Congress are completely different bills. Matching on the bare
-// citation text alone (which is all the earlier version of this function
-// did) meant a 2025 bill could pull in filings from 2008-2018 that just
-// happened to reuse the same number in an unrelated Congress - a real bug,
-// not just noise. Filtering results to the years that Congress was
-// actually in session fixes it.
+// 115th Congress are completely different bills. filing_year is a real,
+// confirmed filter field, so each of the two calendar years a Congress
+// spans gets its own scoped request - more reliable than fetching broadly
+// and filtering client-side, since a popular citation could otherwise have
+// its current-Congress matches crowded out of a single page by older,
+// unrelated ones sharing the same bill number.
 export async function searchFilingsForBill(billCitation: string, congress: number): Promise<LobbyingFiling[]> {
-  const url = new URL(`${BASE_URL}/filings/`);
-  url.searchParams.set("filing_specific_lobbying_issues", billCitation);
-  url.searchParams.set("page_size", "25");
+  const congressStartYear = 1789 + (congress - 1) * 2; // 1st Congress began 1789, each spans 2 years
+  const validYears = [congressStartYear, congressStartYear + 1];
 
-  const res = await trackedFetch(url.toString(), { headers: headers(), cache: "no-store" }, "lda_gov");
-  if (!res.ok) throw new Error(`LDA.gov filings fetch failed: ${res.status}`);
-  const data = await res.json();
-
-  if (typeof data.count === "number" && data.count > UNFILTERED_COUNT_THRESHOLD) {
-    console.warn(`LDA.gov search for "${billCitation}" returned ${data.count} results - likely unfiltered, not the actual match count. Skipping.`);
-    return [];
-  }
-
-  // The 1st Congress began in 1789 and each one spans exactly 2 years.
-  const congressStartYear = 1789 + (congress - 1) * 2;
-  const validYears = new Set([congressStartYear, congressStartYear + 1]);
-
-  // Word-boundary match instead of a plain substring - ".includes()" would
-  // wrongly match "H.R. 1234" inside "H.R. 12345" or "H.R. 1234A". Escape
-  // the citation since it contains regex-special characters like periods.
+  // Word-boundary check as a second, precise filter on top of LDA's own
+  // phrase search - guards against "H.R. 1234" matching inside "H.R. 12345".
   const escaped = billCitation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const citationPattern = new RegExp(`\\b${escaped}\\b(?!\\d)`, "i");
 
   const results: LobbyingFiling[] = [];
-  for (const filing of data.results ?? []) {
-    if (!validYears.has(filing.filing_year)) continue;
 
-    for (const activity of filing.lobbying_activities ?? []) {
-      const desc: string = activity.description ?? "";
-      if (citationPattern.test(desc)) {
-        results.push({
-          filingUuid: filing.filing_uuid,
-          filingYear: filing.filing_year,
-          filingType: filing.filing_type_display,
-          registrantName: filing.registrant?.name ?? "Unknown",
-          clientName: filing.client?.name ?? "Unknown",
-          issueDescription: desc,
-          documentUrl: filing.filing_document_url,
-        });
-        break; // one match per filing is enough to surface it
+  for (const year of validYears) {
+    const url = new URL(`${BASE_URL}/filings/`);
+    url.searchParams.set("filing_specific_lobbying_issues", `"${billCitation}"`); // quoted = exact phrase, not OR'd words
+    url.searchParams.set("filing_year", String(year));
+    url.searchParams.set("ordering", "-dt_posted");
+    url.searchParams.set("page_size", "25");
+
+    const res = await trackedFetch(url.toString(), { headers: headers(), cache: "no-store" }, "lda_gov");
+    if (!res.ok) {
+      console.error(`LDA.gov filings fetch failed for year ${year}: ${res.status}`);
+      continue;
+    }
+    const data = await res.json();
+
+    for (const filing of data.results ?? []) {
+      for (const activity of filing.lobbying_activities ?? []) {
+        const desc: string = activity.description ?? "";
+        if (citationPattern.test(desc)) {
+          results.push({
+            filingUuid: filing.filing_uuid,
+            filingYear: filing.filing_year,
+            filingType: filing.filing_type_display,
+            registrantName: filing.registrant?.name ?? "Unknown",
+            clientName: filing.client?.name ?? "Unknown",
+            issueDescription: desc,
+            documentUrl: filing.filing_document_url,
+          });
+          break; // one match per filing is enough to surface it
+        }
       }
     }
   }
+
   return results.slice(0, 15);
 }
 
