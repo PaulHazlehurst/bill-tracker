@@ -5,8 +5,10 @@ import { LucideIcon } from "lucide-react";
 // page. Used on the dashboard, team, and activity pages.
 export default function EmptyState({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <div style={{ textAlign: "center", padding: "40px 20px" }}>
-      <Icon size={28} strokeWidth={1.5} style={{ color: "var(--text-soft)", opacity: 0.6, marginBottom: 10 }} />
+    <div className="empty-state">
+      <div className="empty-state-icon">
+        <Icon size={22} strokeWidth={1.5} />
+      </div>
       <p className="muted" style={{ margin: 0 }}>{children}</p>
     </div>
   );

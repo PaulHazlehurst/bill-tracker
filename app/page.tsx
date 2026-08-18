@@ -78,6 +78,7 @@ export default function LandingPage() {
 
   return (
     <div>
+      <div className="top-accent-bar" />
       <nav className="nav">
         <span className="brand">Bill Tracker</span>
         <div className="nav-right">

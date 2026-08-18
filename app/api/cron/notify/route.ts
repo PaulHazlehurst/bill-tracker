@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
               billTitle: billTitle ?? event.bill_id,
               billId: event.bill_id,
               summary: event.summary,
+              userId: t.user_id,
             });
             await resend.emails.send({
               from: process.env.RESEND_FROM_EMAIL!,

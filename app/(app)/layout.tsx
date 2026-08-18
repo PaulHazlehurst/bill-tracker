@@ -12,6 +12,7 @@ import CapitolWatermark from "@/components/CapitolWatermark";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <UIProvider>
+      <div className="top-accent-bar" />
       <div className="app-shell">
         <Sidebar />
         <main className="app-main">

@@ -6,6 +6,8 @@
 
 :root {
   --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Public Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --party-dem: #2563eb;
   --party-dem-soft: #e2ebfd;
   --party-rep: #dc2626;
@@ -71,7 +73,7 @@ html[data-font-size="lg"] { font-size: 18px; }
 
 body {
   margin: 0;
-  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -688,7 +690,7 @@ button.ghost:active:not(:disabled) {
 /* ── Invite code chip, owner badge ──────────────────────────────── */
 
 .invite-code {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--font-mono);
   background: var(--surface-soft);
   border: 1px solid var(--border);
   padding: 4px 9px;
@@ -978,12 +980,15 @@ button.ghost:hover:not(:disabled) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .feature-card, .feature-card .feature-icon, .stat-card, button.primary, button.ghost, .step-number {
+  .feature-card, .feature-card .feature-icon, .stat-card, button.primary, button.ghost, .step-number,
+  .sidebar-link, .sidebar-icon, .bill-table tbody tr, .recent-viewed-chip {
     transition: none !important;
   }
-  .feature-card:hover, .stat-card:hover, button.primary:hover, button.ghost:hover {
+  .feature-card:hover, .stat-card:hover, button.primary:hover, button.ghost:hover,
+  .sidebar-link:hover, .sidebar-link:hover .sidebar-icon, .bill-table tbody tr:hover, .recent-viewed-chip:hover {
     transform: none !important;
   }
+  .sidebar-link:hover { padding-left: 12px; }
 }
 
 /* ── Momentum signal chips ───────────────────────────────────────── */
@@ -1392,7 +1397,7 @@ tr:hover .row-external-link { opacity: 1; }
   margin-top: 8px;
 }
 .usage-official-numbers strong {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-mono);
   font-size: 1.375rem;
   color: var(--text);
 }
@@ -1418,7 +1423,7 @@ tr:hover .row-external-link { opacity: 1; }
   border-top: 1px solid var(--border);
 }
 .usage-self-value {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-mono);
   font-size: 1.125rem;
 }
 .usage-self-label {
@@ -1659,3 +1664,77 @@ tr:hover .row-external-link { opacity: 1; }
   border-top: 1px solid var(--border);
 }
 .compare-row:first-of-type { border-top: none; }
+
+/* ── Keyboard focus ──────────────────────────────────────────────── */
+/* :focus-visible (not plain :focus) so this only appears for keyboard
+   navigation, not every mouse click - visible and consistent everywhere,
+   without the "outline flashes on every button press" annoyance. */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.position-select:focus-visible,
+.toolbar-select:focus-visible,
+.cmdk-input:focus-visible {
+  outline-offset: 1px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+.empty-state-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.expandable-text-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  display: inline;
+}
+.expandable-text-toggle:hover { text-decoration: underline; }
+
+/* ── Sidebar live status ─────────────────────────────────────────── */
+
+.sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  margin-bottom: 4px;
+}
+
+/* ── Institutional top accent bar ───────────────────────────────── */
+/* A small, quiet nod to official government site headers, which often
+   carry a thin colored utility stripe above the main nav. */
+
+.top-accent-bar {
+  height: 3px;
+  background: var(--accent);
+}

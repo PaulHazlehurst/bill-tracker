@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { STAGE_LABELS, formatDate, parseVoteInfo } from "@/lib/billMeta";
+import ExpandableText from "@/components/ExpandableText";
 import { Check, Landmark } from "lucide-react";
 
 const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
@@ -112,7 +113,7 @@ export default function PublicBillSharePage() {
               <div className="card">
                 <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
                 <p className="settings-desc">{bill.summaries[0].actionDesc} · official, from the Congressional Research Service</p>
-                <p style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>{bill.summaries[0].text}</p>
+                <ExpandableText text={bill.summaries[0].text} style={{ fontSize: '0.875rem', lineHeight: 1.5 }} />
               </div>
             )}
 

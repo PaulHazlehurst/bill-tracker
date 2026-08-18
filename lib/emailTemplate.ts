@@ -6,14 +6,24 @@ export function billUpdateEmail({
   billTitle,
   billId,
   summary,
+  userId,
 }: {
   billTitle: string;
   billId: string;
   summary: string;
+  userId: string;
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const billUrl = `${appUrl}/bill/${billId}`;
   const settingsUrl = `${appUrl}/settings`;
+  // A genuine one-click unsubscribe, no login required - CAN-SPAM requires
+  // this to actually be one click, and the old "manage settings" link
+  // (which required signing in first) didn't meet that bar. Uses the
+  // profile's own id as the token: it's already an unguessable UUID, and
+  // the only thing this link can do is turn off email notifications for
+  // that one account - low-stakes and reversible, so a dedicated signed
+  // token isn't needed for something with this limited a blast radius.
+  const unsubscribeUrl = `${appUrl}/unsubscribe?uid=${userId}`;
 
   const html = `
 <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #16211d;">
@@ -32,11 +42,13 @@ export function billUpdateEmail({
     <p style="font-size: 12px; color: #566259; margin: 0;">
       You're getting this because you turned on email alerts for this bill.
       <a href="${settingsUrl}" style="color: #566259;">Manage notification settings</a>
+      &nbsp;·&nbsp;
+      <a href="${unsubscribeUrl}" style="color: #566259;">Unsubscribe from all emails</a>
     </p>
   </div>
 </div>`.trim();
 
-  const text = `${billTitle}\n\n${summary}\n\nView this bill: ${billUrl}\n\nManage your notification settings: ${settingsUrl}`;
+  const text = `${billTitle}\n\n${summary}\n\nView this bill: ${billUrl}\n\nManage your notification settings: ${settingsUrl}\nUnsubscribe from all emails: ${unsubscribeUrl}`;
 
   return { html, text };
 }

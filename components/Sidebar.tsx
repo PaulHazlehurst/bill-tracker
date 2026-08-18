@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { timeAgo } from "@/lib/billMeta";
+import { useTicker } from "@/lib/useTicker";
 import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -21,6 +23,8 @@ export default function Sidebar() {
   const [orgName, setOrgName] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [lastChecked, setLastChecked] = useState<string | null>(null);
+  useTicker(60_000);
 
   useEffect(() => {
     (async () => {
@@ -37,6 +41,18 @@ export default function Sidebar() {
       const org = Array.isArray(profile?.organizations) ? profile?.organizations[0] : profile?.organizations;
       setOrgName((org as any)?.name ?? null);
       setLogoUrl((org as any)?.logo_url ?? null);
+
+      // A small, honest "the system is actually watching" signal - real
+      // data (the most recent poll across every bill we track), not just
+      // decoration. Cheap: one indexed query, run once since this
+      // component stays mounted across client-side navigation.
+      const { data: recent } = await supabase
+        .from("bills")
+        .select("last_polled_at")
+        .order("last_polled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (recent?.last_polled_at) setLastChecked(recent.last_polled_at);
     })();
   }, []);
 
@@ -89,6 +105,12 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-footer">
+          {lastChecked && (
+            <div className="sidebar-status">
+              <span className="live-dot" />
+              Checked {timeAgo(lastChecked)}
+            </div>
+          )}
           {email && <div className="sidebar-email">{email}</div>}
           <button className="ghost" onClick={handleLogout} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <LogOut size={14} /> Log out
