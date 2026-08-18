@@ -113,7 +113,7 @@ export default function PublicBillSharePage() {
               <div className="card">
                 <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
                 <p className="settings-desc">{bill.summaries[0].actionDesc} · official, from the Congressional Research Service</p>
-                <ExpandableText text={bill.summaries[0].text} style={{ fontSize: '0.875rem', lineHeight: 1.5 }} />
+                <ExpandableText text={bill.summaries[0].text} className="official-text" />
               </div>
             )}
 

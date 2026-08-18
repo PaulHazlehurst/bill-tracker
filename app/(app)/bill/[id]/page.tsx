@@ -400,7 +400,7 @@ export default function BillDetailPage() {
         <div className="card">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
           <p className="settings-desc">{summaries[0].actionDesc} · official, from the Congressional Research Service</p>
-          <ExpandableText text={summaries[0].text} style={{ fontSize: '0.875rem', lineHeight: 1.5 }} />
+          <ExpandableText text={summaries[0].text} className="official-text" />
           {summaries.length > 1 && (
             <details style={{ marginTop: 10 }}>
               <summary className="muted" style={{ fontSize: '0.75rem', cursor: "pointer" }}>
@@ -409,7 +409,7 @@ export default function BillDetailPage() {
               {summaries.slice(1).map((s, i) => (
                 <div key={i} style={{ marginTop: 10 }}>
                   <p className="muted" style={{ fontSize: '0.75rem', marginBottom: 4 }}>{s.actionDesc}</p>
-                  <ExpandableText text={s.text} style={{ fontSize: '0.8125rem', lineHeight: 1.5 }} />
+                  <ExpandableText text={s.text} className="official-text" />
                 </div>
               ))}
             </details>

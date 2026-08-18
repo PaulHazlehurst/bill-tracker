@@ -5,6 +5,7 @@ import ShortcutsHelp from "@/components/ShortcutsHelp";
 import PageTransition from "@/components/PageTransition";
 import CapitolWatermark from "@/components/CapitolWatermark";
 import VersionBadge from "@/components/VersionBadge";
+import WelcomeBar from "@/components/WelcomeBar";
 
 // Wraps every authenticated page (dashboard, team, activity, settings, bill
 // detail) in a persistent sidebar. Because this is a layout, not a page,
@@ -13,7 +14,7 @@ import VersionBadge from "@/components/VersionBadge";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <UIProvider>
-      <div className="top-accent-bar" />
+      <WelcomeBar />
       <div className="app-shell">
         <Sidebar />
         <main className="app-main">

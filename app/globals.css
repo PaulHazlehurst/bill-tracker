@@ -8,11 +8,19 @@
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Public Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --party-dem: #2563eb;
+  /* Merriweather - USWDS's own second official typeface (paired with
+     Public Sans on real federal .gov sites). Used deliberately narrowly:
+     only where text is literally an official government record (CRS
+     summaries, Congressional Record excerpts) - not a wholesale font
+     swap, which would undo the distinctive Fraunces identity built up
+     everywhere else. One targeted, meaningful use beats a second display
+     face competing for the same job. */
+  --font-official: "Merriweather", Georgia, serif;
+  --party-dem: #1e3a8a;
   --party-dem-soft: #e2ebfd;
-  --party-rep: #dc2626;
+  --party-rep: #b8342a;
   --party-rep-soft: #fbe4e2;
-  --party-ind: #7c3aed;
+  --party-ind: #6d28d9;
   --party-ind-soft: #eee5fc;
   --shadow-sm: 0 1px 3px rgba(20, 20, 15, 0.06);
   --shadow-md: 0 6px 20px rgba(20, 20, 15, 0.10);
@@ -614,8 +622,28 @@ button.ghost:active:not(:disabled) {
 }
 .bill-table tr:last-child td { border-bottom: none; }
 .bill-table tbody tr:hover td { background: var(--surface-soft); }
-.bill-table tbody tr { transition: transform 0.15s ease; }
-.bill-table tbody tr:hover { transform: translateX(2px); }
+.bill-table tbody tr {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.bill-table tbody tr td:first-child {
+  position: relative;
+}
+.bill-table tbody tr td:first-child::after {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transition: transform 0.18s ease;
+}
+.bill-table tbody tr:hover {
+  transform: scale(1.008) translateX(3px);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  z-index: 1;
+}
+.bill-table tbody tr:hover td:first-child::after { transform: scaleY(1); }
 .bill-table-title a {
   color: var(--text);
   font-weight: 500;
@@ -631,11 +659,11 @@ button.ghost:active:not(:disabled) {
 /* ── Position (stance) badges ───────────────────────────────────── */
 
 :root {
-  --pos-support: #16915f;
+  --pos-support: #15803d;
   --pos-support-soft: #dcf3e8;
-  --pos-oppose: #d6392a;
+  --pos-oppose: #b8342a;
   --pos-oppose-soft: #fbe2df;
-  --pos-watching: #c17d0a;
+  --pos-watching: #a16207;
   --pos-watching-soft: #faedd6;
   --pos-none: var(--text-soft);
 }
@@ -1588,22 +1616,26 @@ tr:hover .row-external-link { opacity: 1; }
 
 .capitol-watermark {
   position: fixed;
-  bottom: -40px;
-  right: -60px;
-  width: 520px;
-  height: 390px;
+  bottom: -30px;
+  right: -40px;
+  width: 480px;
+  height: auto;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.05;
-  color: var(--text);
+  opacity: 0.06;
 }
-.capitol-watermark svg { width: 100%; height: 100%; fill: currentColor; }
+.capitol-watermark img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: grayscale(1);
+}
 
 /* Everything inside .app-main needs to sit above the watermark. */
 .container-wide { position: relative; z-index: 1; }
 
 @media (max-width: 900px) {
-  .capitol-watermark { width: 340px; height: 255px; opacity: 0.04; }
+  .capitol-watermark { width: 320px; opacity: 0.045; }
 }
 
 /* ── Confetti + enacted celebration ─────────────────────────────── */
@@ -1744,11 +1776,32 @@ textarea:focus-visible,
 
 /* ── Institutional top accent bar ───────────────────────────────── */
 /* A small, quiet nod to official government site headers, which often
-   carry a thin colored utility stripe above the main nav. */
+   carry a thin colored utility stripe above the main nav. Used on the
+   public landing page, which has no signed-in user to greet. */
 
 .top-accent-bar {
   height: 3px;
   background: var(--accent);
+}
+
+/* The authenticated app gets the thicker, low-opacity version instead -
+   same idea, but with room for an actual greeting rather than pure
+   decoration. Low opacity is a wash over --accent-soft, not a solid block,
+   so it reads as a tinted band rather than a heavy header. */
+.welcome-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--accent-soft);
+  opacity: 0.7;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+@media print {
+  .welcome-bar { display: none; }
 }
 
 /* ── Version badge ───────────────────────────────────────────────── */
@@ -1769,4 +1822,49 @@ textarea:focus-visible,
 }
 @media print {
   .version-badge { display: none; }
+}
+
+/* ── Official document text ─────────────────────────────────────── */
+/* Merriweather, applied only to text that's literally an official record -
+   the CRS summary and Congressional Record excerpts - as a quiet signal
+   "this exact wording is what the government published," distinct from
+   everything else on the page. */
+
+.official-text {
+  font-family: var(--font-official);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+/* ── Simple bar chart ────────────────────────────────────────────── */
+
+.simple-bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 0.75rem;
+}
+.simple-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-soft);
+}
+.simple-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+.simple-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.simple-bar-value {
+  text-align: right;
+  font-family: var(--font-mono);
+  color: var(--text);
 }

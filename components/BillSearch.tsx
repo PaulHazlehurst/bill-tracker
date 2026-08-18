@@ -66,7 +66,7 @@ export default function BillSearch({ onTracked }: { onTracked: () => void }) {
         <input
           id="bill-search-input"
           style={{ flex: 1, padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 6 }}
-          placeholder="Search bills by keyword, e.g. 'infrastructure'"
+          placeholder="Search recent bill titles, or enter a citation like HR 1234"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
