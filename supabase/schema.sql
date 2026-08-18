@@ -92,6 +92,10 @@ create table bills (
   -- preview" per their own docs) - floor speeches/remarks about this bill.
   congressional_record_mentions jsonb,
   congressional_record_mentions_fetched_at timestamptz,
+  -- The actual legislative text versions (Introduced, Reported, etc.) with
+  -- links to each format - not the plain-language CRS summary.
+  text_versions jsonb,
+  text_versions_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 

@@ -80,6 +80,8 @@ type BillSummaryItem = { text: string; actionDesc: string; actionDate: string; u
 
 type RecordMentionItem = { title: string; date: string | null; section: string | null; url: string | null };
 
+type TextVersionItem = { type: string; date: string | null; formats: { type: string; url: string }[] };
+
 type LobbyingFilingItem = {
   filingUuid: string;
   filingYear: number;
@@ -132,6 +134,8 @@ export default function BillDetailPage() {
   const [lobbyingFilings, setLobbyingFilings] = useState<LobbyingFilingItem[]>([]);
   const [recordMentions, setRecordMentions] = useState<RecordMentionItem[]>([]);
   const [recordMentionsLoading, setRecordMentionsLoading] = useState(true);
+  const [textVersions, setTextVersions] = useState<TextVersionItem[]>([]);
+  const [textVersionsLoading, setTextVersionsLoading] = useState(true);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -231,6 +235,12 @@ export default function BillDetailPage() {
       .then((body) => setRecordMentions(body.mentions ?? []))
       .catch(() => setRecordMentions([]))
       .finally(() => setRecordMentionsLoading(false));
+
+    fetch(`/api/bills/text-versions?billId=${billId}&congress=${billData.congress}&billType=${billData.bill_type}&billNumber=${billData.bill_number}`)
+      .then((r) => (r.ok ? r.json() : { versions: [] }))
+      .then((body) => setTextVersions(body.versions ?? []))
+      .catch(() => setTextVersions([]))
+      .finally(() => setTextVersionsLoading(false));
   }
 
   useEffect(() => {
@@ -375,6 +385,34 @@ export default function BillDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Full legislative text - the actual bill language, not the
+          plain-language summary. This is the direct answer to "why not
+          just read it on congress.gov" - now you don't have to leave to
+          get the real document. */}
+      {!textVersionsLoading && textVersions.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Full text</h2>
+          <p className="settings-desc">The actual legislative language, every published version.</p>
+          <div>
+            {textVersions.map((v, i) => (
+              <div key={i} className="text-version-row">
+                <div>
+                  <span className="text-version-type">{v.type}</span>
+                  {v.date && <span className="muted" style={{ fontSize: '0.75rem', marginLeft: 8 }}>{formatDate(v.date)}</span>}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {v.formats.map((f, fi) => (
+                    <a key={fi} href={f.url} target="_blank" rel="noreferrer" className="text-version-link">
+                      {f.type}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {meta && (
         <div className="card">

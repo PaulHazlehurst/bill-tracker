@@ -376,6 +376,31 @@ export async function getBillSummaries(congress: number, billType: string, billN
     .sort((a: BillSummary, b: BillSummary) => (a.actionDate < b.actionDate ? 1 : -1));
 }
 
+export type TextVersion = { type: string; date: string | null; formats: { type: string; url: string }[] };
+
+// The actual legislative text - not the plain-language CRS summary, the
+// real bill language. A bill can have several versions over its life
+// (Introduced, Reported, Engrossed, Enrolled...), each with its own set of
+// formats (PDF, HTML, sometimes XML). Confirmed real against congress.gov's
+// own changelog documentation (date/type/formats fields), same service and
+// key as everything else here.
+export async function getBillTextVersions(congress: number, billType: string, billNumber: number | string): Promise<TextVersion[]> {
+  const url = new URL(`${BASE_URL}/bill/${congress}/${billType.toLowerCase()}/${billNumber}/text`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "20");
+
+  const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+  if (!res.ok) throw new Error(`congress.gov text fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  return (data.textVersions ?? []).map((v: any) => ({
+    type: v.type ?? "Text",
+    date: v.date ?? null,
+    formats: (v.formats ?? []).map((f: any) => ({ type: f.type ?? "Link", url: f.url })).filter((f: any) => f.url),
+  }));
+}
+
 export function inferStage(latestActionText: string): string {
   const text = (latestActionText ?? "").toLowerCase();
   if (text.includes("became public law") || text.includes("signed by president")) return "enacted";
