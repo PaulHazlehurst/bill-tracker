@@ -16,9 +16,33 @@
   --party-ind-soft: #eee5fc;
   --shadow-sm: 0 1px 3px rgba(20, 20, 15, 0.06);
   --shadow-md: 0 6px 20px rgba(20, 20, 15, 0.10);
+  /* The sidebar is deliberately theme-independent - a consistent dark-navy
+     "brand chrome" that stays the same no matter which content theme is
+     active, rather than a 4th thing that changes with the theme switcher.
+     One steady anchor, per the design skill's "spend your boldness in one
+     place" guidance. */
+  --sidebar-bg: #12233b;
+  --sidebar-bg-soft: #1a3352;
+  --sidebar-text: #b7c6dc;
+  --sidebar-text-active: #ffffff;
+  --sidebar-border: #22406399;
 }
 
 :root,
+[data-theme="capitol"] {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-soft: #e7edf6;
+  --text: #101a2c;
+  --text-soft: #526279;
+  --border: #d5deea;
+  --accent: #2c5f9e;
+  --accent-soft: #dfe9f8;
+  --accent-contrast: #ffffff;
+  --danger: #c23b2e;
+  --danger-soft: #f8e3e0;
+}
+
 [data-theme="parchment"] {
   --bg: #f7f6f2;
   --surface: #ffffff;
@@ -47,20 +71,6 @@
   --danger-soft: #3d211e;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="capitol"] {
-  --bg: #eef1f6;
-  --surface: #ffffff;
-  --surface-soft: #e1e8f2;
-  --text: #101a2c;
-  --text-soft: #4c5b76;
-  --border: #ccd7e6;
-  --accent: #1d4ed8;
-  --accent-soft: #dde6fb;
-  --accent-contrast: #ffffff;
-  --danger: #c23b2e;
-  --danger-soft: #f8e3e0;
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
@@ -438,8 +448,8 @@ button.ghost:active:not(:disabled) {
 .sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -452,16 +462,17 @@ button.ghost:active:not(:disabled) {
   align-items: center;
   gap: 10px;
   padding: 18px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 .sidebar-logo { width: 30px; height: 30px; border-radius: 7px; object-fit: cover; flex-shrink: 0; }
 .sidebar-logo-placeholder {
   display: flex; align-items: center; justify-content: center;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--sidebar-bg-soft); color: var(--sidebar-text-active);
   font-family: var(--font-display), serif; font-size: 1rem;
 }
+.sidebar-brand .brand { color: var(--sidebar-text-active); }
 .sidebar-org {
-  font-size: 0.75rem; color: var(--text-soft);
+  font-size: 0.75rem; color: var(--sidebar-text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -469,21 +480,21 @@ button.ghost:active:not(:disabled) {
 .sidebar-link {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px; border-radius: 7px;
-  font-size: 0.875rem; color: var(--text-soft); text-decoration: none;
+  font-size: 0.875rem; color: var(--sidebar-text); text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, padding-left 0.15s ease;
 }
-.sidebar-link:hover { background: var(--surface-soft); color: var(--text); padding-left: 16px; }
-.sidebar-link-active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.sidebar-link:hover { background: var(--sidebar-bg-soft); color: var(--sidebar-text-active); padding-left: 16px; }
+.sidebar-link-active { background: var(--sidebar-bg-soft); color: var(--sidebar-text-active); font-weight: 500; }
 .sidebar-icon { width: 16px; text-align: center; opacity: 0.85; transition: transform 0.15s ease; }
 .sidebar-link:hover .sidebar-icon { transform: scale(1.12); }
 
 .sidebar-footer {
   padding: 14px 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--sidebar-border);
   display: flex; flex-direction: column; gap: 8px;
 }
 .sidebar-email {
-  font-size: 0.75rem; color: var(--text-soft);
+  font-size: 0.75rem; color: var(--sidebar-text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -1366,6 +1377,7 @@ tr:hover .row-external-link { opacity: 1; }
 .sidebar-cmdk-hint {
   font-size: 0.6875rem;
   padding: 0 4px 12px;
+  color: var(--sidebar-text);
 }
 
 /* ── Print (Bill Brief export) ───────────────────────────────────── */
@@ -1726,7 +1738,7 @@ textarea:focus-visible,
   align-items: center;
   gap: 6px;
   font-size: 0.6875rem;
-  color: var(--text-soft);
+  color: var(--sidebar-text);
   margin-bottom: 4px;
 }
 
@@ -1737,4 +1749,24 @@ textarea:focus-visible,
 .top-accent-bar {
   height: 3px;
   background: var(--accent);
+}
+
+/* ── Version badge ───────────────────────────────────────────────── */
+
+.version-badge {
+  position: fixed;
+  bottom: 10px;
+  right: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  opacity: 0.55;
+  z-index: 5;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .version-badge { display: none; } /* not worth the space on small screens */
+}
+@media print {
+  .version-badge { display: none; }
 }

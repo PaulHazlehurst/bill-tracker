@@ -4,6 +4,7 @@ import CommandPalette from "@/components/CommandPalette";
 import ShortcutsHelp from "@/components/ShortcutsHelp";
 import PageTransition from "@/components/PageTransition";
 import CapitolWatermark from "@/components/CapitolWatermark";
+import VersionBadge from "@/components/VersionBadge";
 
 // Wraps every authenticated page (dashboard, team, activity, settings, bill
 // detail) in a persistent sidebar. Because this is a layout, not a page,
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <CommandPalette />
       <ShortcutsHelp />
+      <VersionBadge />
     </UIProvider>
   );
 }

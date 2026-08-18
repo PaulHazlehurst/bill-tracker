@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import Reveal from "@/components/Reveal";
+import VersionBadge from "@/components/VersionBadge";
 import {
   ThumbsUp, Vote, GitBranch, Users2, BellRing, Download,
   Search, MousePointerClick, Mail, Landmark, Sparkles,
@@ -199,6 +200,7 @@ export default function LandingPage() {
         <a href="/terms" className="muted landing-nav-link" style={{ marginRight: 16 }}>Terms</a>
         <a href="/privacy" className="muted landing-nav-link">Privacy</a>
       </footer>
+      <VersionBadge />
     </div>
   );
 }
