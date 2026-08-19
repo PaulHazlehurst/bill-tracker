@@ -105,7 +105,7 @@ export default function LandingPage() {
                   <span><strong>{totalBills.toLocaleString()}</strong> bills introduced so far in the 119th Congress</span>
                 </div>
               )}
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 500, lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontFamily: 'var(--font-display), Georgia, serif', fontSize: '3.5rem', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.025em' }}>
                 Track federal bills without refreshing congress.gov all day.
               </h1>
               <p className="muted" style={{ fontSize: '1.0625rem', maxWidth: 500, marginTop: 16 }}>
