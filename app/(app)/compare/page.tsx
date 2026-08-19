@@ -101,7 +101,7 @@ export default function ComparePage() {
 
                 <div className="compare-row">
                   <span className="muted">Stage</span>
-                  <span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
+                  <span className={`pill pill-${bill.status_stage}`}>{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
                 </div>
                 <div className="progress-track" style={{ margin: "6px 0 10px" }}>
                   <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />

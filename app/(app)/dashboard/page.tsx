@@ -15,11 +15,11 @@ import ActivityMini from "@/components/ActivityMini";
 import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import FirstRunHero from "@/components/FirstRunHero";
 import Reveal from "@/components/Reveal";
 import TrendingBills from "@/components/TrendingBills";
 import { useUI } from "@/components/UIProvider";
-import EmptyState from "@/components/EmptyState";
-import { FileSearch, FileText, Gavel, CheckCircle2, Award } from "lucide-react";
+import { FileText, Gavel, CheckCircle2, Award } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
@@ -154,15 +154,21 @@ export default function DashboardPage() {
 
   return (
     <div className="container-wide">
-      <div className="page-header">
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Your tracked bills</h1>
-          <p className="muted" style={{ marginTop: 4 }}>Search for a bill below to start tracking it.</p>
-        </div>
-      </div>
+      {!loading && tracked.length === 0 ? (
+        <FirstRunHero onTracked={loadTracked} />
+      ) : (
+        <>
+          <div className="page-header">
+            <div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Your tracked bills</h1>
+              <p className="muted" style={{ marginTop: 4 }}>Search for a bill below to start tracking it.</p>
+            </div>
+          </div>
 
-      {!loading && (
-        <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={hasEmailEnabled} hasTeam={hasTeam} hasPhone={hasPhone} />
+          {!loading && (
+            <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={hasEmailEnabled} hasTeam={hasTeam} hasPhone={hasPhone} />
+          )}
+        </>
       )}
 
       <BillSearch onTracked={loadTracked} />
@@ -221,6 +227,7 @@ export default function DashboardPage() {
         </Reveal>
       )}
 
+      {(loading || tracked.length > 0) && (
       <div style={{ marginTop: 28 }}>
         <div className="table-toolbar">
           <h2 style={{ fontSize: '1.0625rem', fontWeight: 500, margin: 0 }}>Currently tracking ({filtered.length})</h2>
@@ -258,14 +265,13 @@ export default function DashboardPage() {
           <p className="error-text">Couldn't load your tracked bills: {error}</p>
         ) : loading ? (
           <TableSkeleton />
-        ) : tracked.length === 0 ? (
-          <EmptyState icon={FileSearch}>Nothing tracked yet — search for a bill above to add one.</EmptyState>
         ) : filtered.length === 0 ? (
           <p className="muted">No tracked bills match those filters.</p>
         ) : (
           <BillTable rows={filtered} editable onUntrack={handleUntrack} onBulkUntrack={handleBulkUntrack} />
         )}
       </div>
+      )}
     </div>
   );
 }

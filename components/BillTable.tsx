@@ -208,7 +208,7 @@ export default function BillTable({
                       </span>
                     )}
                   </td>
-                  <td><span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span></td>
+                  <td><span className={`pill pill-${bill.status_stage}`}>{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span></td>
                   <td style={{ minWidth: 90 }}>
                     <div className="progress-track" style={{ height: 6 }}>
                       <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />

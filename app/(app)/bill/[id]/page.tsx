@@ -332,7 +332,7 @@ export default function BillDetailPage() {
         </>
       )}
 
-      <span className="pill">{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
+      <span className={`pill pill-${bill.status_stage}`}>{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: "10px 0 6px" }}>{bill.title}</h1>
       <p className="muted" style={{ marginBottom: 4 }}>
         {bill.bill_type.toUpperCase()} {bill.bill_number} · {bill.congress}th Congress
