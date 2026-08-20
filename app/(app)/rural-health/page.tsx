@@ -7,27 +7,27 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import CountUp from "@/components/CountUp";
+import SimpleBarChart from "@/components/SimpleBarChart";
 import Reveal from "@/components/Reveal";
-import { HeartPulse, Lock, ExternalLink } from "lucide-react";
+import { HeartPulse, Lock, ExternalLink, AlertTriangle, Stethoscope, Brain } from "lucide-react";
 
 const STATES = [
-  ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],
-  ["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],
-  ["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],
-  ["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],
-  ["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],
-  ["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],
-  ["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],
-  ["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],
-  ["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],
-  ["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],
+  ["Alabama","AL"],["Alaska","AK"],["Arizona","AZ"],["Arkansas","AR"],["California","CA"],
+  ["Colorado","CO"],["Connecticut","CT"],["Delaware","DE"],["Florida","FL"],["Georgia","GA"],
+  ["Hawaii","HI"],["Idaho","ID"],["Illinois","IL"],["Indiana","IN"],["Iowa","IA"],
+  ["Kansas","KS"],["Kentucky","KY"],["Louisiana","LA"],["Maine","ME"],["Maryland","MD"],
+  ["Massachusetts","MA"],["Michigan","MI"],["Minnesota","MN"],["Mississippi","MS"],["Missouri","MO"],
+  ["Montana","MT"],["Nebraska","NE"],["Nevada","NV"],["New Hampshire","NH"],["New Jersey","NJ"],
+  ["New Mexico","NM"],["New York","NY"],["North Carolina","NC"],["North Dakota","ND"],["Ohio","OH"],
+  ["Oklahoma","OK"],["Oregon","OR"],["Pennsylvania","PA"],["Rhode Island","RI"],["South Carolina","SC"],
+  ["South Dakota","SD"],["Tennessee","TN"],["Texas","TX"],["Utah","UT"],["Vermont","VT"],
+  ["Virginia","VA"],["Washington","WA"],["West Virginia","WV"],["Wisconsin","WI"],["Wyoming","WY"],
 ] as const;
 
 type Stats = { states: number; documents: number; activities: number; totalStateAward: number; fundingCount: number };
-type StateDetail = {
-  code: string; name: string; cahCount: number | null; population: number | null; ruralPercent: number | null;
-  summary: string | null; documents: number; awardTotal: number; awardeeCount: number;
-  recentDocuments: { title: string; fileType: string; category: string; url: string; highlights: string | null }[];
+type HPSAData = {
+  state: string; primaryCareHPSAs: number; dentalHPSAs: number; mentalHealthHPSAs: number;
+  practitionersNeeded: number; ruralHPSAs: number; nonRuralHPSAs: number; totalPopulation: number;
 };
 
 function formatMoney(n: number) {
@@ -41,32 +41,42 @@ export default function RuralHealthPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stateCode, setStateCode] = useState("MD");
-  const [stateDetail, setStateDetail] = useState<StateDetail | null>(null);
-  const [configured, setConfigured] = useState(true);
-  const [stateLoading, setStateLoading] = useState(true);
+  const [stateName, setStateName] = useState("Maryland");
+  const [hpsa, setHpsa] = useState<HPSAData | null>(null);
+  const [hpsaLoading, setHpsaLoading] = useState(true);
+  const [hpsaError, setHpsaError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) { router.push("/login"); return; }
       fetch("/api/rural-health/stats").then((r) => r.json()).then((b) => setStats(b.stats)).finally(() => setLoading(false));
     })();
   }, []);
 
   useEffect(() => {
-    setStateLoading(true);
-    fetch(`/api/rural-health/state?code=${stateCode}`)
+    setHpsaLoading(true);
+    setHpsaError(null);
+    fetch(`/api/rural-health/hpsa?state=${encodeURIComponent(stateName)}`)
       .then((r) => r.json())
       .then((b) => {
-        setConfigured(!!b.configured);
-        setStateDetail(b.state ?? null);
+        if (b.error) setHpsaError(b.error);
+        setHpsa(b.hpsa ?? null);
       })
-      .finally(() => setStateLoading(false));
-  }, [stateCode]);
+      .catch(() => setHpsaError("Couldn't reach HRSA data"))
+      .finally(() => setHpsaLoading(false));
+  }, [stateName]);
+
+  const shortageBreakdown = hpsa ? [
+    { label: "Primary care", value: hpsa.primaryCareHPSAs },
+    { label: "Dental", value: hpsa.dentalHPSAs },
+    { label: "Mental health", value: hpsa.mentalHealthHPSAs },
+  ] : [];
+
+  const ruralUrban = hpsa ? [
+    { label: "Rural", value: hpsa.ruralHPSAs },
+    { label: "Non-rural", value: hpsa.nonRuralHPSAs },
+  ] : [];
 
   return (
     <div className="container-wide">
@@ -74,7 +84,7 @@ export default function RuralHealthPage() {
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Rural Health</h1>
           <p className="muted" style={{ marginTop: 4 }}>
-            The Rural Health Transformation Program (RHTP) - $50B in federal investment to strengthen rural care access, tracked across all 50 states.
+            Provider shortage areas, funding, and program activity — from HRSA's official federal data and the Rural Health Transformation Program.
           </p>
         </div>
       </div>
@@ -88,13 +98,13 @@ export default function RuralHealthPage() {
               <div className="stat-grid">
                 <div className="stat-card">
                   <HeartPulse size={15} className="stat-card-icon" />
-                  <div className="stat-value"><CountUp value={stats.states} /></div>
-                  <div className="stat-label">States tracked</div>
+                  <div className="stat-value">{formatMoney(stats.totalStateAward)}</div>
+                  <div className="stat-label">RHTP total awarded</div>
                 </div>
                 <div className="stat-card">
                   <HeartPulse size={15} className="stat-card-icon" />
-                  <div className="stat-value">{formatMoney(stats.totalStateAward)}</div>
-                  <div className="stat-label">Total awarded</div>
+                  <div className="stat-value"><CountUp value={stats.states} /></div>
+                  <div className="stat-label">States tracked</div>
                 </div>
                 <div className="stat-card">
                   <HeartPulse size={15} className="stat-card-icon" />
@@ -104,65 +114,74 @@ export default function RuralHealthPage() {
                 <div className="stat-card">
                   <HeartPulse size={15} className="stat-card-icon" />
                   <div className="stat-value"><CountUp value={stats.documents} /></div>
-                  <div className="stat-label">Documents tracked</div>
+                  <div className="stat-label">Program documents</div>
                 </div>
               </div>
-              <p className="muted" style={{ fontSize: '0.6875rem', marginTop: 8 }}>
-                National totals via Rural Care Journey's public API, aggregated from state and federal sources. Not affiliated with HRSA, CMS, or HHS - verify with official sources before programmatic decisions.
-              </p>
             </Reveal>
           )}
 
-          <Reveal delay={80}>
+          <Reveal delay={60}>
             <div className="card" style={{ marginTop: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 10 }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>State detail</h2>
-                <select className="toolbar-select" value={stateCode} onChange={(e) => setStateCode(e.target.value)}>
-                  {STATES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                <h2 style={{ fontSize: '1.125rem', fontWeight: 500, margin: 0 }}>
+                  <AlertTriangle size={16} style={{ color: "var(--pos-oppose)", marginRight: 8, verticalAlign: -2 }} />
+                  Health Professional Shortage Areas
+                </h2>
+                <select className="toolbar-select" value={stateName} onChange={(e) => setStateName(e.target.value)}>
+                  {STATES.map(([name]) => <option key={name} value={name}>{name}</option>)}
                 </select>
               </div>
+              <p className="settings-desc" style={{ marginBottom: 16 }}>
+                Official HRSA designations — areas where there aren't enough providers to meet basic healthcare needs. Updated daily from data.hrsa.gov.
+              </p>
 
-              {stateLoading ? (
-                <Spinner label="Loading state data…" />
-              ) : !configured ? (
-                <div className="rural-health-locked">
-                  <Lock size={20} className="muted" />
-                  <div>
-                    <p style={{ margin: "0 0 4px", fontWeight: 500 }}>State-level detail isn't unlocked yet</p>
-                    <p className="muted" style={{ margin: 0, fontSize: '0.8125rem' }}>
-                      Population, rural facility counts, award history, and program documents for {STATES.find(([c]) => c === stateCode)?.[1]} require a Rural Care Journey API plan.
-                    </p>
-                    <a href="https://www.ruralcarejourney.com/membership/api" target="_blank" rel="noreferrer" className="external-link-btn" style={{ marginTop: 10 }}>
-                      <ExternalLink size={13} /> View API plans
-                    </a>
-                  </div>
-                </div>
-              ) : stateDetail ? (
+              {hpsaLoading ? (
+                <Spinner label="Loading HRSA data…" />
+              ) : hpsaError ? (
+                <p className="muted">{hpsaError}</p>
+              ) : hpsa ? (
                 <div>
-                  {stateDetail.summary && <p style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>{stateDetail.summary}</p>}
-                  <div className="bill-meta" style={{ marginTop: 8 }}>
-                    {stateDetail.cahCount !== null && <span>Critical access hospitals: <strong>{stateDetail.cahCount}</strong></span>}
-                    {stateDetail.ruralPercent !== null && <span>Rural population: <strong>{stateDetail.ruralPercent}%</strong></span>}
-                    <span>Total awarded: <strong>{formatMoney(stateDetail.awardTotal)}</strong></span>
-                    <span>Awardees: <strong>{stateDetail.awardeeCount}</strong></span>
-                  </div>
-                  {stateDetail.recentDocuments.length > 0 && (
-                    <div style={{ marginTop: 14 }}>
-                      <p className="muted" style={{ fontSize: '0.75rem', marginBottom: 6 }}>Recent program documents</p>
-                      {stateDetail.recentDocuments.map((d, i) => (
-                        <div key={i} style={{ fontSize: '0.8125rem', padding: "6px 0", borderTop: "1px solid var(--border)" }}>
-                          <a href={d.url} target="_blank" rel="noreferrer">{d.title}</a>
-                          <span className="muted"> · {d.category}</span>
-                        </div>
-                      ))}
+                  <div className="stat-grid" style={{ marginBottom: 16 }}>
+                    <div className="stat-card">
+                      <Stethoscope size={15} className="stat-card-icon" />
+                      <div className="stat-value"><CountUp value={hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs} /></div>
+                      <div className="stat-label">Total shortage areas</div>
                     </div>
-                  )}
+                    <div className="stat-card">
+                      <Brain size={15} className="stat-card-icon" />
+                      <div className="stat-value"><CountUp value={hpsa.practitionersNeeded} /></div>
+                      <div className="stat-label">Practitioners needed</div>
+                    </div>
+                    <div className="stat-card">
+                      <HeartPulse size={15} className="stat-card-icon" />
+                      <div className="stat-value">{hpsa.totalPopulation > 0 ? (hpsa.totalPopulation / 1_000_000).toFixed(1) + "M" : "—"}</div>
+                      <div className="stat-label">Population in shortage areas</div>
+                    </div>
+                    <div className="stat-card">
+                      <AlertTriangle size={15} className="stat-card-icon" />
+                      <div className="stat-value">{hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs > 0 ? Math.round((hpsa.ruralHPSAs / (hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs)) * 100) : 0}%</div>
+                      <div className="stat-label">Classified rural</div>
+                    </div>
+                  </div>
+
+                  <div className="widget-grid">
+                    <div className="card">
+                      <SimpleBarChart data={shortageBreakdown} title="Shortage areas by discipline" color="var(--pos-oppose)" />
+                    </div>
+                    <div className="card">
+                      <SimpleBarChart data={ruralUrban} title="Rural vs. non-rural" color="var(--accent)" />
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <p className="muted">No data available for this state yet.</p>
+                <p className="muted">No shortage data found for {stateName}.</p>
               )}
             </div>
           </Reveal>
+
+          <p className="muted" style={{ fontSize: '0.6875rem', marginTop: 12 }}>
+            HPSA data: HRSA, Bureau of Health Workforce. RHTP data: Rural Care Journey. Neither is affiliated with this application — verify with official sources before programmatic decisions.
+          </p>
         </>
       )}
     </div>

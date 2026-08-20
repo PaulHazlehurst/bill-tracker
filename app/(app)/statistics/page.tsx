@@ -197,6 +197,23 @@ export default function StatisticsPage() {
               </div>
             </Reveal>
           )}
+
+          <Reveal delay={150}>
+            <div className="card" style={{ marginTop: 16 }}>
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 12 }}>Portfolio snapshot</h2>
+              <div className="bill-meta" style={{ marginTop: 0 }}>
+                <span>Total bills tracked: <strong>{totalBills}</strong></span>
+                <span>Enacted into law: <strong>{enactedCount}</strong> ({successRate}%)</span>
+                {billsWithCosponsorData > 0 && (
+                  <span>Avg. cosponsors per bill: <strong>{avgCosponsors}</strong></span>
+                )}
+                <span>House bills: <strong>{chamberCounts.House}</strong> · Senate bills: <strong>{chamberCounts.Senate}</strong></span>
+                {Object.keys(policyAreaCounts).length > 0 && (
+                  <span>Most common policy area: <strong>{policyAreaData[0]?.label ?? "—"}</strong> ({policyAreaData[0]?.value ?? 0} bills)</span>
+                )}
+              </div>
+            </div>
+          </Reveal>
         </>
       )}
     </div>

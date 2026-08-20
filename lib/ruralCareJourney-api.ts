@@ -85,3 +85,82 @@ export async function getStateDetail(code: string): Promise<StateDetail | null> 
     })),
   };
 }
+
+// ── HRSA HPSA data (genuinely free, official, no key) ─────────────
+// This is the real goldmine for a rural-health strategies firm:
+// every Health Professional Shortage Area in the country, by state,
+// with shortage scores, practitioner-need counts, and rural/urban
+// classification. Updated daily by HRSA itself.
+
+export type HPSAStateSummary = {
+  state: string;
+  primaryCareHPSAs: number;
+  dentalHPSAs: number;
+  mentalHealthHPSAs: number;
+  practitionersNeeded: number;
+  ruralHPSAs: number;
+  nonRuralHPSAs: number;
+  totalPopulation: number;
+};
+
+// Fetches the HPSA dashboard CSV from HRSA, parses it, and aggregates
+// by state. This is a ~5MB CSV with tens of thousands of rows, so it's
+// cached aggressively on the server side (revalidate = 86400, once/day,
+// which matches HRSA's own stated refresh cycle).
+export async function getHPSAByState(): Promise<Record<string, HPSAStateSummary>> {
+  const url = "https://data.hrsa.gov/DataDownload/DD_Files/HPSA_DASHBOARD.csv";
+  const res = await fetch(url, { next: { revalidate: 86400 } });
+  if (!res.ok) throw new Error(`HRSA HPSA fetch failed: ${res.status}`);
+  const text = await res.text();
+
+  const lines = text.split("\n");
+  const headers = lines[0].split(",").map((h) => h.replace(/"/g, "").trim());
+
+  const stateIdx = headers.indexOf("Common State Name");
+  const typeIdx = headers.indexOf("HPSA Discipline Class");
+  const ruralIdx = headers.indexOf("Rural Status");
+  const popIdx = headers.indexOf("HPSA Designation Population");
+  const needIdx = headers.indexOf("HPSA Provider Ratio Goal");
+  const statusIdx = headers.indexOf("HPSA Status");
+
+  if (stateIdx === -1 || typeIdx === -1) throw new Error("HPSA CSV format changed - column headers not found");
+
+  const byState: Record<string, HPSAStateSummary> = {};
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].match(/(".*?"|[^,]+)/g)?.map((c) => c.replace(/"/g, "").trim());
+    if (!cols || cols.length < Math.max(stateIdx, typeIdx, ruralIdx) + 1) continue;
+
+    const status = statusIdx >= 0 ? cols[statusIdx] : "";
+    if (status !== "Designated") continue;
+
+    const state = cols[stateIdx];
+    if (!state || state.length > 25) continue;
+
+    if (!byState[state]) {
+      byState[state] = {
+        state,
+        primaryCareHPSAs: 0, dentalHPSAs: 0, mentalHealthHPSAs: 0,
+        practitionersNeeded: 0, ruralHPSAs: 0, nonRuralHPSAs: 0, totalPopulation: 0,
+      };
+    }
+
+    const s = byState[state];
+    const type = cols[typeIdx];
+    if (type === "Primary Care") s.primaryCareHPSAs++;
+    else if (type === "Dental Health") s.dentalHPSAs++;
+    else if (type === "Mental Health") s.mentalHealthHPSAs++;
+
+    const rural = ruralIdx >= 0 ? cols[ruralIdx] : "";
+    if (rural === "Rural") s.ruralHPSAs++;
+    else s.nonRuralHPSAs++;
+
+    const pop = popIdx >= 0 ? parseInt(cols[popIdx]) : 0;
+    if (!isNaN(pop)) s.totalPopulation += pop;
+
+    const need = needIdx >= 0 ? parseFloat(cols[needIdx]) : 0;
+    if (!isNaN(need)) s.practitionersNeeded += Math.ceil(need);
+  }
+
+  return byState;
+}
