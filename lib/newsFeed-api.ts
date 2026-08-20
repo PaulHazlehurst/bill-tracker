@@ -19,10 +19,10 @@ export async function searchNews(query: string): Promise<NewsItem[]> {
   const itemBlocks = xml.split("<item>").slice(1);
 
   for (const block of itemBlocks.slice(0, 8)) {
-    const titleMatch = block.match(/<title>(.*?)<\/title>/s);
-    const linkMatch = block.match(/<link>(.*?)<\/link>/s);
-    const pubDateMatch = block.match(/<pubDate>(.*?)<\/pubDate>/s);
-    const sourceMatch = block.match(/<source[^>]*>(.*?)<\/source>/s);
+    const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
+    const linkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
+    const pubDateMatch = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+    const sourceMatch = block.match(/<source[^>]*>([\s\S]*?)<\/source>/);
 
     if (!titleMatch || !linkMatch) continue;
 
