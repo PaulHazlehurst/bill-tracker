@@ -96,6 +96,11 @@ create table bills (
   -- links to each format - not the plain-language CRS summary.
   text_versions jsonb,
   text_versions_fetched_at timestamptz,
+  -- Related news coverage (Google News RSS - a public feed, not a formal
+  -- API; see lib/newsFeed-api.ts for the honest terms). Links only, never
+  -- reproduced article text.
+  news_items jsonb,
+  news_items_fetched_at timestamptz,
   updated_at timestamptz not null default now()
 );
 

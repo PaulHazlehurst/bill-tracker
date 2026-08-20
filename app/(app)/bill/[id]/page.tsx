@@ -82,6 +82,8 @@ type RecordMentionItem = { title: string; date: string | null; section: string |
 
 type TextVersionItem = { type: string; date: string | null; formats: { type: string; url: string }[] };
 
+type NewsItemType = { title: string; source: string; url: string; publishedAt: string | null };
+
 type LobbyingFilingItem = {
   filingUuid: string;
   filingYear: number;
@@ -136,6 +138,8 @@ export default function BillDetailPage() {
   const [recordMentionsLoading, setRecordMentionsLoading] = useState(true);
   const [textVersions, setTextVersions] = useState<TextVersionItem[]>([]);
   const [textVersionsLoading, setTextVersionsLoading] = useState(true);
+  const [newsItems, setNewsItems] = useState<NewsItemType[]>([]);
+  const [newsLoading, setNewsLoading] = useState(true);
   const [trackedRowId, setTrackedRowId] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifySms, setNotifySms] = useState(false);
@@ -241,6 +245,12 @@ export default function BillDetailPage() {
       .then((body) => setTextVersions(body.versions ?? []))
       .catch(() => setTextVersions([]))
       .finally(() => setTextVersionsLoading(false));
+
+    fetch(`/api/bills/news?billId=${billId}&title=${encodeURIComponent(billData.title)}`)
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((body) => setNewsItems(body.items ?? []))
+      .catch(() => setNewsItems([]))
+      .finally(() => setNewsLoading(false));
   }
 
   useEffect(() => {
@@ -430,6 +440,24 @@ export default function BillDetailPage() {
         </div>
       )}
 
+      {meta && meta.cboCostEstimates && meta.cboCostEstimates.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>CBO cost estimate</h2>
+          <p className="settings-desc">
+            The Congressional Budget Office is required by law to cost nearly every bill a committee reports out.
+          </p>
+          {meta.cboCostEstimates.map((c: { title: string | null; description: string | null; url: string | null; date: string | null }, i: number) => (
+            <div key={i} className="text-version-row">
+              <div>
+                <span className="text-version-type">{c.description ?? c.title ?? "Cost estimate"}</span>
+                {c.date && <span className="muted" style={{ fontSize: '0.75rem', marginLeft: 8 }}>{formatDate(c.date)}</span>}
+              </div>
+              {c.url && <a href={c.url} target="_blank" rel="noreferrer" className="text-version-link">Read on CBO.gov</a>}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Summary - official CRS-authored plain language, the single most
           useful "what does this bill actually do" content on the page.
           Shows the most recent version; earlier ones (if the bill changed
@@ -536,6 +564,28 @@ export default function BillDetailPage() {
                     Read the record →
                   </a>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Related news coverage - real article links only, never reproduced
+          text. Google News RSS is a public feed, not a formal API - see
+          lib/newsFeed-api.ts for the honest terms this runs under. */}
+      {!newsLoading && newsItems.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Related news coverage</h2>
+          <p className="settings-desc">
+            Real articles mentioning this bill, linked directly - read the actual reporting, not a summary of it.
+          </p>
+          <div>
+            {newsItems.map((n, i) => (
+              <div key={i} className="hearing-row">
+                <a href={n.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8125rem', fontWeight: 500 }}>{n.title}</a>
+                <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>
+                  {n.source}{n.publishedAt && ` · ${formatDate(n.publishedAt)}`}
+                </div>
               </div>
             ))}
           </div>

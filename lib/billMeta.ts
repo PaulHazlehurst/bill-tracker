@@ -83,5 +83,15 @@ export function extractMeta(raw: any) {
     cosponsorCount: raw.cosponsors?.count ?? null,
     committeeCount: raw.committees?.count ?? null,
     summary: raw.summary?.text ?? null,
+    // CBO is required by law to cost nearly every bill a committee reports
+    // out - confirmed directly from congress.gov's own API docs that this
+    // rides along on the same bill response already being fetched and
+    // cached, so displaying it costs nothing extra.
+    cboCostEstimates: (raw.cboCostEstimates?.item ?? []).map((c: any) => ({
+      title: c.title ?? null,
+      description: c.description ?? null,
+      url: c.url ?? null,
+      date: c.pubDate ?? null,
+    })),
   };
 }
