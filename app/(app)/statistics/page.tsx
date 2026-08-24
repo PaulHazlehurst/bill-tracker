@@ -9,6 +9,7 @@ import Spinner from "@/components/Spinner";
 import CountUp from "@/components/CountUp";
 import SimpleBarChart from "@/components/SimpleBarChart";
 import DonutChart from "@/components/DonutChart";
+import RadialProgress from "@/components/RadialProgress";
 import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import Reveal from "@/components/Reveal";
@@ -175,22 +176,29 @@ export default function StatisticsPage() {
           </Reveal>
 
           <Reveal delay={40}>
-            <div className="stat-grid" style={{ marginTop: 16 }}>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={totalBills} /></div>
-                <div className="stat-label">Bills tracked</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={enactedCount} /></div>
-                <div className="stat-label">Enacted</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">{successRate}%</div>
-                <div className="stat-label">Reached law</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={avgCosponsors} /></div>
-                <div className="stat-label">Avg. cosponsors</div>
+            <div className="stats-featured">
+              <RadialProgress
+                percent={successRate}
+                size={110}
+                strokeWidth={10}
+                color="var(--pos-support)"
+                label="Reached law"
+              />
+              <div className="stats-quick-facts">
+                <div className="stats-quick-fact">
+                  <span className="stats-quick-fact-value"><CountUp value={totalBills} /></span>
+                  <span className="stats-quick-fact-label">Bills tracked</span>
+                </div>
+                <div className="stats-quick-fact">
+                  <span className="stats-quick-fact-value"><CountUp value={enactedCount} /></span>
+                  <span className="stats-quick-fact-label">Enacted</span>
+                </div>
+                {avgCosponsors > 0 && (
+                  <div className="stats-quick-fact">
+                    <span className="stats-quick-fact-value"><CountUp value={avgCosponsors} /></span>
+                    <span className="stats-quick-fact-label">Avg. cosponsors</span>
+                  </div>
+                )}
               </div>
             </div>
           </Reveal>
@@ -222,21 +230,21 @@ export default function StatisticsPage() {
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="widget-grid" style={{ marginTop: 16 }}>
-              <div className="card">
+            <div className="stats-bento">
+              <div className="stats-bento-cell stats-bento-donut">
                 <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 12 }}>Bills by stage</h2>
                 <DonutChart data={donutData} />
               </div>
-              <div className="card">
+              <div className="stats-bento-cell stats-bento-position">
                 <PositionBreakdown counts={positionCounts} />
               </div>
               {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                <div className="card">
+                <div className="stats-bento-cell stats-bento-party">
                   <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
                 </div>
               )}
               {(chamberCounts.House > 0 || chamberCounts.Senate > 0) && (
-                <div className="card">
+                <div className="stats-bento-cell stats-bento-chamber">
                   <SimpleBarChart
                     data={[{ label: "House", value: chamberCounts.House }, { label: "Senate", value: chamberCounts.Senate }]}
                     title="Bills by chamber"

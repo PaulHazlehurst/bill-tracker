@@ -10,7 +10,6 @@ import BillTable, { TableRow } from "@/components/BillTable";
 import BillSearch from "@/components/BillSearch";
 import Spinner from "@/components/Spinner";
 import TableSkeleton from "@/components/TableSkeleton";
-import CountUp from "@/components/CountUp";
 import ActivityMini from "@/components/ActivityMini";
 import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
@@ -19,7 +18,8 @@ import FirstRunHero from "@/components/FirstRunHero";
 import Reveal from "@/components/Reveal";
 import TrendingBills from "@/components/TrendingBills";
 import { useUI } from "@/components/UIProvider";
-import { FileText, Gavel, CheckCircle2, Award } from "lucide-react";
+import RadialProgress from "@/components/RadialProgress";
+import StageFlow from "@/components/StageFlow";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
@@ -185,34 +185,35 @@ export default function DashboardPage() {
               )}.
             </p>
 
-            <div className="stat-grid" style={{ marginTop: 4 }}>
-              {[
-                { label: "Introduced", value: counts.active, Icon: FileText },
-                { label: "In committee", value: counts.committee, Icon: Gavel },
-                { label: "Passed a chamber", value: counts.passed, Icon: CheckCircle2 },
-                { label: "Enacted", value: counts.enacted, Icon: Award },
-              ].map((s) => (
-                <div key={s.label} className="stat-card">
-                  <s.Icon size={15} className="stat-card-icon" />
-                  <div className="stat-value"><CountUp value={s.value} /></div>
-                  <div className="stat-label">{s.label}</div>
-                </div>
-              ))}
+            <div className="overview-featured">
+              <div className="overview-featured-ring">
+                <RadialProgress
+                  percent={tracked.length > 0 ? (counts.enacted / tracked.length) * 100 : 0}
+                  size={92}
+                  color="var(--pos-support)"
+                  label="Reached law"
+                />
+              </div>
+              <div className="overview-stage-flow-wrap">
+                <StageFlow counts={counts} />
+              </div>
             </div>
 
-            <div className="overview-widgets">
-              <div className="overview-widgets-primary">
+            <div className="bento-grid">
+              <div className="bento-cell bento-activity">
                 <ActivityMini scope="personal" />
+              </div>
+              <div className="bento-cell bento-trending">
                 <TrendingBills />
               </div>
-              <div className="overview-widgets-secondary">
+              <div className="bento-cell bento-position">
                 <PositionBreakdown counts={positionCounts} />
-                {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                  <div className="card">
-                    <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
-                  </div>
-                )}
               </div>
+              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+                <div className="bento-cell bento-party">
+                  <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+                </div>
+              )}
             </div>
           </div>
         </Reveal>

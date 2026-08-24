@@ -37,54 +37,6 @@ export async function getPublicStats(): Promise<RuralHealthStats> {
   };
 }
 
-export type StateDetail = {
-  code: string;
-  name: string;
-  cahCount: number | null;
-  population: number | null;
-  ruralPercent: number | null;
-  summary: string | null;
-  documents: number;
-  awardTotal: number;
-  awardeeCount: number;
-  recentDocuments: { title: string; fileType: string; category: string; url: string; highlights: string | null }[];
-};
-
-export function isConfigured(): boolean {
-  return !!process.env.RURAL_CARE_JOURNEY_API_KEY;
-}
-
-export async function getStateDetail(code: string): Promise<StateDetail | null> {
-  const key = process.env.RURAL_CARE_JOURNEY_API_KEY;
-  if (!key) return null; // graceful - no fabricated data, just "not configured"
-
-  const res = await trackedFetch(
-    `${BASE_URL}/v1/states/${code}`,
-    { headers: { Authorization: `Bearer ${key}` }, cache: "no-store" },
-    "rural_care_journey"
-  );
-  if (!res.ok) throw new Error(`Rural Care Journey state fetch failed: ${res.status}`);
-  const data = await res.json();
-
-  return {
-    code: data.code ?? code,
-    name: data.name ?? code,
-    cahCount: data.cahCount ?? null,
-    population: data.population ?? null,
-    ruralPercent: data.ruralPercent ?? null,
-    summary: data.summary ?? null,
-    documents: data.documents ?? 0,
-    awardTotal: data.awardTotal ?? 0,
-    awardeeCount: data.awardeeCount ?? 0,
-    recentDocuments: (data.recentDocuments ?? []).slice(0, 5).map((d: any) => ({
-      title: d.title ?? "Document",
-      fileType: d.fileType ?? "",
-      category: d.category ?? "",
-      url: d.url ?? "",
-      highlights: d.highlights ?? null,
-    })),
-  };
-}
 
 // ── HRSA HPSA data (genuinely free, official, no key) ─────────────
 // This is the real goldmine for a rural-health strategies firm:
@@ -101,6 +53,12 @@ export type HPSAStateSummary = {
   ruralHPSAs: number;
   nonRuralHPSAs: number;
   totalPopulation: number;
+  // Ranked by number of active shortage designations - the honest, real
+  // version of "where is care most needed": not a literal clinic-siting
+  // recommendation (which would need far more context than this data
+  // alone provides), but a defensible, data-grounded starting point for
+  // where a strategies firm might look first.
+  topCounties: { county: string; count: number }[];
 };
 
 // Fetches the HPSA dashboard CSV from HRSA, parses it, and aggregates
@@ -143,12 +101,14 @@ export async function getHPSAByState(): Promise<Record<string, HPSAStateSummary>
   const popIdx = findColumn(headers, ["Designation Population", "HPSA Population", "Population"]);
   const needIdx = findColumn(headers, ["Provider Ratio Goal", "Providers Needed", "Practitioners Needed"]);
   const statusIdx = findColumn(headers, ["HPSA Status", "Status"]);
+  const countyIdx = findColumn(headers, ["County"]);
 
   if (stateIdx === -1 || typeIdx === -1) {
     throw new Error(`HPSA CSV columns not found. Headers seen: ${headers.slice(0, 15).join(" | ")}`);
   }
 
   const byState: Record<string, HPSAStateSummary> = {};
+  const countyTallyByState: Record<string, Record<string, number>> = {};
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].match(/(".*?"|[^,]+)/g)?.map((c) => c.replace(/"/g, "").trim());
@@ -170,7 +130,9 @@ export async function getHPSAByState(): Promise<Record<string, HPSAStateSummary>
         state,
         primaryCareHPSAs: 0, dentalHPSAs: 0, mentalHealthHPSAs: 0,
         practitionersNeeded: 0, ruralHPSAs: 0, nonRuralHPSAs: 0, totalPopulation: 0,
+        topCounties: [],
       };
+      countyTallyByState[state] = {};
     }
 
     const s = byState[state];
@@ -194,6 +156,21 @@ export async function getHPSAByState(): Promise<Record<string, HPSAStateSummary>
       const need = parseFloat((cols[needIdx] ?? "").replace(/[^0-9.]/g, ""));
       if (!isNaN(need)) s.practitionersNeeded += Math.ceil(need);
     }
+
+    if (countyIdx !== -1) {
+      const county = (cols[countyIdx] ?? "").trim();
+      if (county && county.length < 40) {
+        countyTallyByState[state][county] = (countyTallyByState[state][county] ?? 0) + 1;
+      }
+    }
+  }
+
+  // Finalize each state's top-5 counties by shortage-designation count.
+  for (const state of Object.keys(byState)) {
+    byState[state].topCounties = Object.entries(countyTallyByState[state] ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([county, count]) => ({ county, count }));
   }
 
   return byState;

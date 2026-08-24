@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import CountUp from "@/components/CountUp";
-import SimpleBarChart from "@/components/SimpleBarChart";
+import DonutChart from "@/components/DonutChart";
+import RadialProgress from "@/components/RadialProgress";
 import Reveal from "@/components/Reveal";
-import { HeartPulse, Lock, ExternalLink, AlertTriangle, Stethoscope, Brain } from "lucide-react";
+import { AlertTriangle, MapPinned } from "lucide-react";
 
 const STATES = [
   ["Alabama","AL"],["Alaska","AK"],["Arizona","AZ"],["Arkansas","AR"],["California","CA"],
@@ -28,6 +29,7 @@ type Stats = { states: number; documents: number; activities: number; totalState
 type HPSAData = {
   state: string; primaryCareHPSAs: number; dentalHPSAs: number; mentalHealthHPSAs: number;
   practitionersNeeded: number; ruralHPSAs: number; nonRuralHPSAs: number; totalPopulation: number;
+  topCounties: { county: string; count: number }[];
 };
 
 function formatMoney(n: number) {
@@ -67,16 +69,16 @@ export default function RuralHealthPage() {
       .finally(() => setHpsaLoading(false));
   }, [stateName]);
 
-  const shortageBreakdown = hpsa ? [
-    { label: "Primary care", value: hpsa.primaryCareHPSAs },
-    { label: "Dental", value: hpsa.dentalHPSAs },
-    { label: "Mental health", value: hpsa.mentalHealthHPSAs },
+  const totalShortage = hpsa ? hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs : 0;
+  const ruralPercent = hpsa && totalShortage > 0 ? Math.round((hpsa.ruralHPSAs / totalShortage) * 100) : 0;
+
+  const disciplineData = hpsa ? [
+    { label: "Primary care", value: hpsa.primaryCareHPSAs, color: "#2c5f9e" },
+    { label: "Dental", value: hpsa.dentalHPSAs, color: "#a16207" },
+    { label: "Mental health", value: hpsa.mentalHealthHPSAs, color: "#6d28d9" },
   ] : [];
 
-  const ruralUrban = hpsa ? [
-    { label: "Rural", value: hpsa.ruralHPSAs },
-    { label: "Non-rural", value: hpsa.nonRuralHPSAs },
-  ] : [];
+  const maxCountyCount = hpsa?.topCounties[0]?.count ?? 1;
 
   return (
     <div className="container-wide">
@@ -93,93 +95,109 @@ export default function RuralHealthPage() {
         <Spinner label="Loading…" />
       ) : (
         <>
+          {/* Chapter 1: the national picture - RHTP funding overview, a
+              quiet backdrop before the real focus of the page. */}
           {stats && (
             <Reveal>
-              <div className="stat-grid">
-                <div className="stat-card">
-                  <HeartPulse size={15} className="stat-card-icon" />
-                  <div className="stat-value">{formatMoney(stats.totalStateAward)}</div>
-                  <div className="stat-label">RHTP total awarded</div>
+              <div className="rh-national-band">
+                <div className="rh-national-item">
+                  <span className="rh-national-value">{formatMoney(stats.totalStateAward)}</span>
+                  <span className="rh-national-label">RHTP total awarded nationally</span>
                 </div>
-                <div className="stat-card">
-                  <HeartPulse size={15} className="stat-card-icon" />
-                  <div className="stat-value"><CountUp value={stats.states} /></div>
-                  <div className="stat-label">States tracked</div>
+                <div className="rh-national-item">
+                  <span className="rh-national-value"><CountUp value={stats.states} /></span>
+                  <span className="rh-national-label">States tracked</span>
                 </div>
-                <div className="stat-card">
-                  <HeartPulse size={15} className="stat-card-icon" />
-                  <div className="stat-value"><CountUp value={stats.fundingCount} /></div>
-                  <div className="stat-label">Funding opportunities</div>
-                </div>
-                <div className="stat-card">
-                  <HeartPulse size={15} className="stat-card-icon" />
-                  <div className="stat-value"><CountUp value={stats.documents} /></div>
-                  <div className="stat-label">Program documents</div>
+                <div className="rh-national-item">
+                  <span className="rh-national-value"><CountUp value={stats.fundingCount} /></span>
+                  <span className="rh-national-label">Funding opportunities</span>
                 </div>
               </div>
             </Reveal>
           )}
 
+          {/* Chapter 2: the state deep-dive - the real substance of the
+              page, built around HRSA's own daily-updated shortage data. */}
           <Reveal delay={60}>
-            <div className="card" style={{ marginTop: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                <h2 style={{ fontSize: '1.125rem', fontWeight: 500, margin: 0 }}>
-                  <AlertTriangle size={16} style={{ color: "var(--pos-oppose)", marginRight: 8, verticalAlign: -2 }} />
-                  Health Professional Shortage Areas
-                </h2>
-                <select className="toolbar-select" value={stateName} onChange={(e) => setStateName(e.target.value)}>
-                  {STATES.map(([name]) => <option key={name} value={name}>{name}</option>)}
-                </select>
-              </div>
-              <p className="settings-desc" style={{ marginBottom: 16 }}>
-                Official HRSA designations — areas where there aren't enough providers to meet basic healthcare needs. Updated daily from data.hrsa.gov.
-              </p>
+            <div className="rh-state-header">
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 500, margin: 0, fontFamily: 'var(--font-display), Georgia, serif' }}>
+                <AlertTriangle size={18} style={{ color: "var(--pos-oppose)", marginRight: 10, verticalAlign: -3 }} />
+                Where care is hardest to reach
+              </h2>
+              <select className="toolbar-select" value={stateName} onChange={(e) => setStateName(e.target.value)}>
+                {STATES.map(([name]) => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>
+            <p className="settings-desc" style={{ marginBottom: 4 }}>
+              Official HRSA shortage designations for {stateName} - areas where there aren't enough providers to meet basic healthcare needs. Updated daily from data.hrsa.gov.
+            </p>
+          </Reveal>
 
-              {hpsaLoading ? (
-                <Spinner label="Loading HRSA data…" />
-              ) : hpsaError ? (
-                <p className="muted">{hpsaError}</p>
-              ) : hpsa ? (
-                <div>
-                  <div className="stat-grid" style={{ marginBottom: 16 }}>
-                    <div className="stat-card">
-                      <Stethoscope size={15} className="stat-card-icon" />
-                      <div className="stat-value"><CountUp value={hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs} /></div>
-                      <div className="stat-label">Total shortage areas</div>
+          {hpsaLoading ? (
+            <Spinner label="Loading HRSA data…" />
+          ) : hpsaError ? (
+            <p className="muted" style={{ marginTop: 12 }}>{hpsaError}</p>
+          ) : hpsa ? (
+            <>
+              <Reveal delay={90}>
+                <div className="rh-severity-band">
+                  <RadialProgress percent={ruralPercent} size={120} strokeWidth={11} color="var(--pos-oppose)" label="Shortage areas, rural" />
+                  <div className="rh-severity-facts">
+                    <div className="stats-quick-fact">
+                      <span className="stats-quick-fact-value"><CountUp value={totalShortage} /></span>
+                      <span className="stats-quick-fact-label">Total shortage areas</span>
                     </div>
-                    <div className="stat-card">
-                      <Brain size={15} className="stat-card-icon" />
-                      <div className="stat-value"><CountUp value={hpsa.practitionersNeeded} /></div>
-                      <div className="stat-label">Practitioners needed</div>
+                    <div className="stats-quick-fact">
+                      <span className="stats-quick-fact-value"><CountUp value={hpsa.practitionersNeeded} /></span>
+                      <span className="stats-quick-fact-label">Practitioners needed</span>
                     </div>
-                    <div className="stat-card">
-                      <HeartPulse size={15} className="stat-card-icon" />
-                      <div className="stat-value">{hpsa.totalPopulation > 0 ? (hpsa.totalPopulation / 1_000_000).toFixed(1) + "M" : "—"}</div>
-                      <div className="stat-label">Population in shortage areas</div>
-                    </div>
-                    <div className="stat-card">
-                      <AlertTriangle size={15} className="stat-card-icon" />
-                      <div className="stat-value">{hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs > 0 ? Math.round((hpsa.ruralHPSAs / (hpsa.primaryCareHPSAs + hpsa.dentalHPSAs + hpsa.mentalHealthHPSAs)) * 100) : 0}%</div>
-                      <div className="stat-label">Classified rural</div>
-                    </div>
-                  </div>
-
-                  <div className="widget-grid">
-                    <div className="card">
-                      <SimpleBarChart data={shortageBreakdown} title="Shortage areas by discipline" color="var(--pos-oppose)" />
-                    </div>
-                    <div className="card">
-                      <SimpleBarChart data={ruralUrban} title="Rural vs. non-rural" color="var(--accent)" />
+                    <div className="stats-quick-fact">
+                      <span className="stats-quick-fact-value">{hpsa.totalPopulation > 0 ? (hpsa.totalPopulation / 1_000_000).toFixed(1) + "M" : "—"}</span>
+                      <span className="stats-quick-fact-label">Population affected</span>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <p className="muted">No shortage data found for {stateName}.</p>
-              )}
-            </div>
-          </Reveal>
+              </Reveal>
 
-          <p className="muted" style={{ fontSize: '0.6875rem', marginTop: 12 }}>
+              <Reveal delay={120}>
+                <div className="rh-bento">
+                  <div className="stats-bento-cell rh-bento-donut">
+                    <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 12 }}>Shortage type</h2>
+                    <DonutChart data={disciplineData} />
+                  </div>
+                  <div className="stats-bento-cell rh-bento-counties">
+                    <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>
+                      <MapPinned size={15} style={{ marginRight: 6, verticalAlign: -2 }} />
+                      Highest-need counties
+                    </h2>
+                    <p className="settings-desc" style={{ marginBottom: 10 }}>
+                      Ranked by number of active shortage designations - a real, data-grounded starting point for where attention is most needed, not a precise site recommendation.
+                    </p>
+                    {hpsa.topCounties.length > 0 ? (
+                      <div>
+                        {hpsa.topCounties.map((c, i) => (
+                          <div key={c.county} className="rh-county-row">
+                            <span className="rh-county-rank">{i + 1}</span>
+                            <span className="rh-county-name">{c.county}</span>
+                            <div className="rh-county-bar-track">
+                              <div className="rh-county-bar-fill" style={{ width: `${(c.count / maxCountyCount) * 100}%` }} />
+                            </div>
+                            <span className="rh-county-count">{c.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="muted">County-level detail wasn't available for this state.</p>
+                    )}
+                  </div>
+                </div>
+              </Reveal>
+            </>
+          ) : (
+            <p className="muted" style={{ marginTop: 12 }}>No shortage data found for {stateName}.</p>
+          )}
+
+          <p className="muted" style={{ fontSize: '0.6875rem', marginTop: 16 }}>
             HPSA data: HRSA, Bureau of Health Workforce. RHTP data: Rural Care Journey. Neither is affiliated with this application — verify with official sources before programmatic decisions.
           </p>
         </>
