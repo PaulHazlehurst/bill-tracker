@@ -14,7 +14,7 @@ import { hasSeenEnactedCelebration, markEnactedCelebrationSeen } from "@/lib/cel
 import Confetti from "@/components/Confetti";
 import { PartyPopper } from "lucide-react";
 import { useTicker } from "@/lib/useTicker";
-import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check, Share2 } from "lucide-react";
+import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check, Share2, ScrollText } from "lucide-react";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import ExpandableText from "@/components/ExpandableText";
 import MomentumSignals from "@/components/MomentumSignals";
@@ -412,35 +412,15 @@ export default function BillDetailPage() {
         {committees.some((c) => c.activities.some((a) => a.name === "Hearings by")) && <a href="#section-hearings">Hearings</a>}
       </div>
 
-      {/* Full legislative text - the actual bill language, not the
-          plain-language summary. This is the direct answer to "why not
-          just read it on congress.gov" - now you don't have to leave to
-          get the real document. */}
-      {!textVersionsLoading && textVersions.length > 0 && (
-        <div className="card" id="section-text">
-          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Full text</h2>
-          <p className="settings-desc">The actual legislative language, every published version.</p>
-          <div>
-            {textVersions.map((v, i) => (
-              <div key={i} className="text-version-row">
-                <div>
-                  <span className="text-version-type">{v.type}</span>
-                  {v.date && <span className="muted" style={{ fontSize: '0.75rem', marginLeft: 8 }}>{formatDate(v.date)}</span>}
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {v.formats.map((f, fi) => (
-                    <a key={fi} href={f.url} target="_blank" rel="noreferrer" className="text-version-link">
-                      {f.type}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {meta && (
+      {/* Two-column layout: quick-reference facts (Details, CBO estimate)
+          sit in a sticky sidebar instead of stacking above everything else -
+          the direct fix for "the linear lineup of bill information." Main
+          narrative content (summary, text, lobbying, news, hearings) flows
+          in the wider column beside it. Stacks to a single column on
+          mobile via CSS, sidebar first. */}
+      <div className="bill-layout">
+        <aside className="bill-sidebar">
+{meta && (
         <div className="card" id="section-details">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Details</h2>
           <div className="bill-meta" style={{ marginTop: 0 }}>
@@ -473,15 +453,48 @@ export default function BillDetailPage() {
           ))}
         </div>
       )}
+        </aside>
+        <div className="bill-main">
+      {/* Full legislative text - the actual bill language, not the
+          plain-language summary. This is the direct answer to "why not
+          just read it on congress.gov" - now you don't have to leave to
+          get the real document. */}
+      {!textVersionsLoading && textVersions.length > 0 && (
+        <div className="card" id="section-text">
+          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Full text</h2>
+          <p className="settings-desc">The actual legislative language, every published version.</p>
+          <div>
+            {textVersions.map((v, i) => (
+              <div key={i} className="text-version-row">
+                <div>
+                  <span className="text-version-type">{v.type}</span>
+                  {v.date && <span className="muted" style={{ fontSize: '0.75rem', marginLeft: 8 }}>{formatDate(v.date)}</span>}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {v.formats.map((f, fi) => (
+                    <a key={fi} href={f.url} target="_blank" rel="noreferrer" className="text-version-link">
+                      {f.type}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* Summary - official CRS-authored plain language, the single most
+            {/* Summary - official CRS-authored plain language, the single most
           useful "what does this bill actually do" content on the page.
           Shows the most recent version; earlier ones (if the bill changed
           significantly) are available but collapsed by default. */}
       {!summariesLoading && summaries.length > 0 && (
         <div className="card summary-card" id="section-summary">
-          <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
-          <p className="settings-desc">{summaries[0].actionDesc} · official, from the Congressional Research Service</p>
+          <div className="summary-card-header">
+            <h2 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>Summary</h2>
+            <span className="summary-source-badge">CRS Official</span>
+          </div>
+          <p className="settings-desc">{summaries[0].actionDesc}</p>
+          <div className="summary-quote-mark">"</div>
           <ExpandableText text={summaries[0].text} className="official-text" />
           {summaries.length > 1 && (
             <details style={{ marginTop: 10 }}>
@@ -569,20 +582,19 @@ export default function BillDetailPage() {
           <p className="settings-desc">
             Floor speeches and remarks that mention this bill, straight from the official record. Best-effort search - may not be exhaustive.
           </p>
-          <div>
+          <div className="entity-grid">
             {recordMentions.map((m, i) => (
-              <div key={i} className="hearing-row">
-                <div className="hearing-header">
-                  <span className="hearing-committee">{m.title}</span>
-                  {m.date && <span className="hearing-date">{formatDate(m.date)}</span>}
-                </div>
-                {m.section && <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>{m.section}</div>}
-                {m.url && (
-                  <a href={m.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
-                    Read the record →
-                  </a>
-                )}
-              </div>
+              <a key={i} href={m.url ?? undefined} target="_blank" rel="noreferrer" className="entity-card">
+                <span className="entity-card-summary">
+                  <span className="entity-avatar" style={{ background: avatarColorFor(m.section ?? "Record") }}>
+                    <ScrollText size={16} />
+                  </span>
+                  <span>
+                    <span className="entity-card-name">{m.title}</span>
+                    <span className="entity-card-meta">{m.section ?? "Congressional Record"}{m.date && ` · ${formatDate(m.date)}`}</span>
+                  </span>
+                </span>
+              </a>
             ))}
           </div>
         </div>
@@ -735,6 +747,9 @@ export default function BillDetailPage() {
           </div>
         </div>
       )}
+
+        </div>
+      </div>
 
       {/* Track / notify controls */}
       <div className="card no-print">

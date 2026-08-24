@@ -8,16 +8,30 @@ import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import CountUp from "@/components/CountUp";
 import SimpleBarChart from "@/components/SimpleBarChart";
+import DonutChart from "@/components/DonutChart";
 import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import Reveal from "@/components/Reveal";
 import { STAGE_LABELS, extractMeta } from "@/lib/billMeta";
 import { BarChart3 } from "lucide-react";
 
+// Matches the exact stage-pill color language from the bill detail page,
+// so a color here means the same thing it means everywhere else in the
+// app - real visual recognition, not a second, uncoordinated palette.
+const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
+const STAGE_COLORS: Record<string, string> = {
+  introduced: "#4a5769",
+  committee: "#8a5a1a",
+  passed_house: "#1d6d3b",
+  passed_senate: "#1d6d3b",
+  to_president: "#15803d",
+  enacted: "#15803d",
+};
+
 type Row = {
   bill_id: string;
   position: string;
-  bills: { status_stage: string; raw_snapshot: any; congress: number; bill_type: string } | { status_stage: string; raw_snapshot: any; congress: number; bill_type: string }[] | null;
+  bills: { title: string; status_stage: string; raw_snapshot: any; congress: number; bill_type: string } | { title: string; status_stage: string; raw_snapshot: any; congress: number; bill_type: string }[] | null;
 };
 
 export default function StatisticsPage() {
@@ -44,12 +58,9 @@ export default function StatisticsPage() {
     const { data: profile } = await supabase.from("profiles").select("organization_id").eq("id", user.id).single();
     setHasTeam(!!profile?.organization_id);
 
-    // RLS already returns "your own rows, plus your team's if you're on
-    // one" (see schema.sql) - "yours" just adds a client-side filter on
-    // top of what RLS already permitted; "team" uses everything RLS gives back.
     let query = supabase
       .from("tracked_bills")
-      .select("bill_id, position, bills(status_stage, raw_snapshot, congress, bill_type)");
+      .select("bill_id, position, bills(title, status_stage, raw_snapshot, congress, bill_type)");
     if (scope === "yours") query = query.eq("user_id", user.id);
 
     const { data, error: queryError } = await query;
@@ -67,15 +78,11 @@ export default function StatisticsPage() {
   const partyCounts: Record<string, number> = { D: 0, R: 0, I: 0 };
   const chamberCounts: Record<string, number> = { House: 0, Senate: 0 };
   const policyAreaCounts: Record<string, number> = {};
+  const stageBills: Record<string, { id: string; title: string }[]> = {};
   let enactedCount = 0;
   let totalCosponsors = 0;
   let billsWithCosponsorData = 0;
 
-  // De-duplicate by bill_id first - on team scope, the same bill tracked
-  // by three people should count once toward stage/party/chamber
-  // distribution, not three times. Position counts are the one exception
-  // (kept per-tracker below), since "who stands where" is genuinely a
-  // per-person thing.
   const byBill = new Map<string, Row>();
   for (const r of rows) {
     positionCounts[r.position] = (positionCounts[r.position] ?? 0) + 1;
@@ -87,6 +94,8 @@ export default function StatisticsPage() {
     if (!bill) continue;
 
     stageCounts[bill.status_stage] = (stageCounts[bill.status_stage] ?? 0) + 1;
+    if (!stageBills[bill.status_stage]) stageBills[bill.status_stage] = [];
+    stageBills[bill.status_stage].push({ id: r.bill_id, title: bill.title });
     if (bill.status_stage === "enacted") enactedCount++;
 
     const party = (bill.raw_snapshot?.sponsors?.[0]?.party ?? "").toUpperCase();
@@ -108,15 +117,18 @@ export default function StatisticsPage() {
   const totalBills = byBill.size;
   const successRate = totalBills > 0 ? Math.round((enactedCount / totalBills) * 100) : 0;
   const avgCosponsors = billsWithCosponsorData > 0 ? Math.round(totalCosponsors / billsWithCosponsorData) : 0;
+  const activeCount = totalBills - enactedCount;
 
-  const stageData = Object.entries(stageCounts).map(([stage, count]) => ({
+  const donutData = STAGE_ORDER.map((stage) => ({
     label: STAGE_LABELS[stage] ?? stage,
-    value: count,
+    value: stageCounts[stage] ?? 0,
+    color: STAGE_COLORS[stage],
   }));
   const policyAreaData = Object.entries(policyAreaCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
     .map(([label, value]) => ({ label, value }));
+  const topPolicyArea = policyAreaData[0];
 
   return (
     <div className="container-wide">
@@ -144,8 +156,26 @@ export default function StatisticsPage() {
         </div>
       ) : (
         <>
+          {/* Narrative hero - the story headline, not just a stat grid.
+              Real numbers woven into a sentence, so the first thing you
+              read is the takeaway, not a table of raw figures. */}
           <Reveal>
-            <div className="stat-grid">
+            <div className="stats-hero">
+              <p className="stats-hero-headline">
+                You're tracking <strong>{totalBills}</strong> bill{totalBills !== 1 ? "s" : ""}
+                {enactedCount > 0 && <> — <strong>{enactedCount}</strong> {enactedCount === 1 ? "has" : "have"} become law</>}
+                {activeCount > 0 && enactedCount > 0 && <>, <strong>{activeCount}</strong> still moving</>}.
+              </p>
+              <p className="stats-hero-sub">
+                {successRate > 0 && <>A <strong>{successRate}%</strong> success rate so far. </>}
+                {topPolicyArea && <>Most of your attention is on <strong>{topPolicyArea.label}</strong>. </>}
+                {avgCosponsors > 0 && <>Bills you track average <strong>{avgCosponsors}</strong> cosponsors.</>}
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={40}>
+            <div className="stat-grid" style={{ marginTop: 16 }}>
               <div className="stat-card">
                 <div className="stat-value"><CountUp value={totalBills} /></div>
                 <div className="stat-label">Bills tracked</div>
@@ -165,10 +195,37 @@ export default function StatisticsPage() {
             </div>
           </Reveal>
 
-          <Reveal delay={60}>
+          {/* Portfolio scatter - every tracked bill plotted along the same
+              stage axis used on every individual bill's journey tracker.
+              Shows the shape of the whole portfolio at a glance: clustered
+              early, spread across the pipeline, or piled up near law. */}
+          <Reveal delay={70}>
+            <div className="card" style={{ marginTop: 16 }}>
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Where your bills stand</h2>
+              <p className="settings-desc">Every tracked bill, plotted along its legislative journey.</p>
+              <div className="portfolio-scatter">
+                <div className="portfolio-scatter-line" />
+                <div className="portfolio-scatter-stages">
+                  {STAGE_ORDER.map((stage) => (
+                    <div key={stage} className="portfolio-scatter-stage">
+                      <div className="portfolio-scatter-dots">
+                        {(stageBills[stage] ?? []).map((b) => (
+                          <a key={b.id} href={`/bill/${b.id}`} className="portfolio-dot" style={{ background: STAGE_COLORS[stage] }} title={b.title} />
+                        ))}
+                      </div>
+                      <div className="portfolio-scatter-label">{STAGE_LABELS[stage]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={100}>
             <div className="widget-grid" style={{ marginTop: 16 }}>
               <div className="card">
-                <SimpleBarChart data={stageData} title="Bills by stage" />
+                <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 12 }}>Bills by stage</h2>
+                <DonutChart data={donutData} />
               </div>
               <div className="card">
                 <PositionBreakdown counts={positionCounts} />
@@ -191,29 +248,12 @@ export default function StatisticsPage() {
           </Reveal>
 
           {policyAreaData.length > 0 && (
-            <Reveal delay={120}>
+            <Reveal delay={130}>
               <div className="card" style={{ marginTop: 16 }}>
                 <SimpleBarChart data={policyAreaData} title="Top policy areas" color="var(--pos-watching)" />
               </div>
             </Reveal>
           )}
-
-          <Reveal delay={150}>
-            <div className="card" style={{ marginTop: 16 }}>
-              <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 12 }}>Portfolio snapshot</h2>
-              <div className="bill-meta" style={{ marginTop: 0 }}>
-                <span>Total bills tracked: <strong>{totalBills}</strong></span>
-                <span>Enacted into law: <strong>{enactedCount}</strong> ({successRate}%)</span>
-                {billsWithCosponsorData > 0 && (
-                  <span>Avg. cosponsors per bill: <strong>{avgCosponsors}</strong></span>
-                )}
-                <span>House bills: <strong>{chamberCounts.House}</strong> · Senate bills: <strong>{chamberCounts.Senate}</strong></span>
-                {Object.keys(policyAreaCounts).length > 0 && (
-                  <span>Most common policy area: <strong>{policyAreaData[0]?.label ?? "—"}</strong> ({policyAreaData[0]?.value ?? 0} bills)</span>
-                )}
-              </div>
-            </div>
-          </Reveal>
         </>
       )}
     </div>

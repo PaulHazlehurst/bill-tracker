@@ -176,14 +176,14 @@ export default function DashboardPage() {
       {!loading && !error && tracked.length > 0 && (
         <Reveal>
           <div className="settings-section overview-section">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <h2>Overview</h2>
+            <p className="overview-narrative">
+              You're tracking <strong>{tracked.length}</strong> bill{tracked.length !== 1 ? "s" : ""}
+              {counts.enacted > 0 && <> — <strong>{counts.enacted}</strong> {counts.enacted === 1 ? "has" : "have"} become law</>}
+              {counts.committee > 0 && <>, <strong>{counts.committee}</strong> in committee</>}
               {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
-                <span className="overview-headline">
-                  <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} on your bills this week
-                </span>
-              )}
-            </div>
+                <> · <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} this week</>
+              )}.
+            </p>
 
             <div className="stat-grid" style={{ marginTop: 4 }}>
               {[
@@ -200,15 +200,19 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <div className="widget-grid">
-              <ActivityMini scope="personal" />
-              <PositionBreakdown counts={positionCounts} />
-              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                <div className="card">
-                  <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
-                </div>
-              )}
-              <TrendingBills />
+            <div className="overview-widgets">
+              <div className="overview-widgets-primary">
+                <ActivityMini scope="personal" />
+                <TrendingBills />
+              </div>
+              <div className="overview-widgets-secondary">
+                <PositionBreakdown counts={positionCounts} />
+                {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+                  <div className="card">
+                    <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Reveal>

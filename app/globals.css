@@ -1461,19 +1461,39 @@ tr:hover .row-external-link { opacity: 1; }
   font-weight: 500;
   letter-spacing: -0.01em;
 }
-.overview-section .stat-grid,
-.overview-section .widget-grid {
+.overview-section .stat-grid {
   margin-top: 18px;
 }
-.overview-headline {
-  font-size: 0.8125rem;
-  color: var(--text-soft);
-}
-.overview-headline strong {
-  color: var(--accent);
+.overview-narrative {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 1.125rem;
+  font-size: 1.375rem;
   font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  margin: 0;
+  max-width: 640px;
+}
+.overview-narrative strong { color: var(--accent); }
+
+/* Tiered widget hierarchy: Activity and Trending are "story" widgets -
+   specific bills, specific events - so they get more visual room. Position
+   and party breakdowns are quick reference charts, sized smaller
+   alongside them rather than competing for equal attention. */
+.overview-widgets {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+.overview-widgets-primary,
+.overview-widgets-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width: 860px) {
+  .overview-widgets { grid-template-columns: 1fr; }
 }
 
 /* ── Command palette ──────────────────────────────────────────────── */
@@ -2261,4 +2281,139 @@ textarea:focus-visible,
 .summary-card {
   position: relative;
   border-left: 3px solid var(--accent);
+  overflow: hidden;
+}
+.summary-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.summary-source-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.summary-quote-mark {
+  position: absolute;
+  top: 6px;
+  right: 18px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 5rem;
+  line-height: 1;
+  color: var(--accent-soft);
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
+}
+.summary-card .official-text { position: relative; z-index: 1; }
+
+/* ── Bill detail two-column layout ──────────────────────────────── */
+/* Quick-reference facts (Details, CBO estimate) live in a sticky sidebar
+   instead of stacking above the narrative content - the real fix for a
+   page that used to be one long linear column. */
+
+.bill-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.bill-sidebar {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.bill-sidebar .card { margin-bottom: 0; }
+.bill-main { min-width: 0; }
+
+@media (max-width: 900px) {
+  .bill-layout { grid-template-columns: 1fr; }
+  .bill-sidebar { position: static; }
+}
+
+/* ── Statistics hero + portfolio scatter ────────────────────────── */
+
+.stats-hero {
+  padding: 24px 0 4px;
+}
+.stats-hero-headline {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  margin: 0 0 8px;
+}
+.stats-hero-headline strong { color: var(--accent); }
+.stats-hero-sub {
+  font-size: 0.9375rem;
+  color: var(--text-soft);
+  margin: 0;
+}
+.stats-hero-sub strong { color: var(--text); font-weight: 600; }
+
+.portfolio-scatter {
+  position: relative;
+  padding-top: 8px;
+}
+.portfolio-scatter-line {
+  position: absolute;
+  top: 44px;
+  left: 4%;
+  right: 4%;
+  height: 2px;
+  background: var(--border);
+}
+.portfolio-scatter-stages {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+.portfolio-scatter-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.portfolio-scatter-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  align-items: flex-end;
+  padding-bottom: 6px;
+  width: 100%;
+}
+.portfolio-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.portfolio-dot:hover { transform: scale(1.4); }
+.portfolio-scatter-label {
+  font-size: 0.625rem;
+  color: var(--text-soft);
+  text-align: center;
+  max-width: 80px;
+  line-height: 1.3;
+}
+
+@media (max-width: 640px) {
+  .stats-hero-headline { font-size: 1.375rem; }
+  .portfolio-scatter-label { display: none; }
 }
