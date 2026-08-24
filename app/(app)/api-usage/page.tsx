@@ -20,10 +20,34 @@ const SERVICES = [
     staticLimitLabel: "5,000 requests / hour (official)",
   },
   {
+    key: "govinfo_gov",
+    name: "GovInfo (Congressional Record)",
+    staticLimit: null,
+    staticLimitLabel: "Shares congress.gov's quota - same api.data.gov key",
+  },
+  {
     key: "lda_gov",
     name: "LDA.gov (lobbying data)",
     staticLimit: null,
     staticLimitLabel: null, // filled in dynamically below based on whether a key is configured
+  },
+  {
+    key: "rural_care_journey",
+    name: "Rural Care Journey",
+    staticLimit: null,
+    staticLimitLabel: "Free public stats endpoint - no published rate limit",
+  },
+  {
+    key: "hrsa",
+    name: "HRSA (shortage area data)",
+    staticLimit: null,
+    staticLimitLabel: "Free public data - no published rate limit",
+  },
+  {
+    key: "news_feed",
+    name: "Google News RSS",
+    staticLimit: null,
+    staticLimitLabel: "Public feed, not a formal API - no published rate limit",
   },
 ];
 

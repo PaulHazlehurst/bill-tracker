@@ -126,7 +126,7 @@ function findColumn(headers: string[], candidates: string[]): number {
 
 export async function getHPSAByState(): Promise<Record<string, HPSAStateSummary>> {
   const url = "https://data.hrsa.gov/DataDownload/DD_Files/HPSA_DASHBOARD.csv";
-  const res = await fetch(url, { next: { revalidate: 86400 } });
+  const res = await trackedFetch(url, { next: { revalidate: 86400 } } as RequestInit, "hrsa");
   if (!res.ok) throw new Error(`HRSA HPSA fetch failed: ${res.status}`);
   const text = await res.text();
 

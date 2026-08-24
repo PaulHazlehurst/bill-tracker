@@ -7,11 +7,13 @@
 // source, date) - never reproduced article text - is a reasonable use;
 // this never stores or displays full article content, only pointers to it.
 
+import { trackedFetch } from "@/lib/apiUsageTracker";
+
 export type NewsItem = { title: string; source: string; url: string; publishedAt: string | null };
 
 export async function searchNews(query: string): Promise<NewsItem[]> {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-  const res = await fetch(url, { next: { revalidate: 3600 } }); // hourly cache - a live news feed, not government data on a fixed schedule
+  const res = await trackedFetch(url, { next: { revalidate: 3600 } } as RequestInit, "news_feed"); // hourly cache - a live news feed, not government data on a fixed schedule
   if (!res.ok) throw new Error(`Google News RSS fetch failed: ${res.status}`);
   const xml = await res.text();
 

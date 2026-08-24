@@ -8,7 +8,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import { useUI } from "@/components/UIProvider";
-import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
+import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS, avatarColorFor, initialsFor, faviconFor } from "@/lib/billMeta";
 import { recordView } from "@/lib/recentlyViewed";
 import { hasSeenEnactedCelebration, markEnactedCelebrationSeen } from "@/lib/celebrationTracker";
 import Confetti from "@/components/Confetti";
@@ -396,12 +396,28 @@ export default function BillDetailPage() {
         </div>
       </div>
 
+      {/* Quick-jump strip - the direct answer to "we have to scroll for a
+          while": every section that actually has content gets a link here,
+          so getting to lobbying activity or news doesn't mean scrolling
+          past everything else first. Sections with no data for this bill
+          are simply omitted, not shown greyed-out. */}
+      <div className="jump-nav">
+        {textVersions.length > 0 && <a href="#section-text">Full text</a>}
+        {meta?.cboCostEstimates && meta.cboCostEstimates.length > 0 && <a href="#section-cbo">CBO estimate</a>}
+        {summaries.length > 0 && <a href="#section-summary">Summary</a>}
+        {meta && <a href="#section-details">Details</a>}
+        {lobbyingFilings.length > 0 && <a href="#section-lobbying">Lobbying</a>}
+        {recordMentions.length > 0 && <a href="#section-record">Congressional Record</a>}
+        {newsItems.length > 0 && <a href="#section-news">News</a>}
+        {committees.some((c) => c.activities.some((a) => a.name === "Hearings by")) && <a href="#section-hearings">Hearings</a>}
+      </div>
+
       {/* Full legislative text - the actual bill language, not the
           plain-language summary. This is the direct answer to "why not
           just read it on congress.gov" - now you don't have to leave to
           get the real document. */}
       {!textVersionsLoading && textVersions.length > 0 && (
-        <div className="card">
+        <div className="card" id="section-text">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Full text</h2>
           <p className="settings-desc">The actual legislative language, every published version.</p>
           <div>
@@ -425,7 +441,7 @@ export default function BillDetailPage() {
       )}
 
       {meta && (
-        <div className="card">
+        <div className="card" id="section-details">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>Details</h2>
           <div className="bill-meta" style={{ marginTop: 0 }}>
             {meta.chamber && <span>Chamber: <strong>{meta.chamber}</strong></span>}
@@ -441,7 +457,7 @@ export default function BillDetailPage() {
       )}
 
       {meta && meta.cboCostEstimates && meta.cboCostEstimates.length > 0 && (
-        <div className="card">
+        <div className="card" id="section-cbo">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>CBO cost estimate</h2>
           <p className="settings-desc">
             The Congressional Budget Office is required by law to cost nearly every bill a committee reports out.
@@ -463,7 +479,7 @@ export default function BillDetailPage() {
           Shows the most recent version; earlier ones (if the bill changed
           significantly) are available but collapsed by default. */}
       {!summariesLoading && summaries.length > 0 && (
-        <div className="card">
+        <div className="card summary-card" id="section-summary">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
           <p className="settings-desc">{summaries[0].actionDesc} · official, from the Congressional Research Service</p>
           <ExpandableText text={summaries[0].text} className="official-text" />
@@ -516,26 +532,28 @@ export default function BillDetailPage() {
           silent otherwise. Best-effort text match, not exhaustive - see
           lib/lda-api.ts. */}
       {lobbyingFilings.length > 0 && (
-        <div className="card">
+        <div className="card" id="section-lobbying">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Lobbying activity</h2>
           <p className="settings-desc">
             Filings that mention this bill, via LDA.gov (the official House/Senate lobbying disclosure database). Best-effort text match - may not be exhaustive.
           </p>
-          <div>
+          <div className="entity-grid">
             {lobbyingFilings.map((f) => (
-              <div key={f.filingUuid} className="hearing-row">
-                <div className="hearing-header">
-                  <span className="hearing-committee">{f.clientName}</span>
-                  <span className="hearing-date">via {f.registrantName} · {f.filingYear}</span>
-                </div>
-                <details>
-                  <summary className="hearing-title lobbying-issue-preview">{f.issueDescription}</summary>
-                  <p style={{ fontSize: '0.8125rem', marginTop: 6, lineHeight: 1.5 }}>{f.issueDescription}</p>
-                </details>
+              <details key={f.filingUuid} className="entity-card">
+                <summary className="entity-card-summary">
+                  <span className="entity-avatar" style={{ background: avatarColorFor(f.clientName) }}>
+                    {initialsFor(f.clientName)}
+                  </span>
+                  <span>
+                    <span className="entity-card-name">{f.clientName}</span>
+                    <span className="entity-card-meta">via {f.registrantName} · {f.filingYear}</span>
+                  </span>
+                </summary>
+                <p style={{ fontSize: '0.8125rem', marginTop: 10, lineHeight: 1.5 }}>{f.issueDescription}</p>
                 <a href={f.documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
                   View filing →
                 </a>
-              </div>
+              </details>
             ))}
           </div>
         </div>
@@ -546,7 +564,7 @@ export default function BillDetailPage() {
           Search Service is a "public preview" per their own docs, so this
           is best-effort like the lobbying section above it. */}
       {!recordMentionsLoading && recordMentions.length > 0 && (
-        <div className="card">
+        <div className="card" id="section-record">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Congressional Record mentions</h2>
           <p className="settings-desc">
             Floor speeches and remarks that mention this bill, straight from the official record. Best-effort search - may not be exhaustive.
@@ -572,22 +590,35 @@ export default function BillDetailPage() {
 
       {/* Related news coverage - real article links only, never reproduced
           text. Google News RSS is a public feed, not a formal API - see
-          lib/newsFeed-api.ts for the honest terms this runs under. */}
+          lib/newsFeed-api.ts for the honest terms this runs under. Favicons
+          are honestly sourced from the article's real URL, unlike the
+          lobbyist avatars above which use initials since no real domain
+          exists to derive a logo from. */}
       {!newsLoading && newsItems.length > 0 && (
-        <div className="card">
+        <div className="card" id="section-news">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Related news coverage</h2>
           <p className="settings-desc">
             Real articles mentioning this bill, linked directly - read the actual reporting, not a summary of it.
           </p>
-          <div>
-            {newsItems.map((n, i) => (
-              <div key={i} className="hearing-row">
-                <a href={n.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8125rem', fontWeight: 500 }}>{n.title}</a>
-                <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>
-                  {n.source}{n.publishedAt && ` · ${formatDate(n.publishedAt)}`}
-                </div>
-              </div>
-            ))}
+          <div className="entity-grid">
+            {newsItems.map((n, i) => {
+              const favicon = faviconFor(n.url);
+              return (
+                <a key={i} href={n.url} target="_blank" rel="noreferrer" className="entity-card news-card">
+                  <span className="entity-card-summary">
+                    {favicon ? (
+                      <img src={favicon} alt="" className="news-favicon" />
+                    ) : (
+                      <span className="entity-avatar" style={{ background: "var(--text-soft)" }}>{initialsFor(n.source)}</span>
+                    )}
+                    <span>
+                      <span className="entity-card-name">{n.title}</span>
+                      <span className="entity-card-meta">{n.source}{n.publishedAt && ` · ${formatDate(n.publishedAt)}`}</span>
+                    </span>
+                  </span>
+                </a>
+              );
+            })}
           </div>
         </div>
       )}
@@ -599,17 +630,17 @@ export default function BillDetailPage() {
           Always renders once loaded (even with nothing to show) so this
           doesn't silently disappear and look like a missing feature. */}
       {committeesLoading ? (
-        <div className="card">
+        <div className="card" id="section-hearings">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
           <p className="muted" style={{ fontSize: '0.8125rem' }}>Checking committee records…</p>
         </div>
       ) : !committees.some((c) => c.activities.some((a) => a.name === "Hearings by")) ? (
-        <div className="card">
+        <div className="card" id="section-hearings">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
           <p className="muted" style={{ fontSize: '0.8125rem' }}>No hearings recorded for this bill yet. Most bills never reach one.</p>
         </div>
       ) : (
-        <div className="card">
+        <div className="card" id="section-hearings">
           <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Hearings</h2>
           <p className="settings-desc">
             Official committee activity from congress.gov.

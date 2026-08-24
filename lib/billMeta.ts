@@ -95,3 +95,40 @@ export function extractMeta(raw: any) {
     })),
   };
 }
+
+// Deterministic "initials avatar" for entities we only have a name for
+// (lobbying clients/registrants) - no real logo API can reliably match a
+// company name to the right domain, so a wrong guessed logo would be worse
+// than an honest colored initial. The color is hashed from the name itself,
+// so the same company always gets the same color across the app - a real
+// (if small) form of visual recognition, "I've seen that blue square with
+// a P before."
+const AVATAR_COLORS = [
+  "#2c5f9e", "#15803d", "#a16207", "#b8342a", "#6d28d9", "#0e7490", "#be185d", "#4d7c0f",
+];
+
+export function avatarColorFor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+export function initialsFor(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+// A real favicon, honestly sourced - unlike the lobbyist case above, news
+// articles come with a real URL, so the domain (and therefore the favicon)
+// is genuinely correct, not a guess. Google's public favicon service needs
+// no key and no signup.
+export function faviconFor(articleUrl: string): string | null {
+  try {
+    const domain = new URL(articleUrl).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  } catch {
+    return null;
+  }
+}

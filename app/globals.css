@@ -1237,16 +1237,84 @@ button.ghost:hover:not(:disabled) {
   color: var(--text-soft);
   overflow-wrap: break-word;
 }
-.lobbying-issue-preview {
+
+/* ── Entity card grid (lobbyists, news) ─────────────────────────── */
+/* The visual-recognition treatment: a colored avatar or real favicon next
+   to a name, in a card grid instead of a plain text list - so scanning
+   the page means recognizing shapes and colors, not reading every line. */
+
+.entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.entity-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   cursor: pointer;
+}
+.entity-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.entity-card-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+  cursor: pointer;
+}
+.entity-card-summary::-webkit-details-marker { display: none; }
+.entity-card-summary::marker { display: none; content: ""; }
+.entity-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.news-favicon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: var(--surface-soft);
+  padding: 6px;
+}
+.entity-card-name {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
-.lobbying-issue-preview::-webkit-details-marker { display: none; }
-details[open] .lobbying-issue-preview { white-space: normal; }
+.entity-card-meta {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+details.entity-card[open] { border-color: var(--accent); }
+.news-card:hover .entity-card-name { color: var(--accent); }
 .hearing-detail-badge {
   display: inline-block;
   font-size: 0.625rem;
@@ -2152,4 +2220,45 @@ textarea:focus-visible,
   .first-run-hero { padding: 32px 22px 24px; border-radius: 16px; }
   .first-run-headline { font-size: 2rem; }
   .first-run-sub { font-size: 0.9375rem; }
+}
+
+/* ── Jump nav (bill detail page) ─────────────────────────────────── */
+
+.jump-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 16px;
+  margin-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.jump-nav a {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 6px 13px;
+  border-radius: 20px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  scroll-margin-top: 20px;
+}
+.jump-nav a:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.jump-nav::-webkit-scrollbar { height: 0; }
+
+/* Every anchored section gets breathing room from the sticky-ish jump
+   nav above it when navigated to directly. */
+[id^="section-"] { scroll-margin-top: 16px; }
+
+/* ── Summary pull-quote treatment ────────────────────────────────── */
+
+.summary-card {
+  position: relative;
+  border-left: 3px solid var(--accent);
 }
