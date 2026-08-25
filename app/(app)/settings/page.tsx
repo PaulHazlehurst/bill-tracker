@@ -25,6 +25,10 @@ export default function SettingsPage() {
   const [defaultNotifySms, setDefaultNotifySms] = useState(false);
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [topics, setTopics] = useState("");
+  const [savingTopics, setSavingTopics] = useState(false);
+  const [topicsSaved, setTopicsSaved] = useState(false);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
 
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
@@ -54,7 +58,7 @@ export default function SettingsPage() {
 
     const { data: profile, error: loadError } = await supabase
       .from("profiles")
-      .select("phone, organization_id, default_notify_email, default_notify_sms, email_notifications_enabled, organizations(name, invite_code, created_by)")
+      .select("phone, organization_id, default_notify_email, default_notify_sms, email_notifications_enabled, topics, organizations(name, invite_code, created_by, topics)")
       .eq("id", user.id)
       .single();
 
@@ -75,6 +79,7 @@ export default function SettingsPage() {
     setOrgName((org as any)?.name ?? "");
     setInviteCode((org as any)?.invite_code ?? null);
     setIsOwner((org as any)?.created_by === user.id);
+    setTopics((profile?.organization_id ? (org as any)?.topics : profile?.topics)?.join(", ") ?? "");
 
     setLoading(false);
   }
@@ -112,6 +117,34 @@ export default function SettingsPage() {
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function handleSaveTopics(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingTopics(true);
+    setTopicsError(null);
+    setTopicsSaved(false);
+
+    const cleanTopics = topics.split(",").map((t) => t.trim()).filter(Boolean);
+
+    // Org topics are shared (anyone on the team can set them, per the
+    // schema's update-permission trigger) - personal topics only apply
+    // when there's no team yet.
+    const { error: updateError2 } = orgId
+      ? await supabase.from("organizations").update({ topics: cleanTopics }).eq("id", orgId)
+      : await supabase.from("profiles").update({ topics: cleanTopics }).eq("id", userId);
+
+    setSavingTopics(false);
+    if (updateError2) {
+      setTopicsError(updateError2.message);
+      return;
+    }
+    setTopicsSaved(true);
+    setTimeout(() => setTopicsSaved(false), 2500);
+
+    // Best-effort - if this is the first time topics are set, don't make
+    // someone wait until tomorrow's cron to see anything.
+    fetch("/api/prospective/discover-now", { method: "POST" }).catch(() => {});
   }
 
   async function handleSendTestEmail() {
@@ -309,6 +342,32 @@ export default function SettingsPage() {
                   {sendingTest ? "Sending…" : "Send test email"}
                 </button>
               </div>
+            </form>
+          </div>
+
+          <div className="settings-section">
+            <h2>Topics you follow</h2>
+            <p className="settings-desc">
+              {orgId
+                ? "Shared with your whole team - a new bill matching any of these shows up as a suggestion for everyone."
+                : "Personal, since you're not on a team yet - a new bill matching these shows up as a suggestion for you."}
+              {" "}Checked automatically once a day.
+            </p>
+            <form onSubmit={handleSaveTopics} className="card">
+              <div className="field">
+                <label htmlFor="topics">Topics, separated by commas</label>
+                <input
+                  id="topics"
+                  value={topics}
+                  onChange={(e) => setTopics(e.target.value)}
+                  placeholder="diabetes, rural hospitals, insulin pricing"
+                />
+              </div>
+              {topicsError && <p className="error-text">{topicsError}</p>}
+              {topicsSaved && <p className="muted" style={{ color: "var(--accent)" }}>Saved - checking for matching bills now.</p>}
+              <button className="primary" type="submit" disabled={savingTopics}>
+                {savingTopics ? "Saving…" : "Save topics"}
+              </button>
             </form>
           </div>
 

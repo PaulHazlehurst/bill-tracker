@@ -172,11 +172,12 @@ create policy "org members can attempt organization updates"
   using (id = public.current_user_org_id())
   with check (id = public.current_user_org_id());
 
--- Enforces: any member may change the logo. Changing anything else (name,
--- invite_code, created_by) requires being the team's owner. Raises an
--- exception for a disallowed change, which surfaces to the client as a
--- normal Postgres error - this is real enforcement, not just a UI choice
--- to hide the rename button from non-owners.
+-- Enforces: any member may change the logo or the shared topic list.
+-- Changing anything else (name, invite_code, created_by) requires being
+-- the team's owner. Raises an exception for a disallowed change, which
+-- surfaces to the client as a normal Postgres error - this is real
+-- enforcement, not just a UI choice to hide the rename button from
+-- non-owners.
 create or replace function public.enforce_org_update_permissions()
 returns trigger
 language plpgsql
@@ -184,14 +185,14 @@ security definer
 set search_path = public
 as $$
 declare
-  only_logo_changed boolean;
+  only_member_editable_changed boolean;
 begin
-  only_logo_changed :=
+  only_member_editable_changed :=
     (new.name is not distinct from old.name)
     and (new.invite_code is not distinct from old.invite_code)
     and (new.created_by is not distinct from old.created_by);
 
-  if only_logo_changed then
+  if only_member_editable_changed then
     if public.current_user_org_id() is distinct from old.id then
       raise exception 'not a member of this organization';
     end if;
