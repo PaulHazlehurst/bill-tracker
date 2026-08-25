@@ -15,6 +15,8 @@ import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import FirstRunHero from "@/components/FirstRunHero";
+import ProspectiveBills from "@/components/ProspectiveBills";
+import TopicsHero from "@/components/TopicsHero";
 import Reveal from "@/components/Reveal";
 import TrendingBills from "@/components/TrendingBills";
 import { useUI } from "@/components/UIProvider";
@@ -42,6 +44,7 @@ export default function DashboardPage() {
   const [hasPhone, setHasPhone] = useState(false);
   const [hasEmailEnabled, setHasEmailEnabled] = useState(false);
   const [weeklyActivityCount, setWeeklyActivityCount] = useState<number | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -158,12 +161,8 @@ export default function DashboardPage() {
         <FirstRunHero onTracked={loadTracked} />
       ) : (
         <>
-          <div className="page-header">
-            <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Your tracked bills</h1>
-              <p className="muted" style={{ marginTop: 4 }}>Search for a bill below to start tracking it.</p>
-            </div>
-          </div>
+          <TopicsHero onDiscovered={loadTracked} />
+          <ProspectiveBills onTracked={loadTracked} />
 
           {!loading && (
             <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={hasEmailEnabled} hasTeam={hasTeam} hasPhone={hasPhone} />
@@ -174,49 +173,57 @@ export default function DashboardPage() {
       <BillSearch onTracked={loadTracked} />
 
       {!loading && !error && tracked.length > 0 && (
-        <Reveal>
-          <div className="settings-section overview-section">
-            <p className="overview-narrative">
-              You're tracking <strong>{tracked.length}</strong> bill{tracked.length !== 1 ? "s" : ""}
-              {counts.enacted > 0 && <> — <strong>{counts.enacted}</strong> {counts.enacted === 1 ? "has" : "have"} become law</>}
-              {counts.committee > 0 && <>, <strong>{counts.committee}</strong> in committee</>}
-              {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
-                <> · <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} this week</>
-              )}.
-            </p>
+        <div className="settings-section" style={{ marginTop: 20 }}>
+          <button className="ghost analytics-toggle" onClick={() => setShowAnalytics((v) => !v)}>
+            {showAnalytics ? "Hide" : "Show"} portfolio analytics {showAnalytics ? "▲" : "▼"}
+          </button>
 
-            <div className="overview-featured">
-              <div className="overview-featured-ring">
-                <RadialProgress
-                  percent={tracked.length > 0 ? (counts.enacted / tracked.length) * 100 : 0}
-                  size={92}
-                  color="var(--pos-support)"
-                  label="Reached law"
-                />
-              </div>
-              <div className="overview-stage-flow-wrap">
-                <StageFlow counts={counts} />
-              </div>
-            </div>
+          {showAnalytics && (
+            <Reveal>
+              <div className="overview-section" style={{ marginTop: 12 }}>
+                <p className="overview-narrative">
+                  You're tracking <strong>{tracked.length}</strong> bill{tracked.length !== 1 ? "s" : ""}
+                  {counts.enacted > 0 && <> — <strong>{counts.enacted}</strong> {counts.enacted === 1 ? "has" : "have"} become law</>}
+                  {counts.committee > 0 && <>, <strong>{counts.committee}</strong> in committee</>}
+                  {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
+                    <> · <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} this week</>
+                  )}.
+                </p>
 
-            <div className="bento-grid">
-              <div className="bento-cell bento-activity">
-                <ActivityMini scope="personal" />
-              </div>
-              <div className="bento-cell bento-trending">
-                <TrendingBills />
-              </div>
-              <div className="bento-cell bento-position">
-                <PositionBreakdown counts={positionCounts} />
-              </div>
-              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                <div className="bento-cell bento-party">
-                  <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+                <div className="overview-featured">
+                  <div className="overview-featured-ring">
+                    <RadialProgress
+                      percent={tracked.length > 0 ? (counts.enacted / tracked.length) * 100 : 0}
+                      size={92}
+                      color="var(--pos-support)"
+                      label="Reached law"
+                    />
+                  </div>
+                  <div className="overview-stage-flow-wrap">
+                    <StageFlow counts={counts} />
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-        </Reveal>
+
+                <div className="bento-grid">
+                  <div className="bento-cell bento-activity">
+                    <ActivityMini scope="personal" />
+                  </div>
+                  <div className="bento-cell bento-trending">
+                    <TrendingBills />
+                  </div>
+                  <div className="bento-cell bento-position">
+                    <PositionBreakdown counts={positionCounts} />
+                  </div>
+                  {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+                    <div className="bento-cell bento-party">
+                      <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Reveal>
+          )}
+        </div>
       )}
 
       {recentlyViewed.length > 0 && (
