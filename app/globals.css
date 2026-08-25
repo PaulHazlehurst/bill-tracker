@@ -2647,3 +2647,105 @@ textarea:focus-visible,
   .rh-bento { grid-template-columns: 1fr; }
   .rh-severity-band { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Prospective bills (dashboard headline section) ──────────────── */
+
+.prospective-section {
+  margin-bottom: 24px;
+  padding: 20px 22px;
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 600px 300px at 100% -20%, var(--accent-soft) 0%, transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.prospective-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.prospective-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.prospective-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.prospective-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+.prospective-topic-tag {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.prospective-card-title {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 12px;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.prospective-card-actions {
+  display: flex;
+  gap: 6px;
+}
+.prospective-card-actions button.primary {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+}
+.prospective-card-actions button.ghost {
+  padding: 6px 10px;
+}
+
+/* ── Members page ────────────────────────────────────────────────── */
+
+.members-add-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.members-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.member-position-card {
+  display: flex;
+  flex-direction: column;
+  cursor: default;
+}
+.member-position-card:hover { transform: none; border-color: var(--border); box-shadow: none; }

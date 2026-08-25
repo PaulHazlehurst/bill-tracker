@@ -17,6 +17,7 @@ import { useTicker } from "@/lib/useTicker";
 import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check, Share2, ScrollText } from "lucide-react";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import ExpandableText from "@/components/ExpandableText";
+import MemberPositions from "@/components/MemberPositions";
 import MomentumSignals from "@/components/MomentumSignals";
 
 const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
@@ -776,6 +777,8 @@ export default function BillDetailPage() {
           </button>
         )}
       </div>
+
+      <MemberPositions billId={billId} />
 
       {/* Timeline */}
       <div className="card">

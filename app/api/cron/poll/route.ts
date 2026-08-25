@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getBill, inferStage, progressForStage } from "@/lib/congress-api";
+import { runDiscoveryForAllOwners } from "@/lib/topicDiscovery";
 
 // Poll interval per priority tier, in minutes.
 const TIER_INTERVAL_MIN: Record<string, number> = {
@@ -104,5 +105,17 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ polled, changed });
+  // Topic-based discovery runs in the same daily cycle as polling, rather
+  // than as its own registered cron job - keeps this to the two crons
+  // already confirmed working instead of risking a plan limit on a third.
+  // Wrapped so a discovery problem can never break bill polling, which
+  // this app depends on far more.
+  let discovery = { owners: 0, added: 0 };
+  try {
+    discovery = await runDiscoveryForAllOwners();
+  } catch (err) {
+    console.error("topic discovery failed", err);
+  }
+
+  return NextResponse.json({ polled, changed, discovery });
 }

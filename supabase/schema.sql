@@ -355,3 +355,98 @@ create table api_rate_limit_snapshot (
   updated_at timestamptz not null default now()
 );
 alter table api_rate_limit_snapshot enable row level security;
+
+-- ── Topics / issues and automated bill discovery ───────────────────
+-- Topics belong to the organization when someone's on one (shared, since
+-- "the group is focused on diabetes" is an org-level statement), with a
+-- personal fallback for people not on a team yet - same personal/team
+-- duality pattern used throughout the rest of this app.
+alter table organizations add column if not exists topics text[] not null default '{}';
+alter table profiles add column if not exists topics text[] not null default '{}';
+
+-- A bill matched to one of an org's (or a solo user's) topics that isn't
+-- already tracked and isn't a companion/duplicate of something that is.
+-- Populated daily by the poll cron, and once immediately after signup so
+-- a brand-new account isn't waiting a full day to see anything.
+create table prospective_bills (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  bill_id text not null references bills(id) on delete cascade,
+  matched_topic text not null,
+  discovered_at timestamptz not null default now(),
+  -- A dismissed suggestion stays dismissed - re-surfacing something
+  -- someone already said "not interested" to would undermine the whole
+  -- point of a curated suggestion list.
+  dismissed boolean not null default false,
+  -- Exactly one of organization_id / user_id is set, matching the same
+  -- personal-vs-team split as tracked_bills and topics above.
+  constraint prospective_bills_owner_check check (
+    (organization_id is not null and user_id is null) or
+    (organization_id is null and user_id is not null)
+  ),
+  unique (organization_id, user_id, bill_id)
+);
+alter table prospective_bills enable row level security;
+
+create policy "org members see their org's prospective bills"
+  on prospective_bills for select
+  using (
+    (organization_id is not null and organization_id = public.current_user_org_id())
+    or user_id = auth.uid()
+  );
+
+create policy "org members can dismiss their org's prospective bills"
+  on prospective_bills for update
+  using (
+    (organization_id is not null and organization_id = public.current_user_org_id())
+    or user_id = auth.uid()
+  );
+
+-- ── Members: the people/stakeholders this firm actually works with,
+-- distinct from the firm's own tracked_bills.position. A lobbyist or
+-- consulting firm tracks not just "where do we stand" but "where does
+-- each person we work with stand." ───────────────────────────────────
+create table members (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  name text not null,
+  role text,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table members enable row level security;
+
+create policy "org members see their org's member roster"
+  on members for select
+  using (organization_id = public.current_user_org_id());
+
+create policy "org members can manage their org's member roster"
+  on members for all
+  using (organization_id = public.current_user_org_id())
+  with check (organization_id = public.current_user_org_id());
+
+create table member_positions (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members(id) on delete cascade,
+  bill_id text not null references bills(id) on delete cascade,
+  position text not null default 'none' check (position in ('support', 'oppose', 'watching', 'none')),
+  updated_at timestamptz not null default now(),
+  unique (member_id, bill_id)
+);
+alter table member_positions enable row level security;
+
+create policy "org members see positions for their org's members"
+  on member_positions for select
+  using (
+    member_id in (select id from members where organization_id = public.current_user_org_id())
+  );
+
+create policy "org members can set positions for their org's members"
+  on member_positions for all
+  using (
+    member_id in (select id from members where organization_id = public.current_user_org_id())
+  )
+  with check (
+    member_id in (select id from members where organization_id = public.current_user_org_id())
+  );
