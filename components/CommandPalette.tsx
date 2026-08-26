@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LayoutDashboard, Users2, Activity, Settings, FileText, Search } from "lucide-react";
+import { LayoutDashboard, Users2, Activity, Settings, FileText, Search, Compass } from "lucide-react";
 
 type NavItem = { type: "nav"; label: string; href: string; icon: any };
 type BillItem = { type: "bill"; label: string; href: string };
@@ -11,6 +11,7 @@ type Item = NavItem | BillItem;
 
 const NAV_ITEMS: NavItem[] = [
   { type: "nav", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { type: "nav", label: "Discovery", href: "/discovery", icon: Compass },
   { type: "nav", label: "Team", href: "/team", icon: Users2 },
   { type: "nav", label: "Activity", href: "/activity", icon: Activity },
   { type: "nav", label: "Settings", href: "/settings", icon: Settings },

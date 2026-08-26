@@ -15,8 +15,6 @@ import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import FirstRunHero from "@/components/FirstRunHero";
-import ProspectiveBills from "@/components/ProspectiveBills";
-import TopicsHero from "@/components/TopicsHero";
 import Reveal from "@/components/Reveal";
 import TrendingBills from "@/components/TrendingBills";
 import { useUI } from "@/components/UIProvider";
@@ -25,6 +23,7 @@ import StageFlow from "@/components/StageFlow";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -45,6 +44,7 @@ export default function DashboardPage() {
   const [hasEmailEnabled, setHasEmailEnabled] = useState(false);
   const [weeklyActivityCount, setWeeklyActivityCount] = useState<number | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [prospectiveCount, setProspectiveCount] = useState<number | null>(null);
 
   async function loadTracked() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -85,7 +85,19 @@ export default function DashboardPage() {
     loadTracked();
     setRecentlyViewed(getRecentlyViewed());
     loadWeeklyActivityCount();
+    loadProspectiveCount();
   }, []);
+
+  // Just a count, for the Discovery teaser card below - the full list
+  // (with topic tags, track/dismiss actions) lives on the Discovery page
+  // itself now, not duplicated here.
+  async function loadProspectiveCount() {
+    const { count } = await supabase
+      .from("prospective_bills")
+      .select("id", { count: "exact", head: true })
+      .eq("dismissed", false);
+    setProspectiveCount(count ?? 0);
+  }
 
   async function loadWeeklyActivityCount() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -161,8 +173,20 @@ export default function DashboardPage() {
         <FirstRunHero onTracked={loadTracked} />
       ) : (
         <>
-          <TopicsHero onDiscovered={loadTracked} />
-          <ProspectiveBills onTracked={loadTracked} />
+          {/* Discovery moved to its own page - this is just a live-count
+              teaser so it stays visible from the dashboard without the
+              two competing for the same screen (one is "what's mine,"
+              the other is "what might become mine"). */}
+          {!!prospectiveCount && (
+            <a href="/discovery" className="card discovery-teaser hoverable">
+              <span className="discovery-teaser-icon"><Sparkles size={18} /></span>
+              <div className="discovery-teaser-copy">
+                <strong>{prospectiveCount} bill{prospectiveCount === 1 ? "" : "s"} worth a look</strong>
+                <span>Matched your topics, not tracked yet.</span>
+              </div>
+              <ArrowRight size={16} className="discovery-teaser-arrow" />
+            </a>
+          )}
 
           {!loading && (
             <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={hasEmailEnabled} hasTeam={hasTeam} hasPhone={hasPhone} />

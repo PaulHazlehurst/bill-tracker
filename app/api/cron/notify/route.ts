@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { billUpdateEmail } from "@/lib/emailTemplate";
+import { sendWeeklyDigests } from "@/lib/weeklyDigest";
 
 export async function GET(req: NextRequest) {
   // See app/api/cron/poll/route.ts for why both a header and a query param
@@ -99,7 +100,20 @@ export async function GET(req: NextRequest) {
     await supabase.from("bill_events").update({ notified_at: new Date().toISOString() }).eq("id", event.id);
   }
 
-  return NextResponse.json({ eventsProcessed: events?.length ?? 0, emailsSent, smsSent, emailsSkippedNoOptIn });
+  // Weekly discovery digest, folded into this daily cron rather than a
+  // separate scheduled job (see the project note about not registering a
+  // third Vercel cron). Gated to one day a week - Monday, UTC - so it
+  // reads as "your week ahead," not a repeat of yesterday's run.
+  let digest: { recipients: number; sent: number } | null = null;
+  if (new Date().getUTCDay() === 1) {
+    try {
+      digest = await sendWeeklyDigests();
+    } catch (err) {
+      console.error("weekly digest run failed", err);
+    }
+  }
+
+  return NextResponse.json({ eventsProcessed: events?.length ?? 0, emailsSent, smsSent, emailsSkippedNoOptIn, digest });
 }
 
 async function sendSms(to: string, body: string) {

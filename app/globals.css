@@ -2448,6 +2448,30 @@ textarea:focus-visible,
   .bill-sidebar { position: static; }
 }
 
+/* ── Discovery teaser (dashboard link out to /discovery) ─────────── */
+
+.discovery-teaser {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: var(--text);
+  border-color: var(--accent-gold);
+  background: color-mix(in srgb, var(--accent-gold-soft) 55%, var(--surface));
+}
+.discovery-teaser-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-gold);
+  color: var(--surface);
+}
+.discovery-teaser-copy { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.discovery-teaser-copy strong { font-size: 0.875rem; font-weight: 600; }
+.discovery-teaser-copy span { font-size: 0.75rem; color: var(--text-soft); }
+.discovery-teaser-arrow { color: var(--accent-gold); flex-shrink: 0; transition: transform 0.15s ease; }
+.discovery-teaser:hover .discovery-teaser-arrow { transform: translateX(3px); }
+
 /* ── Statistics hero + portfolio scatter ────────────────────────── */
 
 .stats-hero {
