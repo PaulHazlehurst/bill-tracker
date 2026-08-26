@@ -5,8 +5,6 @@ import ShortcutsHelp from "@/components/ShortcutsHelp";
 import PageTransition from "@/components/PageTransition";
 import CapitolWatermark from "@/components/CapitolWatermark";
 import VersionBadge from "@/components/VersionBadge";
-import WelcomeBar from "@/components/WelcomeBar";
-
 // Wraps every authenticated page (dashboard, team, activity, settings, bill
 // detail) in a persistent sidebar. Because this is a layout, not a page,
 // Sidebar stays mounted across client-side navigation between these routes -
@@ -14,7 +12,6 @@ import WelcomeBar from "@/components/WelcomeBar";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <UIProvider>
-      <WelcomeBar />
       <div className="app-shell">
         <Sidebar />
         <main className="app-main">

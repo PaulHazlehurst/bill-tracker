@@ -1579,67 +1579,88 @@ tr:hover .row-external-link { opacity: 1; }
 .hero-preview-badge-watching { background: var(--pos-watching-soft); color: var(--pos-watching); }
 .hero-preview-badge-none { background: var(--surface-soft); color: var(--text-soft); }
 
-/* ── Dashboard overview section (synergistic layout) ────────────── */
+/* ── Portfolio snapshot strip ────────────────────────────────────── */
+/* A compact, always-visible stat strip above the tracked-bills table.
+   Key numbers at a glance; stage-flow bar underneath; expandable detail
+   grid below for the heavier widgets (activity, position, trending). */
 
-.overview-section {
-  position: relative;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: fade-in-scale 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-  background-image:
-    radial-gradient(ellipse 800px 400px at 100% -30%, var(--accent-soft) 0%, transparent 60%),
-    radial-gradient(ellipse 500px 250px at -10% 110%, var(--surface-soft) 0%, transparent 60%);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 28px 28px 14px;
-  box-shadow: var(--shadow-md);
-}
-.overview-section > div:first-child h2 {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1.375rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-.overview-section .stat-grid {
-  margin-top: 18px;
-}
-.overview-narrative {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1.375rem;
-  font-weight: 500;
-  letter-spacing: -0.015em;
-  line-height: 1.35;
-  margin: 0;
-  max-width: 640px;
-}
-.overview-narrative strong { color: var(--accent); }
-
-/* Tiered widget hierarchy: Activity and Trending are "story" widgets -
-   specific bills, specific events - so they get more visual room. Position
-   and party breakdowns are quick reference charts, sized smaller
-   alongside them rather than competing for equal attention. */
-/* Featured metrics band: radial success ring + stage-flow ribbon side by
-   side - replaces four separate boxes with one cohesive visual unit. */
-.overview-featured {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  margin-top: 18px;
-  padding: 18px 20px;
+.portfolio-strip {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  flex-wrap: wrap;
+  padding: 20px 24px 16px;
+  margin-bottom: 6px;
+  box-shadow: var(--shadow-elevated);
+  animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.overview-featured-ring { flex-shrink: 0; padding-bottom: 18px; }
-.overview-stage-flow-wrap { flex: 1; min-width: 220px; }
+.portfolio-strip-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.portfolio-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.portfolio-stat-value {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.portfolio-stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+.portfolio-strip-bar {
+  margin-bottom: 12px;
+}
+.portfolio-detail-toggle {
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+.portfolio-detail-toggle:hover {
+  color: var(--accent);
+}
+
+/* Detail grid: simple responsive 2-column layout that falls back
+   to 1 column on narrow screens. Each widget is its own card, so
+   missing widgets (no trending data, no party data) just leave the
+   remaining ones to flow naturally instead of creating empty holes
+   in a named-area grid. */
+.portfolio-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  animation: fade-in-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.portfolio-detail-grid > .card { margin-bottom: 0; }
+
+@media (max-width: 700px) {
+  .portfolio-strip-stats { gap: 20px; }
+  .portfolio-stat-value { font-size: 1.375rem; }
+  .portfolio-detail-grid { grid-template-columns: 1fr; }
+}
 
 .stage-flow-ribbon {
   display: flex;
-  height: 14px;
-  border-radius: 7px;
+  height: 10px;
+  border-radius: 5px;
   overflow: hidden;
   background: var(--surface-soft);
 }
@@ -1650,7 +1671,7 @@ tr:hover .row-external-link { opacity: 1; }
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 .stage-flow-legend-item {
   display: flex;
@@ -1661,40 +1682,6 @@ tr:hover .row-external-link { opacity: 1; }
 }
 .stage-flow-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .stage-flow-count { font-family: var(--font-mono); color: var(--text); font-weight: 600; }
-
-/* Bento grid: a genuine asymmetric layout, not a rearranged version of the
-   old two-column stack. Activity gets a tall featured column; Trending
-   sits wide across the top of the remaining space; Position and Party are
-   compact cells that share the bottom row. Every cell defines its own
-   height naturally - no grid-stretch, so no more dead space. */
-.bento-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr;
-  grid-template-rows: auto auto;
-  grid-template-areas:
-    "activity trending trending"
-    "activity position  party";
-  gap: 14px;
-  margin-top: 16px;
-  align-items: start;
-}
-.bento-cell .card { height: 100%; margin-bottom: 0; }
-.bento-activity { grid-area: activity; align-self: stretch; }
-.bento-trending { grid-area: trending; }
-.bento-position { grid-area: position; }
-.bento-party { grid-area: party; }
-
-@media (max-width: 860px) {
-  .bento-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "trending"
-      "activity"
-      "position"
-      "party";
-  }
-  .overview-featured { flex-direction: column; align-items: flex-start; }
-}
 
 /* ── Command palette ──────────────────────────────────────────────── */
 
@@ -3208,11 +3195,7 @@ textarea:focus-visible,
   }
 }
 
-/* ── Enhanced welcome bar ────────────────────────────────────────── */
-
-.welcome-bar {
-  animation: slide-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
+/* (welcome bar removed — replaced by the portfolio stat strip) */
 
 /* ── Onboarding card entrance ────────────────────────────────────── */
 
@@ -3235,8 +3218,8 @@ textarea:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; filter: none; transition: none; }
-  .topics-hero, .prospective-section, .overview-section,
-  .first-run-hero, .onboarding-card, .welcome-bar,
+  .topics-hero, .prospective-section, .portfolio-strip,
+  .first-run-hero, .onboarding-card, .portfolio-detail-grid,
   .table-wrap, .prospective-card, .first-run-card,
   .topic-chip, .stat-card, .pill,
   .bill-sidebar .card, .journey-step .journey-circle { animation: none !important; }

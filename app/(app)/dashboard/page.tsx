@@ -20,7 +20,6 @@ import TrendingBills from "@/components/TrendingBills";
 import TopicsHero from "@/components/TopicsHero";
 import ProspectiveBills from "@/components/ProspectiveBills";
 import { useUI } from "@/components/UIProvider";
-import RadialProgress from "@/components/RadialProgress";
 import StageFlow from "@/components/StageFlow";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
@@ -181,58 +180,62 @@ export default function DashboardPage() {
 
       <BillSearch onTracked={loadTracked} />
 
+      {/* Portfolio snapshot: compact stat strip that's always visible
+          when the user has tracked bills, plus a collapsible detail panel
+          beneath it. Replaces the old toggle-hidden analytics section
+          so the key numbers are visible at a glance. */}
       {!loading && !error && tracked.length > 0 && (
-        <div className="settings-section" style={{ marginTop: 20 }}>
-          <button className="ghost analytics-toggle" onClick={() => setShowAnalytics((v) => !v)}>
-            {showAnalytics ? "Hide" : "Show"} portfolio analytics {showAnalytics ? "▲" : "▼"}
-          </button>
+        <Reveal>
+          <div className="portfolio-strip">
+            <div className="portfolio-strip-stats">
+              <div className="portfolio-stat">
+                <span className="portfolio-stat-value">{tracked.length}</span>
+                <span className="portfolio-stat-label">Tracking</span>
+              </div>
+              {counts.committee > 0 && (
+                <div className="portfolio-stat">
+                  <span className="portfolio-stat-value">{counts.committee}</span>
+                  <span className="portfolio-stat-label">In committee</span>
+                </div>
+              )}
+              {(counts.passed > 0) && (
+                <div className="portfolio-stat">
+                  <span className="portfolio-stat-value">{counts.passed}</span>
+                  <span className="portfolio-stat-label">Passed a chamber</span>
+                </div>
+              )}
+              {counts.enacted > 0 && (
+                <div className="portfolio-stat">
+                  <span className="portfolio-stat-value">{counts.enacted}</span>
+                  <span className="portfolio-stat-label">Enacted</span>
+                </div>
+              )}
+              {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
+                <div className="portfolio-stat">
+                  <span className="portfolio-stat-value">{weeklyActivityCount}</span>
+                  <span className="portfolio-stat-label">Updates this week</span>
+                </div>
+              )}
+            </div>
+            <div className="portfolio-strip-bar">
+              <StageFlow counts={counts} />
+            </div>
+            <button className="portfolio-detail-toggle" onClick={() => setShowAnalytics((v) => !v)}>
+              {showAnalytics ? "Less detail ▲" : "More detail ▼"}
+            </button>
+          </div>
 
           {showAnalytics && (
-            <Reveal>
-              <div className="overview-section" style={{ marginTop: 12 }}>
-                <p className="overview-narrative">
-                  You're tracking <strong>{tracked.length}</strong> bill{tracked.length !== 1 ? "s" : ""}
-                  {counts.enacted > 0 && <> — <strong>{counts.enacted}</strong> {counts.enacted === 1 ? "has" : "have"} become law</>}
-                  {counts.committee > 0 && <>, <strong>{counts.committee}</strong> in committee</>}
-                  {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
-                    <> · <strong>{weeklyActivityCount}</strong> update{weeklyActivityCount > 1 ? "s" : ""} this week</>
-                  )}.
-                </p>
-
-                <div className="overview-featured">
-                  <div className="overview-featured-ring">
-                    <RadialProgress
-                      percent={tracked.length > 0 ? (counts.enacted / tracked.length) * 100 : 0}
-                      size={92}
-                      color="var(--pos-support)"
-                      label="Reached law"
-                    />
-                  </div>
-                  <div className="overview-stage-flow-wrap">
-                    <StageFlow counts={counts} />
-                  </div>
-                </div>
-
-                <div className="bento-grid">
-                  <div className="bento-cell bento-activity">
-                    <ActivityMini scope="personal" />
-                  </div>
-                  <div className="bento-cell bento-trending">
-                    <TrendingBills />
-                  </div>
-                  <div className="bento-cell bento-position">
-                    <PositionBreakdown counts={positionCounts} />
-                  </div>
-                  {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                    <div className="bento-cell bento-party">
-                      <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Reveal>
+            <div className="portfolio-detail-grid">
+              <ActivityMini scope="personal" />
+              <PositionBreakdown counts={positionCounts} />
+              <TrendingBills />
+              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
+                <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
+              )}
+            </div>
           )}
-        </div>
+        </Reveal>
       )}
 
       {recentlyViewed.length > 0 && (
