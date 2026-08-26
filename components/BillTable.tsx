@@ -12,6 +12,7 @@ type BillDetail = {
   status_stage: string;
   progress_pct: number;
   latest_action: string | null;
+  latest_action_date: string | null;
   congress_url: string | null;
   raw_snapshot: any | null;
   last_polled_at: string | null;
@@ -167,6 +168,8 @@ export default function BillTable({
               if (!bill) return null;
               const meta = extractMeta(bill.raw_snapshot);
               const trackerEmail = trackerEmails && row.user_id ? trackerEmails[row.user_id] : undefined;
+              // Show a pulse dot for bills with activity in the last 48 hours
+              const isRecent = bill.latest_action_date && (Date.now() - new Date(bill.latest_action_date).getTime()) < 48 * 60 * 60 * 1000;
 
               return (
                 <tr key={row.id}>
@@ -175,6 +178,7 @@ export default function BillTable({
                   </td>
                   <td className="bill-table-title">
                     <a href={`/bill/${row.bill_id}`}>{bill.title}</a>
+                    {isRecent && <span className="activity-pulse" title="Activity in the last 48 hours" />}
                     {bill.congress_url && (
                       <a
                         href={bill.congress_url}

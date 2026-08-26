@@ -76,13 +76,14 @@ export default function ProspectiveBills({ onTracked }: { onTracked: () => void 
   return (
     <div className="prospective-section">
       <div className="prospective-header">
-        <Sparkles size={16} style={{ color: "var(--accent)" }} />
+        <Sparkles size={16} style={{ color: "var(--accent-gold)" }} />
         <div>
-          <h2 style={{ fontSize: '1.0625rem', fontWeight: 500, margin: 0, fontFamily: 'var(--font-display), Georgia, serif' }}>
+          <span className="page-eyebrow">Bills you'd be interested in</span>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 500, margin: 0, fontFamily: 'var(--font-display), Georgia, serif' }}>
             Worth tracking
           </h2>
           <p className="settings-desc" style={{ margin: "2px 0 0" }}>
-            Matched to your topics, not already on your list, and not a duplicate of anything you track.
+            Matched to your topics, not already on your list.
           </p>
         </div>
       </div>

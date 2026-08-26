@@ -6,11 +6,10 @@ import { avatarColorFor } from "@/lib/billMeta";
 import { useUI } from "@/components/UIProvider";
 import { Sparkles, Plus, X, RefreshCw } from "lucide-react";
 
-// Lives on the Discovery page (moved out of the dashboard so "what am I
-// watching for" and "what's already mine" aren't competing for the same
-// screen). Topics are editable right here, and "Check now" gives real,
-// immediate feedback instead of a silent background process nobody can
-// see the result of.
+// Lives on the dashboard, right above the tracked bills table. Topics
+// are editable right here, and "Check now" gives real, immediate
+// feedback instead of a silent background process nobody can see the
+// result of.
 export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void }) {
   const supabase = createClient();
   const { toast } = useUI();
@@ -54,6 +53,11 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
   }
 
   async function saveTopics(next: string[]) {
+    // Guard: don't try to save if we haven't loaded the user yet.
+    if (!userId) {
+      toast("Still loading — try again in a moment.", "error");
+      return;
+    }
     // Optimistic update, but reverted on failure - previously a failed
     // write (RLS, network, etc.) left the chip showing locally while
     // nothing was actually saved, so it silently vanished on next load
@@ -61,12 +65,13 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
     // what's actually in the database.
     const previous = topics;
     setTopics(next);
-    const { error } = orgId
-      ? await supabase.from("organizations").update({ topics: next }).eq("id", orgId)
-      : await supabase.from("profiles").update({ topics: next }).eq("id", userId);
+    const table = orgId ? "organizations" : "profiles";
+    const id = orgId ?? userId;
+    const { error } = await supabase.from(table).update({ topics: next }).eq("id", id);
     if (error) {
       setTopics(previous);
       toast(`Couldn't save that topic: ${error.message}`, "error");
+      console.error("Topic save failed:", table, id, error);
     }
   }
 
@@ -120,7 +125,7 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
       <div className="topics-hero-top">
         <div>
           <div className="first-run-badge"><Sparkles size={13} /> {orgId ? "Your team's topics" : "Your topics"}</div>
-          <h1 className="topics-hero-headline">What are you watching for?</h1>
+          <h1 className="topics-hero-headline">What should we watch for?</h1>
           <p className="first-run-sub" style={{ marginBottom: 0 }}>
             Every day, we check for new bills that match these - and flag anything worth tracking that isn't already on your list.
           </p>
