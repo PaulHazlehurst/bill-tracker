@@ -263,6 +263,7 @@ export default function SettingsPage() {
 
   return (
     <div className="container-wide" style={{ maxWidth: 640 }}>
+      <span className="page-eyebrow">Preferences</span>
       <h1 style={{ fontSize: "1.5rem", fontWeight: 500, marginBottom: 24 }}>Settings</h1>
 
       {loading ? (

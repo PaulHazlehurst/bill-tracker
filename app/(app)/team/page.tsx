@@ -172,6 +172,7 @@ export default function TeamPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">Organization</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Team tracking</h1>
           <p className="muted" style={{ marginTop: 4 }}>
             {orgName ? `Everything ${orgName} is tracking.` : "Everything your team is tracking."}

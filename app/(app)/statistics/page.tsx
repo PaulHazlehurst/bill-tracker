@@ -135,6 +135,7 @@ export default function StatisticsPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">Portfolio</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Statistics</h1>
           <p className="muted" style={{ marginTop: 4 }}>A portfolio view across everything tracked.</p>
         </div>

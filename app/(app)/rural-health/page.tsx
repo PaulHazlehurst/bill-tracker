@@ -84,6 +84,7 @@ export default function RuralHealthPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">Field data</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Rural Health</h1>
           <p className="muted" style={{ marginTop: 4 }}>
             Provider shortage areas, funding, and program activity — from HRSA's official federal data and the Rural Health Transformation Program.

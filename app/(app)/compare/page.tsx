@@ -77,6 +77,7 @@ export default function ComparePage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">Side by side</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Compare bills</h1>
           <p className="muted" style={{ marginTop: 4 }}>Side by side, at a glance.</p>
         </div>

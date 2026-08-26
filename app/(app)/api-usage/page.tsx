@@ -95,6 +95,7 @@ export default function ApiUsagePage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">System status</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>API Usage</h1>
           <p className="muted" style={{ marginTop: 4 }}>
             Live view of outbound calls this app has made. Refreshes automatically every 30 seconds.

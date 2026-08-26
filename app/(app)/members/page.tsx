@@ -103,6 +103,7 @@ export default function MembersPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">Stakeholders</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Members</h1>
           <p className="muted" style={{ marginTop: 4 }}>The people you work with - track where each one stands on every bill.</p>
         </div>

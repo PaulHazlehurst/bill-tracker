@@ -73,6 +73,7 @@ export default function ActivityPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
+          <span className="page-eyebrow">Live feed</span>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Activity</h1>
           <p className="muted" style={{ marginTop: 4 }}>Every recorded change to a bill you or your team tracks, most recent first.</p>
         </div>
