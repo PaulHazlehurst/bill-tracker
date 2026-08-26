@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { avatarColorFor } from "@/lib/billMeta";
+import { useUI } from "@/components/UIProvider";
 import { Sparkles, Plus, X, RefreshCw } from "lucide-react";
 
 // This is now the actual headline of the dashboard - replacing the old
@@ -12,6 +13,7 @@ import { Sparkles, Plus, X, RefreshCw } from "lucide-react";
 // instead of a silent background process nobody can see the result of.
 export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void }) {
   const supabase = createClient();
+  const { toast } = useUI();
   const [topics, setTopics] = useState<string[]>([]);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -37,9 +39,20 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
   }
 
   async function saveTopics(next: string[]) {
+    // Optimistic update, but reverted on failure - previously a failed
+    // write (RLS, network, etc.) left the chip showing locally while
+    // nothing was actually saved, so it silently vanished on next load
+    // with no explanation. Now a failure is visible and the UI matches
+    // what's actually in the database.
+    const previous = topics;
     setTopics(next);
-    if (orgId) await supabase.from("organizations").update({ topics: next }).eq("id", orgId);
-    else await supabase.from("profiles").update({ topics: next }).eq("id", userId);
+    const { error } = orgId
+      ? await supabase.from("organizations").update({ topics: next }).eq("id", orgId)
+      : await supabase.from("profiles").update({ topics: next }).eq("id", userId);
+    if (error) {
+      setTopics(previous);
+      toast(`Couldn't save that topic: ${error.message}`, "error");
+    }
   }
 
   async function handleAddTopic(e: React.FormEvent) {
@@ -62,6 +75,11 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
       const body = await res.json();
       if (body.reason === "no topics configured") {
         setCheckResult("Add a topic below first.");
+      } else if (body.searchFailed) {
+        // Distinct from "checked, nothing found" - the search itself
+        // couldn't run (congress.gov unreachable, rate limited, etc.),
+        // so saying "no new matches" here would hide a real problem.
+        setCheckResult(`Couldn't reach congress.gov to check ${body.failedTopics?.length > 1 ? "those topics" : "that topic"} right now - try again shortly.`);
       } else {
         setCheckResult(
           body.added > 0

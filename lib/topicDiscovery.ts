@@ -47,10 +47,14 @@ async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, bil
 
 // Runs discovery for one owner (an org, or a solo user) against their own
 // topic list and their own already-tracked bills. Returns how many new
-// prospective bills were added, for logging/testing visibility.
-export async function runDiscoveryForOwner(opts: { organizationId?: string; userId?: string; topics: string[] }): Promise<number> {
+// prospective bills were added, plus which topics failed to search at all
+// (a congress.gov outage/rate-limit/bad-key looks identical to "zero
+// matches" unless the caller can tell the two apart - see discover-now's
+// route, which uses failedTopics to give an honest error instead of a
+// false "no new matches").
+export async function runDiscoveryForOwner(opts: { organizationId?: string; userId?: string; topics: string[] }): Promise<{ added: number; failedTopics: string[] }> {
   const { organizationId, userId, topics } = opts;
-  if (topics.length === 0) return 0;
+  if (topics.length === 0) return { added: 0, failedTopics: [] };
   const admin = createAdminClient();
 
   // What's already tracked by this owner - both to skip exact matches and
@@ -71,13 +75,20 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
   const alreadySuggested = new Set((existingProspectiveRows ?? []).map((r) => r.bill_id));
 
   let added = 0;
+  const failedTopics: string[] = [];
 
   for (const topic of topics) {
     let results;
     try {
-      results = await searchBills(topic, CURRENT_CONGRESS);
+      // pages=3: scan up to ~750 recently-updated bills instead of just
+      // 250, since the whole point of topic discovery is surfacing bills
+      // a person doesn't already know to look for - a narrower window
+      // would systematically miss exactly the quieter bills this feature
+      // exists to catch.
+      results = await searchBills(topic, CURRENT_CONGRESS, 3);
     } catch (err) {
       console.error(`discovery: search failed for topic "${topic}"`, err);
+      failedTopics.push(topic);
       continue;
     }
 
@@ -123,7 +134,7 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
     }
   }
 
-  return added;
+  return { added, failedTopics };
 }
 
 // Runs discovery across every org and every solo (no-org) user that has
@@ -138,7 +149,7 @@ export async function runDiscoveryForAllOwners(): Promise<{ owners: number; adde
   for (const org of orgs ?? []) {
     if (!org.topics || org.topics.length === 0) continue;
     ownerCount++;
-    totalAdded += await runDiscoveryForOwner({ organizationId: org.id, topics: org.topics });
+    totalAdded += (await runDiscoveryForOwner({ organizationId: org.id, topics: org.topics })).added;
   }
 
   const { data: soloProfiles } = await admin
@@ -149,7 +160,7 @@ export async function runDiscoveryForAllOwners(): Promise<{ owners: number; adde
   for (const profile of soloProfiles ?? []) {
     if (!profile.topics || profile.topics.length === 0) continue;
     ownerCount++;
-    totalAdded += await runDiscoveryForOwner({ userId: profile.id, topics: profile.topics });
+    totalAdded += (await runDiscoveryForOwner({ userId: profile.id, topics: profile.topics })).added;
   }
 
   return { owners: ownerCount, added: totalAdded };

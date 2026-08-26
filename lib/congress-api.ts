@@ -42,7 +42,17 @@ export type SearchResult = {
 // even if their title matches - a fundamental limitation of the public API,
 // not a bug in this code. See https://api.congress.gov/ for the source of
 // truth if this ever changes.
-export async function searchBills(query: string, congress = 119): Promise<SearchResult[]> {
+// `pages` controls how far back into the "most recently updated" list this
+// scans - each page is congress.gov's max page size (250 bills), fetched
+// oldest-update-last via `offset`. The manual search bar calls this with
+// the default (1 page = the most recent 250) since a person typing a query
+// wants a fast answer. Topic discovery (lib/topicDiscovery.ts) calls it
+// with more pages, since the whole point there is surfacing bills a person
+// doesn't know to look for yet, and a topic that hasn't had a recent flurry
+// of activity can easily fall outside the most-recent-250 window. Each
+// extra page is one more API call - bounded well under the 5,000/hr shared
+// limit even at pages=4 run across several topics.
+export async function searchBills(query: string, congress = 119, pages = 1): Promise<SearchResult[]> {
   // Shortcut: if the query looks like a bill citation ("hr 1234", "s1234",
   // "HJRES 45"), fetch that exact bill directly. This is 100% reliable
   // regardless of the "recently updated" window limitation above, since it's
@@ -68,31 +78,45 @@ export async function searchBills(query: string, congress = 119): Promise<Search
     }
   }
 
-  const url = new URL(`${BASE_URL}/bill/${congress}`);
-  url.searchParams.set("api_key", apiKey());
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "250"); // congress.gov's max page size
-  url.searchParams.set("sort", "updateDate+desc");
-
-  const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
-  if (!res.ok) throw new Error(`congress.gov search failed: ${res.status}`);
-  const data = await res.json();
-
-  // Match if every word in the query appears somewhere in the title -
-  // more forgiving than requiring the exact phrase in the exact order.
+  // Match if every word in the query appears somewhere in the title, OR
+  // in the plain text of the bill's latest action - a bill referred to a
+  // relevant committee or subject often names the topic there even when
+  // the title itself is generic ("A bill to amend title 42...").
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  return (data.bills ?? [])
-    .filter((b: any) => {
+  const matches: SearchResult[] = [];
+
+  for (let page = 0; page < Math.max(1, pages); page++) {
+    const url = new URL(`${BASE_URL}/bill/${congress}`);
+    url.searchParams.set("api_key", apiKey());
+    url.searchParams.set("format", "json");
+    url.searchParams.set("limit", "250"); // congress.gov's max page size
+    url.searchParams.set("offset", String(page * 250));
+    url.searchParams.set("sort", "updateDate+desc");
+
+    const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+    if (!res.ok) throw new Error(`congress.gov search failed: ${res.status}`);
+    const data = await res.json();
+    const pageBills = data.bills ?? [];
+
+    for (const b of pageBills) {
       const title = (b.title ?? "").toLowerCase();
-      return words.every((w: string) => title.includes(w));
-    })
-    .slice(0, 20)
-    .map((b: any) => ({
-      congress: b.congress,
-      type: b.type,
-      number: String(b.number),
-      title: b.title,
-    }));
+      const actionText = (b.latestAction?.text ?? "").toLowerCase();
+      if (words.every((w: string) => title.includes(w) || actionText.includes(w))) {
+        matches.push({
+          congress: b.congress,
+          type: b.type,
+          number: String(b.number),
+          title: b.title,
+        });
+      }
+    }
+
+    // Stop early once the page comes back short - that's the last page
+    // congress.gov has for this congress, no point requesting an empty one.
+    if (pageBills.length < 250) break;
+  }
+
+  return matches.slice(0, 20);
 }
 
 export type RelatedBill = {

@@ -190,7 +190,7 @@ export default function StatisticsPage() {
                   <span className="stats-quick-fact-value"><CountUp value={totalBills} /></span>
                   <span className="stats-quick-fact-label">Bills tracked</span>
                 </div>
-                <div className="stats-quick-fact">
+                <div className="stats-quick-fact stats-quick-fact-gold">
                   <span className="stats-quick-fact-value"><CountUp value={enactedCount} /></span>
                   <span className="stats-quick-fact-label">Enacted</span>
                 </div>

@@ -34,10 +34,17 @@ export async function POST() {
   }
 
   try {
-    const added = organizationId
+    const { added, failedTopics } = organizationId
       ? await runDiscoveryForOwner({ organizationId, topics })
       : await runDiscoveryForOwner({ userId: user.id, topics });
-    return NextResponse.json({ added });
+    // A topic that failed to search at all (congress.gov down, rate
+    // limited, bad key) looks identical to "genuinely no matches" unless
+    // we say so explicitly - otherwise a real outage reads to the user
+    // as "checked, nothing found," which hides the actual problem.
+    if (failedTopics.length > 0 && added === 0) {
+      return NextResponse.json({ added: 0, searchFailed: true, failedTopics });
+    }
+    return NextResponse.json({ added, failedTopics });
   } catch (err) {
     console.error("immediate discovery failed", err);
     return NextResponse.json({ added: 0, error: "discovery failed" }, { status: 500 });
