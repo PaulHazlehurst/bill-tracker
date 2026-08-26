@@ -3230,3 +3230,905 @@ textarea:focus-visible,
   .page-transition { animation: none; }
   .cmdk-overlay, .cmdk-panel, .modal-overlay, .modal-card { animation: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   FEATURE: Stakeholder Briefing Report (print-optimized)
+   ════════════════════════════════════════════════════════════════════ */
+
+.briefing-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.briefing-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.briefing-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  transition: color 0.15s;
+}
+.briefing-back:hover { color: var(--fg); }
+
+.briefing-header {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-radius: 12px;
+  padding: 32px 28px;
+  margin-bottom: 28px;
+}
+
+.briefing-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.briefing-logo {
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: var(--accent-gold);
+}
+
+.briefing-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0;
+  color: #fff;
+}
+
+.briefing-subtitle {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  margin: 4px 0 0;
+}
+
+.briefing-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.briefing-section {
+  margin-bottom: 32px;
+}
+
+.briefing-section-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--sidebar-bg);
+}
+
+.briefing-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.briefing-summary-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.briefing-summary-number {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+
+.briefing-summary-label {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.briefing-highlight {
+  background: color-mix(in srgb, var(--accent-gold) 8%, transparent);
+  border-left: 3px solid var(--accent-gold);
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.875rem;
+}
+
+.briefing-bill-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.briefing-bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.briefing-bill-id {
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+}
+
+.briefing-bill-title {
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.briefing-bill-status {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.briefing-stage {
+  font-size: 0.6875rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--sidebar-bg) 10%, transparent);
+  color: var(--sidebar-bg);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.briefing-stage-enacted { background: color-mix(in srgb, var(--pos-support) 12%, transparent); color: var(--pos-support); }
+.briefing-stage-passed_house,
+.briefing-stage-passed_senate { background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold); }
+
+.briefing-position {
+  font-size: 0.6875rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.briefing-position-support { background: color-mix(in srgb, var(--pos-support) 10%, transparent); color: var(--pos-support); }
+.briefing-position-oppose { background: color-mix(in srgb, var(--pos-oppose) 10%, transparent); color: var(--pos-oppose); }
+.briefing-position-watching { background: color-mix(in srgb, var(--accent-gold) 10%, transparent); color: var(--accent-gold); }
+.briefing-position-none { background: color-mix(in srgb, var(--text-soft) 10%, transparent); color: var(--text-soft); }
+
+.briefing-bill-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.briefing-progress-track {
+  flex: 1;
+  height: 6px;
+  background: var(--card-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.briefing-progress-fill {
+  height: 100%;
+  background: var(--sidebar-bg);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.briefing-progress-label {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-soft);
+  min-width: 32px;
+  text-align: right;
+}
+
+.briefing-bill-details {
+  display: grid;
+  gap: 6px;
+}
+
+.briefing-detail-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.briefing-detail-label {
+  font-weight: 500;
+  color: var(--text-soft);
+  min-width: 100px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.briefing-cbo {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+.briefing-cbo-text {
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.briefing-bill-events {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+.briefing-event-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8125rem;
+  padding: 4px 0;
+}
+
+.briefing-event-date {
+  font-family: var(--font-mono);
+  color: var(--text-soft);
+  min-width: 80px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+.briefing-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 2px solid var(--card-border);
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  text-align: center;
+}
+.briefing-footer p { margin: 4px 0; }
+
+/* ── Briefing print styles ─────────────────────────────────────────── */
+
+@media print {
+  .no-print { display: none !important; }
+
+  body, .app-shell, .app-main {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .sidebar, .sidebar-toggle, .sidebar-overlay,
+  .version-badge, .cmdk-overlay { display: none !important; }
+
+  .app-main { margin-left: 0 !important; padding: 0 !important; }
+
+  .briefing-page {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .briefing-header {
+    background: #1a2744 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .briefing-bill-card {
+    break-inside: avoid;
+    border: 1px solid #ddd;
+  }
+
+  .briefing-summary-card {
+    border: 1px solid #ddd;
+  }
+
+  .briefing-progress-fill {
+    background: #1a2744 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FEATURE: Legislator Directory & Profiles
+   ════════════════════════════════════════════════════════════════════ */
+
+.legislator-search {
+  margin-bottom: 20px;
+}
+
+.legislator-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: border-color 0.15s;
+}
+.legislator-search-wrap:focus-within {
+  border-color: var(--sidebar-bg);
+}
+
+.legislator-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--fg);
+}
+
+.legislator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.legislator-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 14px;
+  text-decoration: none;
+  color: var(--fg);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.legislator-card:hover {
+  border-color: var(--sidebar-bg);
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-1px);
+}
+
+.legislator-card-photo {
+  flex-shrink: 0;
+}
+
+.legislator-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.legislator-photo-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-soft);
+}
+
+.legislator-card-info {
+  min-width: 0;
+}
+
+.legislator-card-name {
+  font-weight: 500;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legislator-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+
+.legislator-party-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* ── Legislator Profile page ─────────────────────────────────────── */
+
+.legislator-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.legislator-photo-lg {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--card-border);
+}
+
+.legislator-photo-placeholder-lg {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-soft);
+}
+
+.legislator-profile-info {
+  min-width: 0;
+}
+
+.legislator-profile-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: var(--text-soft);
+}
+
+.legislator-party-badge-lg {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.legislator-profile-contact {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.legislator-contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8125rem;
+  color: var(--sidebar-bg);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.legislator-contact-link:hover { opacity: 0.7; }
+
+.legislator-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.legislator-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.legislator-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.legislator-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+.legislator-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.legislator-tab {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.legislator-tab:hover { color: var(--fg); }
+.legislator-tab-active {
+  color: var(--sidebar-bg);
+  border-bottom-color: var(--sidebar-bg);
+  font-weight: 500;
+}
+
+.legislator-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.legislator-bill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--fg);
+  transition: background 0.12s;
+}
+.legislator-bill-row:hover { background: color-mix(in srgb, var(--sidebar-bg) 4%, transparent); }
+
+.legislator-bill-tracked {
+  background: color-mix(in srgb, var(--accent-gold) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 15%, transparent);
+}
+.legislator-bill-tracked:hover { background: color-mix(in srgb, var(--accent-gold) 10%, transparent); }
+
+.legislator-bill-title {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legislator-tracked-badge {
+  font-size: 0.6875rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-gold) 15%, transparent);
+  color: var(--accent-gold);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FEATURE: Cross-Bill Impact Dashboard
+   ════════════════════════════════════════════════════════════════════ */
+
+.impact-health-hero {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.impact-health-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.impact-health-ring {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: conic-gradient(var(--health-color) var(--health-pct), var(--card-border) var(--health-pct));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.impact-health-ring-inner {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.impact-health-number {
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.impact-health-label {
+  font-size: 0.6875rem;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.impact-health-grade {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.impact-health-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  flex: 1;
+}
+
+.impact-health-metric {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--fg) 2%, transparent);
+  border-radius: 10px;
+}
+
+.impact-metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.impact-metric-label {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+
+.impact-view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* ── Topic groups ──────────────────────────────────────────────────── */
+
+.impact-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.impact-group-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.impact-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 14px 16px;
+  cursor: pointer;
+  color: var(--fg);
+  transition: background 0.12s;
+}
+.impact-group-header:hover { background: color-mix(in srgb, var(--fg) 2%, transparent); }
+
+.impact-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.impact-group-count {
+  font-size: 0.6875rem;
+  background: var(--sidebar-bg);
+  color: #fff;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.impact-group-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.impact-group-progress-track {
+  width: 80px;
+  height: 5px;
+  background: var(--card-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.impact-group-progress-fill {
+  height: 100%;
+  background: var(--sidebar-bg);
+  border-radius: 3px;
+}
+
+.impact-group-bills {
+  border-top: 1px solid var(--card-border);
+  padding: 6px 8px;
+}
+
+/* ── Shared bill rows for impact ────────────────────────────────── */
+
+.impact-bill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--fg);
+  transition: background 0.12s;
+}
+.impact-bill-row:hover { background: color-mix(in srgb, var(--sidebar-bg) 4%, transparent); }
+
+.impact-bill-advancing {
+  background: color-mix(in srgb, var(--pos-support) 4%, transparent);
+}
+.impact-bill-advancing:hover { background: color-mix(in srgb, var(--pos-support) 8%, transparent); }
+
+.impact-bill-stalled {
+  background: color-mix(in srgb, var(--pos-oppose) 3%, transparent);
+}
+.impact-bill-stalled:hover { background: color-mix(in srgb, var(--pos-oppose) 6%, transparent); }
+
+.impact-bill-title {
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.impact-bill-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 0.7rem;
+}
+
+.impact-stage {
+  font-size: 0.625rem;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sidebar-bg) 8%, transparent);
+  color: var(--sidebar-bg);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.impact-stage-enacted { background: color-mix(in srgb, var(--pos-support) 10%, transparent); color: var(--pos-support); }
+.impact-stage-passed_house,
+.impact-stage-passed_senate { background: color-mix(in srgb, var(--accent-gold) 10%, transparent); color: var(--accent-gold); }
+.impact-stage-vetoed,
+.impact-stage-failed { background: color-mix(in srgb, var(--pos-oppose) 10%, transparent); color: var(--pos-oppose); }
+
+.impact-position {
+  font-size: 0.625rem;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.impact-position-support { background: color-mix(in srgb, var(--pos-support) 8%, transparent); color: var(--pos-support); }
+.impact-position-oppose { background: color-mix(in srgb, var(--pos-oppose) 8%, transparent); color: var(--pos-oppose); }
+.impact-position-watching { background: color-mix(in srgb, var(--accent-gold) 8%, transparent); color: var(--accent-gold); }
+
+.impact-bill-progress-mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.impact-mini-track {
+  width: 50px;
+  height: 4px;
+  background: var(--card-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.impact-mini-fill {
+  height: 100%;
+  background: var(--sidebar-bg);
+  border-radius: 2px;
+}
+
+/* ── Momentum sections ─────────────────────────────────────────── */
+
+.impact-momentum {
+  display: grid;
+  gap: 20px;
+}
+
+.impact-momentum-section {
+  display: grid;
+  gap: 4px;
+}
+
+.impact-momentum-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+/* ── Impact responsive ──────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  .impact-health-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  .impact-health-breakdown {
+    grid-template-columns: repeat(2, 1fr);
+    width: 100%;
+  }
+  .legislator-profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  .legislator-profile-meta {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .legislator-profile-contact {
+    justify-content: center;
+  }
+  .legislator-stats-row {
+    grid-template-columns: 1fr;
+  }
+  .briefing-bill-header {
+    flex-direction: column;
+  }
+}

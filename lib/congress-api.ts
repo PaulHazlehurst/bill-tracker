@@ -425,6 +425,135 @@ export async function getBillTextVersions(congress: number, billType: string, bi
   }));
 }
 
+// ── Member / legislator endpoints ──────────────────────────────────
+
+export type MemberSummary = {
+  bioguideId: string;
+  name: string;
+  party: string;
+  state: string;
+  district: string | null;
+  chamber: string;
+  imageUrl: string | null;
+  url: string | null;
+};
+
+// Search members of congress. congress.gov's member endpoint supports
+// currentMember filtering so we default to current members only.
+export async function searchMembers(query?: string, congress = 119, limit = 50): Promise<MemberSummary[]> {
+  const url = new URL(`${BASE_URL}/member`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("currentMember", "true");
+
+  const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+  if (!res.ok) throw new Error(`congress.gov members fetch failed: ${res.status}`);
+  const data = await res.json();
+
+  let members = (data.members ?? []).map((m: any) => {
+    const term = (m.terms?.item ?? m.terms ?? []).sort((a: any, b: any) =>
+      (b.startYear ?? 0) - (a.startYear ?? 0)
+    )[0];
+    return {
+      bioguideId: m.bioguideId,
+      name: m.name ?? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim(),
+      party: (m.partyName ?? m.party ?? term?.party ?? "").charAt(0).toUpperCase() || "?",
+      state: m.state ?? term?.state ?? "",
+      district: term?.district ? String(term.district) : null,
+      chamber: (term?.chamber ?? m.terms?.item?.[0]?.chamber ?? "").replace("Senate", "Senate").replace("House of Representatives", "House"),
+      imageUrl: m.depiction?.imageUrl ?? null,
+      url: m.url ?? null,
+    } as MemberSummary;
+  });
+
+  if (query) {
+    const q = query.toLowerCase();
+    members = members.filter((m: MemberSummary) =>
+      m.name.toLowerCase().includes(q) ||
+      m.state.toLowerCase().includes(q)
+    );
+  }
+
+  return members;
+}
+
+export type MemberDetail = MemberSummary & {
+  officialUrl: string | null;
+  phone: string | null;
+  sponsoredLegislation: { count: number; url: string | null };
+  cosponsoredLegislation: { count: number; url: string | null };
+};
+
+// Fetch a single member by bioguide ID.
+export async function getMember(bioguideId: string): Promise<MemberDetail | null> {
+  const url = new URL(`${BASE_URL}/member/${bioguideId}`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+
+  const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+  if (!res.ok) return null;
+  const data = await res.json();
+  const m = data.member;
+  if (!m) return null;
+
+  const term = (m.terms ?? []).sort((a: any, b: any) =>
+    (b.startYear ?? 0) - (a.startYear ?? 0)
+  )[0];
+
+  return {
+    bioguideId: m.bioguideId,
+    name: m.directOrderName ?? m.invertedOrderName ?? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim(),
+    party: (m.partyHistory?.[0]?.partyName ?? term?.partyName ?? "").charAt(0).toUpperCase() || "?",
+    state: m.state ?? term?.stateCode ?? "",
+    district: term?.district ? String(term.district) : null,
+    chamber: (term?.chamber ?? "").replace("House of Representatives", "House"),
+    imageUrl: m.depiction?.imageUrl ?? null,
+    url: m.url ?? null,
+    officialUrl: m.officialWebsiteUrl ?? null,
+    phone: m.addressInformation?.phoneNumber ?? null,
+    sponsoredLegislation: {
+      count: m.sponsoredLegislation?.count ?? 0,
+      url: m.sponsoredLegislation?.url ?? null,
+    },
+    cosponsoredLegislation: {
+      count: m.cosponsoredLegislation?.count ?? 0,
+      url: m.cosponsoredLegislation?.url ?? null,
+    },
+  };
+}
+
+// Fetch bills sponsored by a member (limited set for the profile page).
+export type MemberBill = {
+  congress: number;
+  type: string;
+  number: string;
+  title: string;
+  latestActionText: string | null;
+  latestActionDate: string | null;
+};
+
+export async function getMemberBills(bioguideId: string, type: "sponsored" | "cosponsored" = "sponsored", limit = 20): Promise<MemberBill[]> {
+  const endpoint = type === "sponsored" ? "sponsored-legislation" : "cosponsored-legislation";
+  const url = new URL(`${BASE_URL}/member/${bioguideId}/${endpoint}`);
+  url.searchParams.set("api_key", apiKey());
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", String(limit));
+
+  const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+  if (!res.ok) return [];
+  const data = await res.json();
+
+  return (data.sponsoredLegislation ?? data.cosponsoredLegislation ?? []).map((b: any) => ({
+    congress: b.congress,
+    type: b.type,
+    number: String(b.number),
+    title: b.title ?? "",
+    latestActionText: b.latestAction?.text ?? null,
+    latestActionDate: b.latestAction?.actionDate ?? null,
+  }));
+}
+
 export function inferStage(latestActionText: string): string {
   const text = (latestActionText ?? "").toLowerCase();
   if (text.includes("became public law") || text.includes("signed by president")) return "enacted";

@@ -5,10 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/billMeta";
 import { useTicker } from "@/lib/useTicker";
-import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, HeartPulse, Contact } from "lucide-react";
+import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, HeartPulse, Contact, Landmark, ClipboardList, GitBranch } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "My bills", Icon: FileText },
+  { href: "/legislators", label: "Legislators", Icon: Landmark },
+  { href: "/impact", label: "Impact", Icon: GitBranch },
+  { href: "/briefing", label: "Briefing", Icon: ClipboardList },
   { href: "/team", label: "Team", Icon: Users },
   { href: "/members", label: "Members", Icon: Contact },
   { href: "/statistics", label: "Statistics", Icon: BarChart3 },
