@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       sponsorParty: sponsor?.party ?? null,
       cosponsorCount: raw?.cosponsors?.count ?? 0,
     };
-  }).filter(Boolean);
+  }).filter((x): x is NonNullable<typeof x> => x !== null);
 
   // Group by policy area
   const groupMap = new Map<string, typeof bills>();
