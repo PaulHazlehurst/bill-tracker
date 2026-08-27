@@ -712,14 +712,18 @@ button.ghost:active:not(:disabled) {
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 26px;
 }
+/* Every app page title reads as a bold editorial headline, matching the
+   landing. Scoped to .app-main so the public landing hero is untouched;
+   !important is needed because inner pages set font-weight inline. */
+.app-main h1,
 .page-header h1 {
   font-family: var(--font-display), Georgia, serif !important;
-  font-size: 2rem !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-size: clamp(1.7rem, 3.2vw, 2.2rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.035em !important;
+  line-height: 1.05;
 }
 
 /* Small mono label above a page's h1 - "119TH CONGRESS · DASHBOARD" - a
