@@ -7,61 +7,26 @@ import Reveal from "@/components/Reveal";
 import VersionBadge from "@/components/VersionBadge";
 import {
   ThumbsUp, Vote, GitBranch, Users2, BellRing, Download,
-  Search, MousePointerClick, Mail, Landmark, Sparkles,
+  Search, MousePointerClick, Mail,
 } from "lucide-react";
 
-// A plain public landing page - no session check required to view it, so
-// unlike the old version of this file, it doesn't need force-dynamic or a
-// server-side Supabase call at all.
-//
-// It does a light client-side check (after the page has already rendered)
-// just to swap the header buttons if you're already signed in - if that
-// check fails for any reason, the page still works fine, it just shows the
-// logged-out buttons.
+// Public landing page — no session check required to view it. A light
+// client-side check (after render) swaps the header buttons if you're
+// already signed in; if it fails, the page still works logged-out.
 
 const FEATURES = [
-  {
-    icon: ThumbsUp,
-    title: "Take a real position",
-    body: "Mark any bill Support, Oppose, or Watching. See your own stance at a glance, or how your whole team lines up on it.",
-  },
-  {
-    icon: Vote,
-    title: "Real vote results",
-    body: "When a bill actually gets a floor vote, the yea/nay count and roll call number show up automatically - not just a status label.",
-  },
-  {
-    icon: GitBranch,
-    title: "Related bills",
-    body: "See the House and Senate companion versions of a bill without hunting for them yourself.",
-  },
-  {
-    icon: Users2,
-    title: "Team consensus, visible",
-    body: "Instantly see which tracked bills your team agrees on, and which ones are actually contested.",
-  },
-  {
-    icon: BellRing,
-    title: "Email and text alerts",
-    body: "Get notified only for the bills you chose to follow, the moment their status changes.",
-  },
-  {
-    icon: Download,
-    title: "Export anytime",
-    body: "Download your tracked bills, or your whole team's, as a CSV whenever you need it.",
-  },
+  { icon: ThumbsUp, title: "Take a real position", body: "Mark any bill Support, Oppose, or Watching. See your own stance at a glance, or how your whole team lines up on it." },
+  { icon: Vote, title: "Real vote results", body: "When a bill gets a floor vote, the yea/nay count and roll-call number show up automatically — not just a status label." },
+  { icon: GitBranch, title: "Related bills", body: "See the House and Senate companion versions of a bill without hunting for them yourself." },
+  { icon: Users2, title: "Team consensus, visible", body: "Instantly see which tracked bills your team agrees on, and which ones are actually contested." },
+  { icon: BellRing, title: "Email and text alerts", body: "Get notified only for the bills you chose to follow, the moment their status changes." },
+  { icon: Download, title: "Export anytime", body: "Download your tracked bills, or your whole team's, as a CSV or a client-ready briefing whenever you need it." },
 ];
 
 const STEPS = [
   { icon: Search, title: "Search a bill", body: "Look it up by keyword, or jump straight to it with a citation like \"HR 1234\"." },
-  { icon: MousePointerClick, title: "Track it", body: "One click adds it to your dashboard - and your team's, if you're on one." },
+  { icon: MousePointerClick, title: "Track it", body: "One click adds it to your dashboard — and your team's, if you're on one." },
   { icon: Mail, title: "Get notified", body: "We check daily and email or text you the moment something actually changes." },
-];
-
-const PREVIEW_ROWS = [
-  { title: "Bipartisan Background Checks Act", position: "support", progress: 30 },
-  { title: "One Big Beautiful Bill Act", position: "watching", progress: 100 },
-  { title: "Healthcare Cybersecurity Act", position: "none", progress: 15 },
 ];
 
 export default function LandingPage() {
@@ -78,127 +43,99 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div>
-      <div className="top-accent-bar" />
-      <nav className="nav">
+    <div className="landing">
+      <nav className="lnav">
         <span className="brand">Bill Tracker</span>
-        <div className="nav-right">
+        <div className="lnav-right">
           <ThemeSwitcher />
           {signedIn ? (
-            <a href="/dashboard"><button className="primary">Go to dashboard</button></a>
+            <a href="/dashboard"><button className="primary">Go to dashboard <span className="btn-arw">→</span></button></a>
           ) : (
             <>
               <a href="/login" className="landing-nav-link">Log in</a>
-              <a href="/signup"><button className="primary">Sign up</button></a>
+              <a href="/signup"><button className="primary">Get started <span className="btn-arw">→</span></button></a>
             </>
           )}
         </div>
       </nav>
 
-      <div className="hero-section">
-        <div className="container" style={{ maxWidth: 1040, paddingTop: 64, paddingBottom: 56 }}>
-          <div className="hero-grid">
-            <div>
-              {totalBills && (
-                <div className="hero-stat-pill">
-                  <span className="live-dot" />
-                  <span><strong>{totalBills.toLocaleString()}</strong> bills introduced so far in the 119th Congress</span>
-                </div>
-              )}
-              <h1 style={{ fontFamily: 'var(--font-display), Georgia, serif', fontSize: '3.5rem', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.025em' }}>
-                Track federal bills without refreshing congress.gov all day.
-              </h1>
-              <p className="muted" style={{ fontSize: '1.0625rem', maxWidth: 500, marginTop: 16 }}>
-                Search for a bill, take a position on it, and get an email or
-                text the moment its status changes. Vote records, hearing
-                history, lobbying activity, and official summaries - all in
-                one place, for you and your whole team.
-              </p>
-              <div style={{ marginTop: 28, display: "flex", gap: 12 }}>
-                <a href="/signup"><button className="primary">Get started</button></a>
-                <a href="/login"><button className="ghost">Log in</button></a>
-              </div>
-            </div>
-
-            <div className="hero-preview" aria-hidden="true">
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, fontSize: '0.75rem' }} className="muted">
-                <Sparkles size={13} /> Your tracked bills
-              </div>
-              {PREVIEW_ROWS.map((r) => (
-                <div key={r.title} className="hero-preview-row">
-                  <span className={`hero-preview-badge hero-preview-badge-${r.position}`} style={{ flexShrink: 0 }}>
-                    {r.position === "support" ? "Support" : r.position === "watching" ? "Watching" : "—"}
-                  </span>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</div>
-                    <div className="hero-preview-bar" style={{ marginTop: 5 }}>
-                      <div className="hero-preview-bar-fill" style={{ width: `${r.progress}%` }} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <header className="lhero">
+        <span className="lkicker"><span className="lpip" /> Legislative intelligence · 119th Congress</span>
+        <h1 className="lhero-title">Know where every bill stands. <em>Before it moves.</em></h1>
+        <div className="lhero-lower">
+          <p className="lhero-sub">
+            Search for a bill, take a position, and get an email or text the
+            moment its status changes — vote records, sponsors, and official
+            summaries, for you and your whole team.
+          </p>
+          <div className="lhero-cta">
+            <a href="/signup"><button className="primary">Start tracking <span className="btn-arw">→</span></button></a>
+            <a href="/login" className="lhero-link">Log in →</a>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container" style={{ paddingBottom: 56, paddingTop: 8 }}>
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+      <section className="lstatband">
+        <Reveal><div><div className="lsb-n">{totalBills ? totalBills.toLocaleString() : "5,000+"}</div><div className="lsb-l">Bills introduced in the 119th Congress</div></div></Reveal>
+        <Reveal delay={60}><div><div className="lsb-n">1 click</div><div className="lsb-l">From a bill to your dashboard</div></div></Reveal>
+        <Reveal delay={120}><div><div className="lsb-n">Daily</div><div className="lsb-l">Automatic checks for changes</div></div></Reveal>
+        <Reveal delay={180}><div><div className="lsb-n">0</div><div className="lsb-l">Refreshing Congress.gov yourself</div></div></Reveal>
+      </section>
+
+      <section className="lsec">
+        <div className="lsec-lead">
+          <div>
+            <span className="ltag">What it does</span>
+            <h2>Everything your team needs to stay ahead.</h2>
+          </div>
+          <p>Watch legislation, take positions, brief a client, and know who's moving a bill — without living inside Congress.gov.</p>
+        </div>
+        <div className="lrows">
           {FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={i * 60}>
-              <div className="card feature-card">
-                <f.icon size={20} className="feature-icon" style={{ color: "var(--text-soft)", marginBottom: 10 }} />
-                <h3 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: "0 0 6px" }}>{f.title}</h3>
-                <p className="muted" style={{ margin: 0 }}>{f.body}</p>
+            <Reveal key={f.title} delay={i * 40}>
+              <div className="lrow">
+                <div className="lrow-idx">{String(i + 1).padStart(2, "0")}</div>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
               </div>
             </Reveal>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="container" style={{ paddingBottom: 64 }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 500, marginBottom: 24, textAlign: "center" }}>How it works</h2>
-        <div style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", maxWidth: 760, margin: "0 auto" }}>
-          {STEPS.map((s, i) => (
-            <Reveal key={s.title} delay={i * 80}>
-              <div className="step" style={{ textAlign: "center" }}>
-                <div
-                  className="step-number"
-                  style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: "var(--accent-soft)", color: "var(--accent)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    margin: "0 auto 12px", fontWeight: 600,
-                  }}
-                >
-                  {i + 1}
-                </div>
-                <h3 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: "0 0 6px" }}>{s.title}</h3>
-                <p className="muted" style={{ margin: 0 }}>{s.body}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-
-      <div className="container" style={{ paddingBottom: 64, textAlign: "center" }}>
-        <Reveal>
-          <div className="card feature-card" style={{ maxWidth: 560, margin: "0 auto", padding: 32 }}>
-            <Landmark size={24} style={{ color: "var(--accent)", marginBottom: 10 }} />
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 500, margin: "0 0 8px" }}>Built on official sources</h3>
-            <p className="muted" style={{ margin: 0 }}>
-              Every fact in this app traces back to congress.gov, the House
-              and Senate's official lobbying disclosure database, or a
-              government record - never a guess, never an AI-generated summary
-              presented as fact.
-            </p>
+      <section className="lsec" style={{ paddingTop: 0 }}>
+        <div className="lsec-lead">
+          <div>
+            <span className="ltag">How it works</span>
+            <h2>Set it once. Get briefed when it matters.</h2>
           </div>
+        </div>
+        <div className="lrows">
+          {STEPS.map((s, i) => (
+            <Reveal key={s.title} delay={i * 60}>
+              <div className="lrow">
+                <div className="lrow-idx">Step {i + 1}</div>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      <div className="lcta-wrap">
+        <Reveal>
+          <section className="lcta">
+            <h2>Stop refreshing Congress.gov.</h2>
+            <p>Start every week knowing exactly where your portfolio stands — and what changed while you slept. Every fact traces back to an official government source.</p>
+            <a href="/signup"><button className="primary">Start tracking free <span className="btn-arw">→</span></button></a>
+          </section>
         </Reveal>
       </div>
 
-      <footer style={{ borderTop: "1px solid var(--border)", padding: "20px", textAlign: "center" }}>
-        <a href="/terms" className="muted landing-nav-link" style={{ marginRight: 16 }}>Terms</a>
-        <a href="/privacy" className="muted landing-nav-link">Privacy</a>
+      <footer className="lfoot">
+        <a href="/terms" className="landing-nav-link">Terms</a>
+        <a href="/privacy" className="landing-nav-link">Privacy</a>
       </footer>
       <VersionBadge />
     </div>
