@@ -58,17 +58,18 @@ export async function POST() {
   const diag = { topic: probeTopic, keys, govinfo, titleMatch };
 
   try {
-    const { added, failedTopics } = organizationId
+    const { added, failedTopics, debug } = organizationId
       ? await runDiscoveryForOwner({ organizationId, topics })
       : await runDiscoveryForOwner({ userId: user.id, topics });
+    const fullDiag = { ...diag, discovery: debug };
     // A topic that failed to search at all (congress.gov down, rate
     // limited, bad key) looks identical to "genuinely no matches" unless
     // we say so explicitly - otherwise a real outage reads to the user
     // as "checked, nothing found," which hides the actual problem.
     if (failedTopics.length > 0 && added === 0) {
-      return NextResponse.json({ added: 0, searchFailed: true, failedTopics, diag });
+      return NextResponse.json({ added: 0, searchFailed: true, failedTopics, diag: fullDiag });
     }
-    return NextResponse.json({ added, failedTopics, diag });
+    return NextResponse.json({ added, failedTopics, diag: fullDiag });
   } catch (err) {
     console.error("immediate discovery failed", err);
     return NextResponse.json({ added: 0, error: "discovery failed", diag }, { status: 500 });

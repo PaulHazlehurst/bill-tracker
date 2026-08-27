@@ -10,11 +10,11 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { searchBillsSmart, getBill, getRelatedBills, inferStage, progressForStage } from "@/lib/congress-api";
 
 const CURRENT_CONGRESS = 119;
-const MAX_PER_TOPIC = 8; // keep this bounded - a broad topic word could otherwise flood the list
+const MAX_PER_TOPIC = 15; // keep this bounded - a broad topic word could otherwise flood the list
 
-async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, billId: string, congress: number, billType: string, billNumber: string) {
+async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, billId: string, congress: number, billType: string, billNumber: string): Promise<{ ok: boolean; error?: string }> {
   const { data: existing } = await admin.from("bills").select("id").eq("id", billId).maybeSingle();
-  if (existing) return true;
+  if (existing) return { ok: true };
 
   try {
     const raw = await getBill(congress, billType, billNumber);
@@ -22,11 +22,14 @@ async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, bil
     const latestActionText = b.latestAction?.text ?? "";
     const stage = inferStage(latestActionText);
 
-    await admin.from("bills").insert({
+    const { error } = await admin.from("bills").insert({
       id: billId,
       congress,
       bill_type: billType.toLowerCase(),
-      bill_number: billNumber,
+      // bills.bill_number is an INTEGER column - passing the string form
+      // silently fails the insert, which then breaks the foreign-key on
+      // prospective_bills. Coerce to a real number.
+      bill_number: parseInt(String(billNumber), 10),
       title: b.title ?? `${billType.toUpperCase()} ${billNumber}`,
       latest_action: latestActionText || null,
       latest_action_date: b.latestAction?.actionDate ?? null,
@@ -38,10 +41,14 @@ async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, bil
       next_poll_at: new Date(Date.now() + 30 * 60_000).toISOString(),
       poll_priority: "normal",
     });
-    return true;
-  } catch (err) {
+    if (error) {
+      console.error(`discovery: bills insert failed for ${billId}`, error);
+      return { ok: false, error: `bills insert: ${error.message}` };
+    }
+    return { ok: true };
+  } catch (err: any) {
     console.error(`discovery: failed to cache candidate bill ${billId}`, err);
-    return false;
+    return { ok: false, error: `getBill: ${String(err?.message ?? err)}` };
   }
 }
 
@@ -52,9 +59,12 @@ async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, bil
 // matches" unless the caller can tell the two apart - see discover-now's
 // route, which uses failedTopics to give an honest error instead of a
 // false "no new matches").
-export async function runDiscoveryForOwner(opts: { organizationId?: string; userId?: string; topics: string[] }): Promise<{ added: number; failedTopics: string[] }> {
+export async function runDiscoveryForOwner(opts: { organizationId?: string; userId?: string; topics: string[] }): Promise<{ added: number; failedTopics: string[]; debug: any }> {
   const { organizationId, userId, topics } = opts;
-  if (topics.length === 0) return { added: 0, failedTopics: [] };
+  // Counters so "Check now" can report exactly where candidates go, instead
+  // of silently ending at "no matches."
+  const debug = { candidates: 0, skippedKnown: 0, skippedCompanion: 0, cacheFailed: 0, prospectiveFailed: 0, inserted: 0, firstError: null as string | null };
+  if (topics.length === 0) return { added: 0, failedTopics: [], debug };
   const admin = createAdminClient();
 
   // What's already tracked by this owner - both to skip exact matches and
@@ -95,8 +105,9 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
     }
 
     for (const r of results.slice(0, MAX_PER_TOPIC)) {
+      debug.candidates++;
       const billId = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
-      if (trackedBillIds.has(billId) || alreadySuggested.has(billId)) continue;
+      if (trackedBillIds.has(billId) || alreadySuggested.has(billId)) { debug.skippedKnown++; continue; }
 
       // The real point: exclude companion/duplicate bills of anything
       // already tracked. A Senate companion of a House bill the org
@@ -118,10 +129,14 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
         // genuine opportunity.
         console.error(`discovery: related-bills check failed for ${billId}`, err);
       }
-      if (isCompanionOfTracked) continue;
+      if (isCompanionOfTracked) { debug.skippedCompanion++; continue; }
 
       const cached = await ensureBillCached(admin, billId, r.congress, r.type, r.number);
-      if (!cached) continue;
+      if (!cached.ok) {
+        debug.cacheFailed++;
+        if (!debug.firstError) debug.firstError = cached.error ?? "cache failed";
+        continue;
+      }
 
       const { error: insertError } = await admin.from("prospective_bills").insert({
         organization_id: organizationId ?? null,
@@ -131,12 +146,16 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
       });
       if (!insertError) {
         added++;
+        debug.inserted++;
         alreadySuggested.add(billId); // avoid a second topic re-adding the same bill in this same run
+      } else {
+        debug.prospectiveFailed++;
+        if (!debug.firstError) debug.firstError = `prospective insert: ${insertError.message}`;
       }
     }
   }
 
-  return { added, failedTopics };
+  return { added, failedTopics, debug };
 }
 
 // Runs discovery across every org and every solo (no-org) user that has

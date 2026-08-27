@@ -103,7 +103,10 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
           ? `GovInfo ${d.govinfo.count}${d.govinfo.count ? ` (${d.govinfo.sample.join(", ")})` : ""}`
           : `GovInfo ERROR: ${d.govinfo?.error}`;
         const tm = d.titleMatch?.ok ? `title-match ${d.titleMatch.count}` : `title-match ERROR: ${d.titleMatch?.error}`;
-        diagLine = `  ·  [diag "${d.topic}": ${gi}; ${tm}; key govinfo=${d.keys?.govinfo} congress=${d.keys?.congress}]`;
+        const dv = d.discovery
+          ? ` | discovery: cand ${d.discovery.candidates}, knownSkip ${d.discovery.skippedKnown}, companionSkip ${d.discovery.skippedCompanion}, cacheFail ${d.discovery.cacheFailed}, prospFail ${d.discovery.prospectiveFailed}, inserted ${d.discovery.inserted}${d.discovery.firstError ? `, err: ${d.discovery.firstError}` : ""}`
+          : "";
+        diagLine = `  ·  [diag "${d.topic}": ${gi}; ${tm}; key govinfo=${d.keys?.govinfo} congress=${d.keys?.congress}${dv}]`;
       }
 
       if (body.reason === "no topics configured") {
