@@ -1606,39 +1606,37 @@ tr:hover .row-external-link { opacity: 1; }
   box-shadow: none;
   animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Compact at-a-glance overview — a slim inline row, not big tiles, so it
+   barely takes any vertical space above the tracked-bills table. */
 .portfolio-strip-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
-}
-/* At-a-glance stat tiles — bordered cards, ink numbers, hover lift */
-.portfolio-stat {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px 18px 16px;
-  transition: transform 0.3s cubic-bezier(0.2,1,0.3,1), box-shadow 0.3s ease, border-color 0.3s ease;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  align-items: baseline;
+  margin-bottom: 10px;
 }
-.portfolio-stat:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-elevated-hover);
-  border-color: color-mix(in srgb, var(--text) 20%, var(--border));
+.portfolio-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  transition: none;
 }
+.portfolio-stat:hover { transform: none; box-shadow: none; border-color: transparent; }
 .portfolio-stat-value {
   font-family: var(--font-mono);
-  font-size: 2rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .portfolio-stat-label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-soft);
   text-transform: none;
   letter-spacing: 0;
@@ -3071,13 +3069,13 @@ textarea:focus-visible,
 .topic-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px 6px 12px;
+  gap: 7px;
+  padding: 8px 12px 8px 16px;
   border-radius: 20px;
   border: 1.5px solid;
   background: var(--surface);
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   animation: fade-in-scale 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -4457,4 +4455,24 @@ button.primary:hover .btn-arw { transform:translateX(4px); }
 @media (max-width: 560px) {
   .prospect-row { grid-template-columns: 1fr auto; }
   .prospect-tag { grid-column: 1 / -1; justify-self: start; }
+}
+
+/* Collapsed suggestions strip gently pulses to signal it can be opened */
+@keyframes prospect-pulse {
+  0%, 100% { box-shadow: var(--shadow-elevated), 0 0 0 0 color-mix(in srgb, var(--accent-gold) 38%, transparent); }
+  50% { box-shadow: var(--shadow-elevated), 0 0 0 5px color-mix(in srgb, var(--accent-gold) 0%, transparent); }
+}
+@keyframes prospect-count-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.09); }
+}
+.prospect-collapsed {
+  animation: prospect-pulse 2.4s ease-in-out infinite;
+  border-color: color-mix(in srgb, var(--accent-gold) 38%, var(--border));
+}
+.prospect-collapsed .prospect-head { cursor: pointer; }
+.prospect-collapsed .prospect-count { animation: prospect-count-pulse 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .prospect-collapsed { animation: none; }
+  .prospect-collapsed .prospect-count { animation: none; }
 }

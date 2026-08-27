@@ -19,7 +19,7 @@ type ProspectiveItem = {
 export default function ProspectiveBills({ onTracked }: { onTracked: () => void }) {
   const [items, setItems] = useState<ProspectiveItem[] | null>(null);
   const [actingOn, setActingOn] = useState<string | null>(null);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     load();
@@ -74,7 +74,7 @@ export default function ProspectiveBills({ onTracked }: { onTracked: () => void 
   if (items === null || items.length === 0) return null;
 
   return (
-    <div className="prospect">
+    <div className={`prospect${open ? "" : " prospect-collapsed"}`}>
       <button className="prospect-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="prospect-eyebrow"><Sparkles size={13} /> Bills you'd be interested in</span>
         <span className="prospect-count">{items.length}</span>
