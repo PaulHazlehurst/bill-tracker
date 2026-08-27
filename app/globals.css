@@ -4371,3 +4371,90 @@ button.primary:hover .btn-arw { transform:translateX(4px); }
   .lhero{ padding-top:56px; }
 }
 @media(prefers-reduced-motion:reduce){ .lpip{ animation:none; } .lrow, .btn-arw{ transition:none; } }
+
+/* ════════ Prospective bills — compact, collapsible suggestions strip ════════ */
+.prospect {
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-elevated);
+}
+.prospect-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.prospect-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+.prospect-count {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--accent-gold-soft);
+  color: var(--accent-gold);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.prospect-chevron { margin-left: auto; color: var(--text-soft); display: inline-flex; }
+.prospect-list {
+  max-height: 300px;           /* bounded — never eats the screen */
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+.prospect-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+.prospect-row:last-child { border-bottom: none; }
+.prospect-row:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.prospect-tag {
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.prospect-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.prospect-title:hover { text-decoration: underline; }
+.prospect-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.prospect-track.primary { padding: 5px 12px; font-size: 0.75rem; }
+.prospect-x.ghost { padding: 5px 9px; }
+@media (max-width: 560px) {
+  .prospect-row { grid-template-columns: 1fr auto; }
+  .prospect-tag { grid-column: 1 / -1; justify-self: start; }
+}
