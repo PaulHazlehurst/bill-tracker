@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { searchBills } from "@/lib/congress-api";
+import { searchBillsSmart } from "@/lib/congress-api";
 
 export async function GET(req: NextRequest) {
   // Require a signed-in session before spending congress.gov quota on a search.
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const bills = await searchBills(q.trim());
+    const bills = await searchBillsSmart(q.trim());
     return NextResponse.json({ bills });
   } catch (err) {
     console.error("bill search failed", err);

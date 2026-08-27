@@ -2953,16 +2953,58 @@ textarea:focus-visible,
 }
 .members-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
 .members-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
+.members-card-head { display: flex; align-items: center; gap: 12px; }
+.member-sub { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-soft); margin-top: 2px; }
+.member-cat-badge {
+  font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 7px; border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.member-icon-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-soft);
+  border-radius: 6px; padding: 6px; cursor: pointer; flex-shrink: 0;
+  transition: border-color .15s, color .15s;
+}
+.member-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.member-contact { display: flex; flex-wrap: wrap; gap: 8px; }
+.member-contact-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; color: var(--accent); text-decoration: none;
+  background: var(--accent-soft); padding: 3px 9px; border-radius: 6px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.member-contact-chip:hover { text-decoration: underline; }
+.member-notes {
+  display: flex; gap: 6px; align-items: flex-start;
+  font-size: 0.78rem; color: var(--text); line-height: 1.5;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  padding: 8px 10px; border-radius: 7px;
+}
+.members-card-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 4px; }
+.member-form { display: flex; flex-direction: column; gap: 10px; }
+.member-form-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
+}
+.member-form-grid .toolbar-input { width: 100%; }
+.member-notes-input { width: 100%; resize: vertical; font-family: inherit; }
+.member-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 4px; }
+.member-filter {
+  background: none; border: 1px solid var(--border); color: var(--text-soft);
+  border-radius: 20px; padding: 4px 12px; font-size: 0.74rem; cursor: pointer;
+  transition: all .15s;
+}
+.member-filter:hover { color: var(--text); border-color: var(--text-soft); }
+.member-filter-on { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); font-weight: 600; }
 
 .member-position-card {
   display: flex;
@@ -4247,3 +4289,24 @@ h1, h2, h3, .brand, .mk-h1 { letter-spacing: -0.01em; }
 
 /* Health ring inner disc + group progress pick up the amber system */
 .impact-group-count { background: var(--accent); color: var(--accent-contrast); }
+
+/* ── Legislator profile: tenure, leadership, alignment scorecard ────── */
+.legislator-tenure { display: inline-flex; align-items: center; gap: 5px; }
+.legislator-leadership { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.legislator-leadership-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.7rem; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--accent-gold-soft); color: var(--accent-gold);
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 30%, transparent);
+}
+.legislator-alignment {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--card-bg); border: 1px solid var(--border); border-left-width: 3px;
+  border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;
+  box-shadow: var(--shadow-elevated);
+}
+.legislator-alignment-verdict { display: flex; align-items: center; gap: 10px; }
+.legislator-alignment-label { font-size: 0.95rem; font-weight: 600; }
+.legislator-alignment-tally { display: flex; gap: 14px; align-items: center; }
+.legislator-align-chip { font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }

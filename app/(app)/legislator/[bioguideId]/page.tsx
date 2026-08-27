@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, ExternalLink, Phone, Globe, FileText, Star, User } from "lucide-react";
+import { ArrowLeft, ExternalLink, Phone, Globe, FileText, Star, User, Award, CalendarClock, Scale } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
 
 type MemberDetail = {
@@ -16,6 +16,10 @@ type MemberDetail = {
   imageUrl: string | null;
   officialUrl: string | null;
   phone: string | null;
+  office: string | null;
+  servingSince: number | null;
+  yearsInOffice: number | null;
+  leadershipRoles: string[];
   sponsoredLegislation: { count: number };
   cosponsoredLegislation: { count: number };
 };
@@ -29,6 +33,16 @@ type MemberBill = {
   latestActionText: string | null;
   latestActionDate: string | null;
   isTracked: boolean;
+  position: string | null;
+};
+
+type Alignment = { aligned: number; atOdds: number; watching: number; label: string };
+
+const ALIGN_COLORS: Record<string, string> = {
+  "Aligned with you": "var(--pos-support)",
+  "At odds with you": "var(--pos-oppose)",
+  "Mixed record": "var(--accent-gold)",
+  "No overlap yet": "var(--text-soft)",
 };
 
 const PARTY_NAMES: Record<string, string> = { D: "Democrat", R: "Republican", I: "Independent" };
@@ -44,6 +58,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [sponsored, setSponsored] = useState<MemberBill[]>([]);
   const [cosponsored, setCosponsored] = useState<MemberBill[]>([]);
+  const [alignment, setAlignment] = useState<Alignment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"sponsored" | "cosponsored">("sponsored");
@@ -56,6 +71,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
         setMember(data.member);
         setSponsored(data.sponsored ?? []);
         setCosponsored(data.cosponsored ?? []);
+        setAlignment(data.alignment ?? null);
         setLoading(false);
       })
       .catch(() => { setError("Couldn't load this legislator."); setLoading(false); });
@@ -96,7 +112,21 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
             </span>
             <span>{member.state}{member.district ? `, District ${member.district}` : ""}</span>
             <span>{member.chamber}</span>
+            {member.yearsInOffice != null && member.servingSince != null && (
+              <span className="legislator-tenure">
+                <CalendarClock size={12} /> In office since {member.servingSince} · {member.yearsInOffice} yr{member.yearsInOffice === 1 ? "" : "s"}
+              </span>
+            )}
           </div>
+          {member.leadershipRoles.length > 0 && (
+            <div className="legislator-leadership">
+              {member.leadershipRoles.map((role) => (
+                <span key={role} className="legislator-leadership-badge">
+                  <Award size={12} /> {role}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="legislator-profile-contact">
             {member.phone && (
               <a href={`tel:${member.phone}`} className="legislator-contact-link">
@@ -111,6 +141,25 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
           </div>
         </div>
       </div>
+
+      {alignment && (alignment.aligned > 0 || alignment.atOdds > 0 || alignment.watching > 0) && (
+        <div className="legislator-alignment" style={{ borderColor: ALIGN_COLORS[alignment.label] ?? "var(--border)" }}>
+          <div className="legislator-alignment-verdict">
+            <Scale size={16} style={{ color: ALIGN_COLORS[alignment.label] ?? "var(--text-soft)" }} />
+            <div>
+              <div className="legislator-alignment-label" style={{ color: ALIGN_COLORS[alignment.label] ?? "var(--text)" }}>
+                {alignment.label}
+              </div>
+              <div className="muted" style={{ fontSize: "0.72rem" }}>Based on your positions on bills they've sponsored or cosponsored</div>
+            </div>
+          </div>
+          <div className="legislator-alignment-tally">
+            <span className="legislator-align-chip" style={{ color: "var(--pos-support)" }}>{alignment.aligned} support</span>
+            <span className="legislator-align-chip" style={{ color: "var(--pos-oppose)" }}>{alignment.atOdds} oppose</span>
+            <span className="legislator-align-chip muted">{alignment.watching} watching</span>
+          </div>
+        </div>
+      )}
 
       <div className="legislator-stats-row">
         <div className="legislator-stat-card">

@@ -7,7 +7,7 @@
 // is fundamentally different from a bill silently added to their list.
 
 import { createAdminClient } from "@/lib/supabase/server";
-import { searchBills, getBill, getRelatedBills, inferStage, progressForStage } from "@/lib/congress-api";
+import { searchBillsSmart, getBill, getRelatedBills, inferStage, progressForStage } from "@/lib/congress-api";
 
 const CURRENT_CONGRESS = 119;
 const MAX_PER_TOPIC = 8; // keep this bounded - a broad topic word could otherwise flood the list
@@ -80,12 +80,14 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
   for (const topic of topics) {
     let results;
     try {
-      // pages=3: scan up to ~750 recently-updated bills instead of just
-      // 250, since the whole point of topic discovery is surfacing bills
-      // a person doesn't already know to look for - a narrower window
-      // would systematically miss exactly the quieter bills this feature
-      // exists to catch.
-      results = await searchBills(topic, CURRENT_CONGRESS, 3);
+      // GovInfo full-text search is the primary source here - it searches
+      // the actual TEXT of every bill in the congress, so a topic keyword
+      // surfaces bills whose titles never mention it (exactly the quiet
+      // bills this feature exists to catch). searchBillsSmart also merges
+      // in a title/recency match (titlePages=3, ~750 recent bills) as a
+      // safety net for brand-new bills GovInfo hasn't indexed yet, and only
+      // throws if BOTH sources are down.
+      results = await searchBillsSmart(topic, CURRENT_CONGRESS, 3);
     } catch (err) {
       console.error(`discovery: search failed for topic "${topic}"`, err);
       failedTopics.push(topic);

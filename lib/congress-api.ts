@@ -119,6 +119,102 @@ export async function searchBills(query: string, congress = 119, pages = 1): Pro
   return matches.slice(0, 20);
 }
 
+// GovInfo runs on the same api.data.gov platform as congress.gov, so a
+// congress.gov key usually works here too. Prefer an explicit GovInfo key
+// if one is set; fall back to the congress key, then DEMO_KEY (heavily
+// rate-limited but enough to prove the feature) so a missing key never
+// hard-crashes topic discovery.
+function govinfoKey() {
+  return process.env.GOVINFO_API_KEY || process.env.CONGRESS_API_KEY || "DEMO_KEY";
+}
+
+// TRUE full-text search - the thing congress.gov's own API can't do. GovInfo
+// (the Government Publishing Office's system) indexes the actual text of every
+// bill, so a keyword like "critical access hospital" or "340B" finds bills
+// even when those words never appear in the title. This is what makes topic
+// discovery surface bills a person doesn't already know to look for. Returns
+// the same shape as searchBills so it's a drop-in. Throws on API failure so
+// callers can fall back to the title match.
+export async function searchBillsFullText(query: string, congress = 119, limit = 20): Promise<SearchResult[]> {
+  const url = new URL("https://api.govinfo.gov/search");
+  url.searchParams.set("api_key", govinfoKey());
+
+  // GovInfo uses field operators inline in the query string. Restrict to the
+  // BILLS collection and the target congress, and full-text search the rest.
+  // pageSize is inflated because GovInfo returns one row per bill VERSION
+  // (ih, rh, enr...), so the same bill appears several times before dedupe.
+  const q = `${query.trim()} collection:BILLS congress:${congress}`;
+  const body = JSON.stringify({
+    query: q,
+    pageSize: Math.min(100, Math.max(20, limit * 4)),
+    offsetMark: "*",
+  });
+
+  const res = await trackedFetch(
+    url.toString(),
+    { method: "POST", headers: { "Content-Type": "application/json" }, body, cache: "no-store" },
+    "govinfo",
+  );
+  if (!res.ok) throw new Error(`govinfo search failed: ${res.status}`);
+  const data = await res.json();
+  const rows = data.results ?? [];
+
+  const seen = new Set<string>();
+  const out: SearchResult[] = [];
+  for (const row of rows) {
+    // packageId like "BILLS-119hr1247ih" -> congress 119, type HR, number 1247
+    const m = String(row.packageId ?? "").match(/^BILLS-(\d+)([a-z]+)(\d+)[a-z]*$/i);
+    if (!m) continue;
+    const [, cong, type, number] = m;
+    const key = `${type.toLowerCase()}-${number}-${cong}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      congress: Number(cong),
+      type: type.toUpperCase(),
+      number: String(number),
+      title: row.title ?? `${type.toUpperCase()} ${number}`,
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+// The unified search used by both the manual "add a bill" bar and topic
+// discovery. Tries GovInfo full-text first (searches real bill text), then
+// merges in the title/citation match (which reliably catches exact bill
+// citations and brand-new bills GovInfo may not have indexed yet). Only
+// throws if BOTH sources fail, so callers can tell a genuine outage apart
+// from an honest "no matches."
+export async function searchBillsSmart(query: string, congress = 119, titlePages = 1): Promise<SearchResult[]> {
+  let results: SearchResult[] = [];
+  let govinfoOk = false;
+  try {
+    results = await searchBillsFullText(query, congress, 25);
+    govinfoOk = true;
+  } catch (err) {
+    console.error("govinfo full-text search failed; falling back to title match", err);
+  }
+
+  try {
+    const titleMatches = await searchBills(query, congress, titlePages);
+    const seen = new Set(results.map((r) => `${r.type.toLowerCase()}-${r.number}-${r.congress}`));
+    for (const t of titleMatches) {
+      const k = `${t.type.toLowerCase()}-${t.number}-${t.congress}`;
+      if (!seen.has(k)) {
+        seen.add(k);
+        results.push(t);
+      }
+    }
+  } catch (err) {
+    // If GovInfo also failed, we truly have nothing - surface the error so
+    // the caller reports "search unavailable" instead of "no matches."
+    if (!govinfoOk) throw err;
+  }
+
+  return results.slice(0, 30);
+}
+
 export type RelatedBill = {
   congress: number;
   type: string;
@@ -481,6 +577,10 @@ export async function searchMembers(query?: string, congress = 119, limit = 50):
 export type MemberDetail = MemberSummary & {
   officialUrl: string | null;
   phone: string | null;
+  office: string | null;
+  servingSince: number | null;
+  yearsInOffice: number | null;
+  leadershipRoles: string[];
   sponsoredLegislation: { count: number; url: string | null };
   cosponsoredLegislation: { count: number; url: string | null };
 };
@@ -497,9 +597,22 @@ export async function getMember(bioguideId: string): Promise<MemberDetail | null
   const m = data.member;
   if (!m) return null;
 
-  const term = (m.terms ?? []).sort((a: any, b: any) =>
-    (b.startYear ?? 0) - (a.startYear ?? 0)
-  )[0];
+  const terms = m.terms ?? [];
+  const term = [...terms].sort((a: any, b: any) => (b.startYear ?? 0) - (a.startYear ?? 0))[0];
+
+  // Seniority: earliest term start year across all terms served. A quick,
+  // honest signal of how established a member is - a 20-year veteran and a
+  // freshman carry very different weight in a whip count.
+  const startYears = terms.map((t: any) => t.startYear).filter((y: any) => typeof y === "number");
+  const servingSince = startYears.length ? Math.min(...startYears) : null;
+  const nowYear = new Date().getFullYear();
+  const yearsInOffice = servingSince ? Math.max(0, nowYear - servingSince) : null;
+
+  // Leadership roles (Majority Leader, Whip, etc.) when congress.gov reports
+  // them - these are exactly the people who control whether a bill moves.
+  const leadershipRoles: string[] = Array.from(
+    new Set(((m.leadership ?? []) as any[]).map((l) => l.type).filter(Boolean)),
+  );
 
   return {
     bioguideId: m.bioguideId,
@@ -512,6 +625,10 @@ export async function getMember(bioguideId: string): Promise<MemberDetail | null
     url: m.url ?? null,
     officialUrl: m.officialWebsiteUrl ?? null,
     phone: m.addressInformation?.phoneNumber ?? null,
+    office: m.addressInformation?.officeAddress ?? null,
+    servingSince,
+    yearsInOffice,
+    leadershipRoles,
     sponsoredLegislation: {
       count: m.sponsoredLegislation?.count ?? 0,
       url: m.sponsoredLegislation?.url ?? null,
