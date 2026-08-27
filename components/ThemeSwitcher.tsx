@@ -7,7 +7,7 @@ const THEMES = [
   { id: "terminal-light", label: "Terminal Light", swatch: "#eef1f5" },
 ] as const;
 
-const VALID = new Set(THEMES.map((t) => t.id));
+const VALID = new Set<string>(THEMES.map((t) => t.id));
 const STORAGE_KEY = "billtracker-theme";
 
 export default function ThemeSwitcher() {
