@@ -14,11 +14,12 @@ import { hasSeenEnactedCelebration, markEnactedCelebrationSeen } from "@/lib/cel
 import Confetti from "@/components/Confetti";
 import { PartyPopper } from "lucide-react";
 import { useTicker } from "@/lib/useTicker";
-import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check, Share2, ScrollText } from "lucide-react";
+import { TrendingUp, FileText, Users, Circle, ExternalLink, Printer, Check, Share2, ScrollText, ClipboardList } from "lucide-react";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import ExpandableText from "@/components/ExpandableText";
 import MemberPositions from "@/components/MemberPositions";
 import MomentumSignals from "@/components/MomentumSignals";
+import BillWorkspace from "@/components/BillWorkspace";
 
 const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
 
@@ -104,9 +105,10 @@ const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate",
 // between panels. Panels stay mounted (display-toggled, not unmounted) so
 // switching is instant, async data isn't refetched, and a print override can
 // still lay every panel out for the "Print brief" button.
-type TabId = "overview" | "text" | "people" | "coverage";
+type TabId = "overview" | "workspace" | "text" | "people" | "coverage";
 const TABS: { id: TabId; label: string; Icon: any }[] = [
   { id: "overview", label: "Overview", Icon: FileText },
+  { id: "workspace", label: "Workspace", Icon: ClipboardList },
   { id: "text", label: "Text & Votes", Icon: ScrollText },
   { id: "people", label: "People & Money", Icon: Users },
   { id: "coverage", label: "Coverage & Activity", Icon: TrendingUp },
@@ -561,6 +563,11 @@ export default function BillDetailPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ========================= WORKSPACE ========================= */}
+      <div data-billpanel style={panelStyle("workspace")}>
+        <BillWorkspace billId={billId} />
       </div>
 
       {/* ========================= TEXT & VOTES ========================= */}
