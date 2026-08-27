@@ -5,11 +5,10 @@
    they need to stay recognizable regardless of which theme is active. */
 
 :root {
-  /* Terminal system typefaces: Chivo (tight grotesque) for headings,
-     IBM Plex Sans for UI/body, IBM Plex Mono for all data and numbers.
-     Serif kept only for literal official records (CRS summaries). */
-  --font-display: "Chivo", -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Phenomenon system: Archivo (bold grotesque) for display AND body,
+     IBM Plex Mono for data, labels and bill IDs. */
+  --font-display: "Archivo", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Archivo", -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --font-official: Georgia, "Times New Roman", serif;
   /* Alias tokens some components reference (card surfaces, foreground).
@@ -25,68 +24,61 @@
   --party-rep-soft: #fbe4e2;
   --party-ind: #6d28d9;
   --party-ind-soft: #eee5fc;
-  /* Shadows default to the dark (Terminal) theme; Terminal Light
-     overrides them with lighter ambient values. */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.5);
-  --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 30px -18px rgba(0, 0, 0, 0.6);
-  --shadow-elevated-hover: 0 2px 4px rgba(0, 0, 0, 0.45), 0 16px 38px -16px rgba(0, 0, 0, 0.72);
-  /* Amber is the single Terminal accent; --accent-gold aliases it so
-     existing gold usages (progress, brand mark) stay on-system. */
-  --accent-gold: #e0a52e;
-  --accent-gold-soft: #2a2114;
-  /* The sidebar is deliberately theme-independent - a near-black brand
-     chrome that stays the same in both Terminal and Terminal Light, so
-     the app always reads as one consistent instrument. */
-  --sidebar-bg: #0a0f15;
-  --sidebar-bg-soft: #131b24;
-  --sidebar-bg-active: #16202b;
-  --sidebar-text: #7e8a99;
-  --sidebar-text-active: #f0f4f8;
-  --sidebar-border: #1c2530;
-  --sidebar-gold: #e0a52e;
+  /* Shadows default to the light theme; dark overrides them below. */
+  --shadow-sm: 0 1px 2px rgba(20, 20, 25, 0.05);
+  --shadow-md: 0 6px 20px rgba(20, 20, 25, 0.09);
+  --shadow-elevated: 0 1px 2px rgba(20, 20, 25, 0.04), 0 14px 30px -18px rgba(20, 20, 25, 0.18);
+  --shadow-elevated-hover: 0 2px 6px rgba(20, 20, 25, 0.07), 0 20px 40px -18px rgba(20, 20, 25, 0.24);
+  /* Gold is the single restrained accent, used sparingly (light default). */
+  --accent-gold: #b3873a;
+  --accent-gold-soft: #f6eddc;
+  /* The sidebar is a near-black brand rail, the same in light and dark. */
+  --sidebar-bg: #111114;
+  --sidebar-bg-soft: #1f1f23;
+  --sidebar-bg-active: #29292d;
+  --sidebar-text: #8a8c92;
+  --sidebar-text-active: #ffffff;
+  --sidebar-border: #26262a;
+  --sidebar-gold: #d8b25a;
 }
 
 :root,
-[data-theme="terminal"] {
-  /* Terminal — the default. A blue-black ground (never pure black),
-     amber as the one accent, with green reserved only for "passed /
-     enacted" status so movement reads instantly. */
-  --bg: #0d1219;
-  --surface: #121a23;
-  --surface-soft: #1c2530;
-  --text: #e8edf2;
-  --text-soft: #8b97a6;
-  --border: #1f2a36;
-  --accent: #e0a52e;
-  --accent-soft: #2a2114;
-  --accent-contrast: #0a0f15;
-  --danger: #f0796a;
-  --danger-soft: #33201d;
-}
-
-[data-theme="terminal-light"] {
-  /* Terminal Light — the same system (amber accent, Chivo/Plex type,
-     sharp edges) on a cool paper ground for daytime use. The sidebar
-     stays dark, so both variants share one brand chrome. */
-  --bg: #eef1f5;
+[data-theme="light"] {
+  /* Phenomenon Light (default) — warm off-white paper, near-black ink,
+     one restrained gold accent, semantic status colors for movement. */
+  --bg: #f4f4f2;
   --surface: #ffffff;
-  --surface-soft: #e4e9f0;
-  --text: #16202b;
-  --text-soft: #5a6675;
-  --border: #d6dce4;
-  --accent: #9c6f14;
-  --accent-soft: #f6ecd6;
+  --surface-soft: #ececea;
+  --text: #121316;
+  --text-soft: #6f7278;
+  --border: #e4e4e2;
+  --accent: #b3873a;
+  --accent-soft: #f6eddc;
   --accent-contrast: #ffffff;
   --danger: #c23b2e;
   --danger-soft: #f8e3e0;
-  /* Amber needs to darken on white to stay legible as text/borders. */
-  --accent-gold: #9c6f14;
-  --accent-gold-soft: #f6ecd6;
-  --shadow-sm: 0 1px 3px rgba(16, 26, 44, 0.06);
-  --shadow-md: 0 6px 20px rgba(16, 26, 44, 0.10);
-  --shadow-elevated: 0 1px 2px rgba(16, 26, 44, 0.05), 0 12px 30px -18px rgba(16, 26, 44, 0.26);
-  --shadow-elevated-hover: 0 2px 4px rgba(16, 26, 44, 0.07), 0 16px 38px -16px rgba(16, 26, 44, 0.3);
+}
+
+[data-theme="dark"] {
+  /* Phenomenon Dark — near-black ground, off-white ink, inverted CTAs.
+     The sidebar stays the same near-black rail as in light mode. */
+  --bg: #0d0d0f;
+  --surface: #161619;
+  --surface-soft: #1e1e21;
+  --text: #f3f2ee;
+  --text-soft: #9a9ca1;
+  --border: #262629;
+  --accent: #d8b25a;
+  --accent-soft: #2a2113;
+  --accent-contrast: #121316;
+  --danger: #f0796a;
+  --danger-soft: #33201d;
+  --accent-gold: #d8b25a;
+  --accent-gold-soft: #2a2113;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.55);
+  --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px -18px rgba(0, 0, 0, 0.65);
+  --shadow-elevated-hover: 0 2px 6px rgba(0, 0, 0, 0.5), 0 20px 42px -18px rgba(0, 0, 0, 0.75);
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
@@ -283,30 +275,21 @@ button.ghost:active { transform: translateY(0); box-shadow: none; }
 }
 
 /* Stage-specific: real progression, not just decoration. */
-/* Stage pills — Terminal (dark) defaults: amber for in-progress, green
-   reserved for chambers passed and enactment. */
-.pill.pill-introduced { color: #9aa6b4; background: #1c2530; border-color: #2a3542; }
-.pill.pill-committee { color: #e0a52e; background: rgba(224, 165, 46, 0.14); border-color: rgba(224, 165, 46, 0.3); }
+/* Stage pills — semantic status color (light default): grey introduced,
+   gold in-committee, blue passed a chamber, green enacted. */
+.pill.pill-introduced { color: #6f7278; background: #ececea; border-color: transparent; }
+.pill.pill-committee { color: #b3873a; background: #f6eddc; border-color: transparent; }
 .pill.pill-passed_house,
-.pill.pill-passed_senate { color: #3fbf6f; background: rgba(63, 191, 111, 0.14); border-color: rgba(63, 191, 111, 0.3); }
-.pill.pill-to_president { color: #3fbf6f; background: rgba(63, 191, 111, 0.18); border-color: rgba(63, 191, 111, 0.35); }
-.pill.pill-enacted {
-  color: #0a0f15;
-  background: #3fbf6f;
-  border-color: #3fbf6f;
-  box-shadow: 0 1px 3px rgba(63, 191, 111, 0.3);
-}
-/* Stage pills — Terminal Light overrides */
-[data-theme="terminal-light"] .pill.pill-introduced { color: #4a5769; background: #eef1f6; border-color: #d5deea; }
-[data-theme="terminal-light"] .pill.pill-committee { color: #8a5a1a; background: #faedd6; border-color: #ecd9b4; }
-[data-theme="terminal-light"] .pill.pill-passed_house,
-[data-theme="terminal-light"] .pill.pill-passed_senate { color: #1d6d3b; background: #dcf3e8; border-color: #b7e3ca; }
-[data-theme="terminal-light"] .pill.pill-to_president { color: #15803d; background: #d4efdf; border-color: #9dd4b6; }
-[data-theme="terminal-light"] .pill.pill-enacted {
-  color: #ffffff;
-  background: linear-gradient(135deg, #15803d, #1d6d3b);
-  border-color: #15803d;
-}
+.pill.pill-passed_senate { color: #2f6fdb; background: #e7eefb; border-color: transparent; }
+.pill.pill-to_president { color: #2f6fdb; background: #e0eafb; border-color: transparent; }
+.pill.pill-enacted { color: #1f9d5f; background: #e6f5ec; border-color: transparent; box-shadow: none; }
+/* Stage pills — dark overrides */
+[data-theme="dark"] .pill.pill-introduced { color: #9a9ca1; background: #1e1e21; }
+[data-theme="dark"] .pill.pill-committee { color: #d8b25a; background: #2a2113; }
+[data-theme="dark"] .pill.pill-passed_house,
+[data-theme="dark"] .pill.pill-passed_senate { color: #6ba5f5; background: #142238; }
+[data-theme="dark"] .pill.pill-to_president { color: #6ba5f5; background: #152238; }
+[data-theme="dark"] .pill.pill-enacted { color: #46cf8c; background: #13301f; }
 
 .error-text { color: var(--danger); font-size: 0.8125rem; margin-top: 4px; }
 .muted { color: var(--text-soft); font-size: 0.8125rem; }
@@ -883,22 +866,22 @@ button.ghost:active:not(:disabled) {
 /* ── Position (stance) badges ───────────────────────────────────── */
 
 :root,
-[data-theme="terminal"] {
-  --pos-support: #3fbf6f;
-  --pos-support-soft: #14261c;
-  --pos-oppose: #f0796a;
-  --pos-oppose-soft: #33201d;
-  --pos-watching: #e0a52e;
-  --pos-watching-soft: #2a2114;
-  --pos-none: var(--text-soft);
-}
-[data-theme="terminal-light"] {
-  --pos-support: #1d7a44;
-  --pos-support-soft: #dcf3e8;
+[data-theme="light"] {
+  --pos-support: #1f9d5f;
+  --pos-support-soft: #e6f5ec;
   --pos-oppose: #c23b2e;
   --pos-oppose-soft: #fbe2df;
-  --pos-watching: #9c6f14;
-  --pos-watching-soft: #f6ecd6;
+  --pos-watching: #b3873a;
+  --pos-watching-soft: #f6eddc;
+  --pos-none: var(--text-soft);
+}
+[data-theme="dark"] {
+  --pos-support: #46cf8c;
+  --pos-support-soft: #13301f;
+  --pos-oppose: #f0796a;
+  --pos-oppose-soft: #33201d;
+  --pos-watching: #d8b25a;
+  --pos-watching-soft: #2a2113;
 }
 
 .badge-position {
@@ -4221,33 +4204,34 @@ textarea:focus-visible,
 .legislator-stat-card,
 .briefing-summary-card { border-radius: 8px; }
 
-/* Primary buttons: flat amber, no shimmer sweep */
+/* Primary buttons: solid ink pill that inverts in dark mode, no shimmer */
 button.primary {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-radius: 6px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 999px;
   box-shadow: none;
   font-family: var(--font-body);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   font-weight: 600;
+  transition: transform 0.3s cubic-bezier(0.2,1,0.3,1), box-shadow 0.3s ease, opacity 0.2s ease;
 }
 button.primary::after { display: none !important; }
 button.primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: color-mix(in srgb, var(--accent) 88%, #ffffff);
-  box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--text) 55%, transparent);
 }
-button.ghost { border-radius: 6px; }
+button.ghost { border-radius: 999px; transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease, transform 0.3s cubic-bezier(0.2,1,0.3,1); }
 button.ghost:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+  transform: translateY(-2px);
   box-shadow: none;
 }
 
-/* Progress fills: solid amber, no animated gradient */
+/* Progress fills: solid ink, no animated gradient */
 .progress-fill {
-  background: var(--accent);
+  background: var(--text);
   background-size: auto;
   animation: none;
   box-shadow: none;
@@ -4275,8 +4259,9 @@ textarea { border-radius: 6px; }
 /* Active sidebar item carries an amber marker rail */
 .sidebar-link-active { box-shadow: inset 2px 0 0 var(--accent-gold); }
 
-/* Headings in the tight Chivo grotesque, a touch tighter tracking */
-h1, h2, h3, .brand, .mk-h1 { letter-spacing: -0.01em; }
+/* Headings — bold Archivo, tighter tracking, more editorial presence */
+h1, h2, h3, .brand { letter-spacing: -0.025em; font-weight: 800; }
+h1 { letter-spacing: -0.035em; }
 
 /* Drop leftover glass/backdrop blur that muddies the dark ground */
 .overview-section,
@@ -4285,7 +4270,7 @@ h1, h2, h3, .brand, .mk-h1 { letter-spacing: -0.01em; }
 
 /* Capitol watermark barely-there on the dark ground */
 .capitol-watermark { opacity: 0.03; }
-[data-theme="terminal-light"] .capitol-watermark { opacity: 0.05; }
+[data-theme="dark"] .capitol-watermark { opacity: 0.025; }
 
 /* Health ring inner disc + group progress pick up the amber system */
 .impact-group-count { background: var(--accent); color: var(--accent-contrast); }

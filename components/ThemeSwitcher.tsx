@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react";
 
 const THEMES = [
-  { id: "terminal", label: "Terminal", swatch: "#0d1219" },
-  { id: "terminal-light", label: "Terminal Light", swatch: "#eef1f5" },
+  { id: "light", label: "Light", swatch: "#f4f4f2" },
+  { id: "dark", label: "Dark", swatch: "#0d0d0f" },
 ] as const;
 
 const VALID = new Set<string>(THEMES.map((t) => t.id));
 const STORAGE_KEY = "billtracker-theme";
 
 export default function ThemeSwitcher() {
-  const [theme, setTheme] = useState<string>("terminal");
+  const [theme, setTheme] = useState<string>("light");
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
