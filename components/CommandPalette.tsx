@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LayoutDashboard, Users2, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users2, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact } from "lucide-react";
 
 type NavItem = { type: "nav"; label: string; href: string; icon: any };
 type BillItem = { type: "bill"; label: string; href: string };
@@ -11,7 +11,8 @@ type Item = NavItem | BillItem;
 
 const NAV_ITEMS: NavItem[] = [
   { type: "nav", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { type: "nav", label: "Legislators", href: "/legislators", icon: Landmark },
+  { type: "nav", label: "Congress", href: "/legislators", icon: Landmark },
+  { type: "nav", label: "Contacts", href: "/members", icon: Contact },
   { type: "nav", label: "Impact Dashboard", href: "/impact", icon: GitBranch },
   { type: "nav", label: "Stakeholder Briefing", href: "/briefing", icon: ClipboardList },
   { type: "nav", label: "Team", href: "/team", icon: Users2 },

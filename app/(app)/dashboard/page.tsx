@@ -19,6 +19,7 @@ import Reveal from "@/components/Reveal";
 import TrendingBills from "@/components/TrendingBills";
 import TopicsHero from "@/components/TopicsHero";
 import ProspectiveBills from "@/components/ProspectiveBills";
+import Onboarding from "@/components/Onboarding";
 import { useUI } from "@/components/UIProvider";
 import StageFlow from "@/components/StageFlow";
 import { STAGE_LABELS } from "@/lib/billMeta";
@@ -173,12 +174,18 @@ export default function DashboardPage() {
           shows the bills those keywords matched. */}
       {!loading && (
         <Reveal>
-          <TopicsHero onDiscovered={() => setProspectiveRefreshKey((k) => k + 1)} />
+          <div data-coach="topics">
+            <TopicsHero onDiscovered={() => setProspectiveRefreshKey((k) => k + 1)} />
+          </div>
           <ProspectiveBills key={prospectiveRefreshKey} onTracked={() => { loadTracked(); setProspectiveRefreshKey((k) => k + 1); }} />
         </Reveal>
       )}
 
-      <BillSearch onTracked={loadTracked} />
+      <div data-coach="search">
+        <BillSearch onTracked={loadTracked} />
+      </div>
+
+      {!loading && <Onboarding />}
 
       {/* Portfolio snapshot: compact stat strip that's always visible
           when the user has tracked bills, plus a collapsible detail panel
@@ -252,7 +259,7 @@ export default function DashboardPage() {
       )}
 
       {(loading || tracked.length > 0) && (
-      <div style={{ marginTop: 28 }}>
+      <div style={{ marginTop: 28 }} data-coach="tracked">
         <div className="table-toolbar">
           <h2 style={{ fontSize: '1.0625rem', fontWeight: 500, margin: 0 }}>Currently tracking ({filtered.length})</h2>
           <div className="table-toolbar-controls">

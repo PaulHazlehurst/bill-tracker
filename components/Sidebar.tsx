@@ -9,8 +9,11 @@ import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, He
 
 // Grouped by what a person is trying to DO, not by feature. Five short
 // sections to scan instead of eleven flat tabs - much easier for new or
-// less technical users to find their way. "Members" and "Legislators"
-// both live under People so the overlap reads as intentional.
+// less technical users to find their way. The three People items were the
+// biggest source of confusion ("Legislators" vs "Members" vs "Team" all
+// sound alike), so they're renamed to say plainly what each is: Congress =
+// the official directory of members of Congress; Contacts = your own
+// stakeholder/CRM list; Team = your teammates with logins.
 const NAV_GROUPS = [
   {
     label: "Track",
@@ -30,8 +33,8 @@ const NAV_GROUPS = [
   {
     label: "People",
     items: [
-      { href: "/legislators", label: "Legislators", Icon: Landmark },
-      { href: "/members", label: "Members", Icon: Contact },
+      { href: "/legislators", label: "Congress", Icon: Landmark },
+      { href: "/members", label: "Contacts", Icon: Contact },
       { href: "/team", label: "Team", Icon: Users },
     ],
   },

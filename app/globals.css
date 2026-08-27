@@ -4476,3 +4476,181 @@ button.primary:hover .btn-arw { transform:translateX(4px); }
   .prospect-collapsed { animation: none; }
   .prospect-collapsed .prospect-count { animation: none; }
 }
+
+/* ============================================================
+   First-run coach-marks (components/Onboarding.tsx)
+   Low-opacity hand-drawn arrows that point at the three things
+   a new user needs: topics, search, the tracked list. Desktop
+   only — the component itself no-ops below 900px.
+   ============================================================ */
+.coach-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  pointer-events: none;
+}
+.coach-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 30%, transparent);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: coach-fade 0.4s ease both;
+}
+.coach-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.coach-arrow path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.5;
+  animation: coach-draw 0.7s ease both 0.15s;
+}
+.coach-card {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 14px;
+  padding: 12px 14px 13px;
+  box-shadow: var(--shadow-elevated);
+  pointer-events: auto;
+  animation: coach-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.2s;
+}
+.coach-card-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.coach-card-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.coach-card-body {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-soft);
+}
+.coach-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 12px 10px 18px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-elevated);
+  pointer-events: auto;
+  animation: coach-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.35s;
+}
+.coach-bar-note {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.coach-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg);
+  color: var(--text);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.coach-done:hover { transform: translateY(-1px); opacity: 0.9; }
+.coach-replay {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 900;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-elevated);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.coach-replay:hover { opacity: 1; color: var(--accent); transform: translateY(-2px); }
+@keyframes coach-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes coach-pop { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.coach-card-left { }
+.coach-card-right { }
+@keyframes coach-draw {
+  from { opacity: 0; }
+  to { opacity: 0.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach-scrim, .coach-card, .coach-bar, .coach-arrow path { animation: none; }
+}
+
+/* ============================================================
+   Accessibility pass — skip link + visible keyboard focus
+   ============================================================ */
+.skip-link {
+  position: fixed;
+  top: -60px;
+  left: 12px;
+  z-index: 2000;
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.18s ease;
+}
+.skip-link:focus {
+  top: 12px;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+/* A consistent, high-contrast focus ring for keyboard users everywhere,
+   without showing it on mouse clicks. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.app-main:focus { outline: none; }
