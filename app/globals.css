@@ -5,93 +5,88 @@
    they need to stay recognizable regardless of which theme is active. */
 
 :root {
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Public Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Terminal system typefaces: Chivo (tight grotesque) for headings,
+     IBM Plex Sans for UI/body, IBM Plex Mono for all data and numbers.
+     Serif kept only for literal official records (CRS summaries). */
+  --font-display: "Chivo", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  /* Merriweather - USWDS's own second official typeface (paired with
-     Public Sans on real federal .gov sites). Used deliberately narrowly:
-     only where text is literally an official government record (CRS
-     summaries, Congressional Record excerpts) - not a wholesale font
-     swap, which would undo the distinctive Fraunces identity built up
-     everywhere else. One targeted, meaningful use beats a second display
-     face competing for the same job. */
-  --font-official: "Merriweather", Georgia, serif;
+  --font-official: Georgia, "Times New Roman", serif;
+  /* Alias tokens some components reference (card surfaces, foreground).
+     Map them to the active theme's palette so they're always defined -
+     previously these were undefined, which is why the Legislators,
+     Impact and Briefing cards rendered with no background. */
+  --card-bg: var(--surface);
+  --card-border: var(--border);
+  --fg: var(--text);
   --party-dem: #1e3a8a;
   --party-dem-soft: #e2ebfd;
   --party-rep: #b8342a;
   --party-rep-soft: #fbe4e2;
   --party-ind: #6d28d9;
   --party-ind-soft: #eee5fc;
-  --shadow-sm: 0 1px 3px rgba(20, 20, 15, 0.06);
-  --shadow-md: 0 6px 20px rgba(20, 20, 15, 0.10);
-  /* Layered "elevated" shadow - a soft contact shadow plus a wider, faint
-     ambient one underneath. Used on cards and stat cards in place of the
-     single-shadow --shadow-sm/md pair, for a touch more depth without
-     tipping into heavy-handed. */
-  --shadow-elevated: 0 1px 2px rgba(16, 26, 44, 0.04), 0 10px 30px -18px rgba(16, 26, 44, 0.22);
-  --shadow-elevated-hover: 0 2px 4px rgba(16, 26, 44, 0.06), 0 16px 36px -16px rgba(16, 26, 44, 0.26);
-  /* Second accent, used sparingly (progress fills, a stat value here and
-     there, sidebar brand mark) alongside the primary blue - never as a
-     wholesale replacement for --accent. */
-  --accent-gold: #a3812f;
-  --accent-gold-soft: #f5ecd7;
-  /* The sidebar is deliberately theme-independent - a consistent dark-navy
-     "brand chrome" that stays the same no matter which content theme is
-     active, rather than a 4th thing that changes with the theme switcher.
-     One steady anchor, per the design skill's "spend your boldness in one
-     place" guidance. */
-  --sidebar-bg: #0f2038;
-  --sidebar-bg-soft: #1a3352;
-  --sidebar-bg-active: #1c3866;
-  --sidebar-text: #a9bad6;
-  --sidebar-text-active: #ffffff;
-  --sidebar-border: #22406399;
-  --sidebar-gold: #d8bb7c;
+  /* Shadows default to the dark (Terminal) theme; Terminal Light
+     overrides them with lighter ambient values. */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 30px -18px rgba(0, 0, 0, 0.6);
+  --shadow-elevated-hover: 0 2px 4px rgba(0, 0, 0, 0.45), 0 16px 38px -16px rgba(0, 0, 0, 0.72);
+  /* Amber is the single Terminal accent; --accent-gold aliases it so
+     existing gold usages (progress, brand mark) stay on-system. */
+  --accent-gold: #e0a52e;
+  --accent-gold-soft: #2a2114;
+  /* The sidebar is deliberately theme-independent - a near-black brand
+     chrome that stays the same in both Terminal and Terminal Light, so
+     the app always reads as one consistent instrument. */
+  --sidebar-bg: #0a0f15;
+  --sidebar-bg-soft: #131b24;
+  --sidebar-bg-active: #16202b;
+  --sidebar-text: #7e8a99;
+  --sidebar-text-active: #f0f4f8;
+  --sidebar-border: #1c2530;
+  --sidebar-gold: #e0a52e;
 }
 
 :root,
-[data-theme="capitol"] {
-  --bg: #f4f6fa;
+[data-theme="terminal"] {
+  /* Terminal — the default. A blue-black ground (never pure black),
+     amber as the one accent, with green reserved only for "passed /
+     enacted" status so movement reads instantly. */
+  --bg: #0d1219;
+  --surface: #121a23;
+  --surface-soft: #1c2530;
+  --text: #e8edf2;
+  --text-soft: #8b97a6;
+  --border: #1f2a36;
+  --accent: #e0a52e;
+  --accent-soft: #2a2114;
+  --accent-contrast: #0a0f15;
+  --danger: #f0796a;
+  --danger-soft: #33201d;
+}
+
+[data-theme="terminal-light"] {
+  /* Terminal Light — the same system (amber accent, Chivo/Plex type,
+     sharp edges) on a cool paper ground for daytime use. The sidebar
+     stays dark, so both variants share one brand chrome. */
+  --bg: #eef1f5;
   --surface: #ffffff;
-  --surface-soft: #e7edf6;
-  --text: #101a2c;
-  --text-soft: #526279;
-  --border: #d5deea;
-  --accent: #2c5f9e;
-  --accent-soft: #dfe9f8;
+  --surface-soft: #e4e9f0;
+  --text: #16202b;
+  --text-soft: #5a6675;
+  --border: #d6dce4;
+  --accent: #9c6f14;
+  --accent-soft: #f6ecd6;
   --accent-contrast: #ffffff;
   --danger: #c23b2e;
   --danger-soft: #f8e3e0;
-}
-
-[data-theme="parchment"] {
-  --bg: #f7f6f2;
-  --surface: #ffffff;
-  --surface-soft: #edeade;
-  --text: #16211d;
-  --text-soft: #566259;
-  --border: #d9d4c4;
-  --accent: #0f7a5c;
-  --accent-soft: #dcf0e7;
-  --accent-contrast: #ffffff;
-  --danger: #c23b2e;
-  --danger-soft: #f8e3e0;
-}
-
-[data-theme="midnight"] {
-  --bg: #0e1113;
-  --surface: #191d20;
-  --surface-soft: #22272b;
-  --text: #f0ede4;
-  --text-soft: #a3aca9;
-  --border: #2b3236;
-  --accent: #e8ab41;
-  --accent-soft: #3a2c14;
-  --accent-contrast: #17130a;
-  --danger: #ea7a6c;
-  --danger-soft: #3d211e;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.5);
+  /* Amber needs to darken on white to stay legible as text/borders. */
+  --accent-gold: #9c6f14;
+  --accent-gold-soft: #f6ecd6;
+  --shadow-sm: 0 1px 3px rgba(16, 26, 44, 0.06);
+  --shadow-md: 0 6px 20px rgba(16, 26, 44, 0.10);
+  --shadow-elevated: 0 1px 2px rgba(16, 26, 44, 0.05), 0 12px 30px -18px rgba(16, 26, 44, 0.26);
+  --shadow-elevated-hover: 0 2px 4px rgba(16, 26, 44, 0.07), 0 16px 38px -16px rgba(16, 26, 44, 0.3);
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
@@ -288,16 +283,29 @@ button.ghost:active { transform: translateY(0); box-shadow: none; }
 }
 
 /* Stage-specific: real progression, not just decoration. */
-.pill.pill-introduced { color: #4a5769; background: #eef1f6; border-color: #d5deea; }
-.pill.pill-committee { color: #8a5a1a; background: #faedd6; border-color: #ecd9b4; }
+/* Stage pills — Terminal (dark) defaults: amber for in-progress, green
+   reserved for chambers passed and enactment. */
+.pill.pill-introduced { color: #9aa6b4; background: #1c2530; border-color: #2a3542; }
+.pill.pill-committee { color: #e0a52e; background: rgba(224, 165, 46, 0.14); border-color: rgba(224, 165, 46, 0.3); }
 .pill.pill-passed_house,
-.pill.pill-passed_senate { color: #1d6d3b; background: #dcf3e8; border-color: #b7e3ca; }
-.pill.pill-to_president { color: #15803d; background: #d4efdf; border-color: #9dd4b6; }
+.pill.pill-passed_senate { color: #3fbf6f; background: rgba(63, 191, 111, 0.14); border-color: rgba(63, 191, 111, 0.3); }
+.pill.pill-to_president { color: #3fbf6f; background: rgba(63, 191, 111, 0.18); border-color: rgba(63, 191, 111, 0.35); }
 .pill.pill-enacted {
+  color: #0a0f15;
+  background: #3fbf6f;
+  border-color: #3fbf6f;
+  box-shadow: 0 1px 3px rgba(63, 191, 111, 0.3);
+}
+/* Stage pills — Terminal Light overrides */
+[data-theme="terminal-light"] .pill.pill-introduced { color: #4a5769; background: #eef1f6; border-color: #d5deea; }
+[data-theme="terminal-light"] .pill.pill-committee { color: #8a5a1a; background: #faedd6; border-color: #ecd9b4; }
+[data-theme="terminal-light"] .pill.pill-passed_house,
+[data-theme="terminal-light"] .pill.pill-passed_senate { color: #1d6d3b; background: #dcf3e8; border-color: #b7e3ca; }
+[data-theme="terminal-light"] .pill.pill-to_president { color: #15803d; background: #d4efdf; border-color: #9dd4b6; }
+[data-theme="terminal-light"] .pill.pill-enacted {
   color: #ffffff;
   background: linear-gradient(135deg, #15803d, #1d6d3b);
   border-color: #15803d;
-  box-shadow: 0 1px 3px rgba(21, 128, 61, 0.25);
 }
 
 .error-text { color: var(--danger); font-size: 0.8125rem; margin-top: 4px; }
@@ -642,6 +650,23 @@ button.ghost:active:not(:disabled) {
 }
 
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; padding: 12px; flex-grow: 1; }
+.sidebar-group { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-group + .sidebar-group { margin-top: 10px; }
+.sidebar-group-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--sidebar-text);
+  opacity: 0.5;
+  padding: 6px 12px 3px;
+}
+/* API Usage + Settings pinned to the foot of the nav, out of the way */
+.sidebar-group-utility {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--sidebar-border);
+}
 .sidebar-link {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px; border-radius: 9px;
@@ -857,22 +882,23 @@ button.ghost:active:not(:disabled) {
 
 /* ── Position (stance) badges ───────────────────────────────────── */
 
-:root {
-  --pos-support: #15803d;
-  --pos-support-soft: #dcf3e8;
-  --pos-oppose: #b8342a;
-  --pos-oppose-soft: #fbe2df;
-  --pos-watching: #a16207;
-  --pos-watching-soft: #faedd6;
+:root,
+[data-theme="terminal"] {
+  --pos-support: #3fbf6f;
+  --pos-support-soft: #14261c;
+  --pos-oppose: #f0796a;
+  --pos-oppose-soft: #33201d;
+  --pos-watching: #e0a52e;
+  --pos-watching-soft: #2a2114;
   --pos-none: var(--text-soft);
 }
-[data-theme="midnight"] {
-  --pos-support: #34c281;
-  --pos-oppose: #f0796a;
-  --pos-watching: #f0b342;
-  --pos-support-soft: #17301f;
-  --pos-oppose-soft: #3a201d;
-  --pos-watching-soft: #3a2c12;
+[data-theme="terminal-light"] {
+  --pos-support: #1d7a44;
+  --pos-support-soft: #dcf3e8;
+  --pos-oppose: #c23b2e;
+  --pos-oppose-soft: #fbe2df;
+  --pos-watching: #9c6f14;
+  --pos-watching-soft: #f6ecd6;
 }
 
 .badge-position {
@@ -2205,10 +2231,10 @@ textarea:focus-visible,
 }
 
 /* ── Official document text ─────────────────────────────────────── */
-/* Merriweather, applied only to text that's literally an official record -
+/* A serif, applied only to text that's literally an official record -
    the CRS summary and Congressional Record excerpts - as a quiet signal
    "this exact wording is what the government published," distinct from
-   everything else on the page. */
+   the Chivo/Plex system used everywhere else. */
 
 .official-text {
   font-family: var(--font-official);
@@ -4132,3 +4158,92 @@ textarea:focus-visible,
     flex-direction: column;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   TERMINAL SYSTEM — structural feel layered on top of the token palette.
+   The tokens above already flip every surface to the dark ground and
+   amber accent; this section handles the "instrument panel" feel:
+   sharper edges, flat surfaces, solid amber (no animated gradients or
+   shimmer), and data set in mono. Applies to both Terminal and Terminal
+   Light. Loaded last so it wins on equal specificity.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Sharper radii — cards read as panels, not pills */
+.card,
+.table-wrap,
+.bill-sidebar .card,
+.portfolio-strip,
+.impact-group-card,
+.legislator-card,
+.briefing-bill-card,
+.legislator-stat-card,
+.briefing-summary-card { border-radius: 8px; }
+
+/* Primary buttons: flat amber, no shimmer sweep */
+button.primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 6px;
+  box-shadow: none;
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+  font-weight: 600;
+}
+button.primary::after { display: none !important; }
+button.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent) 88%, #ffffff);
+  box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+button.ghost { border-radius: 6px; }
+button.ghost:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+/* Progress fills: solid amber, no animated gradient */
+.progress-fill {
+  background: var(--accent);
+  background-size: auto;
+  animation: none;
+  box-shadow: none;
+}
+
+/* Inputs read as terminal fields */
+.field input,
+.field select,
+input[type="text"],
+input[type="email"],
+input[type="search"],
+select,
+textarea { border-radius: 6px; }
+
+/* Numbers, IDs and data set in mono with aligned figures */
+.stat-value,
+.kpi-value,
+.bill-table-id,
+.portfolio-stat-value,
+.legislator-stat-value,
+.impact-metric-value,
+.briefing-summary-number,
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Active sidebar item carries an amber marker rail */
+.sidebar-link-active { box-shadow: inset 2px 0 0 var(--accent-gold); }
+
+/* Headings in the tight Chivo grotesque, a touch tighter tracking */
+h1, h2, h3, .brand, .mk-h1 { letter-spacing: -0.01em; }
+
+/* Drop leftover glass/backdrop blur that muddies the dark ground */
+.overview-section,
+.topics-hero,
+.first-run-hero { backdrop-filter: none; }
+
+/* Capitol watermark barely-there on the dark ground */
+.capitol-watermark { opacity: 0.03; }
+[data-theme="terminal-light"] .capitol-watermark { opacity: 0.05; }
+
+/* Health ring inner disc + group progress pick up the amber system */
+.impact-group-count { background: var(--accent); color: var(--accent-contrast); }
