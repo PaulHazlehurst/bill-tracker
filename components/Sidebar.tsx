@@ -7,16 +7,43 @@ import { timeAgo } from "@/lib/billMeta";
 import { useTicker } from "@/lib/useTicker";
 import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, HeartPulse, Contact, Landmark, ClipboardList, GitBranch } from "lucide-react";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "My bills", Icon: FileText },
-  { href: "/legislators", label: "Legislators", Icon: Landmark },
-  { href: "/impact", label: "Impact", Icon: GitBranch },
-  { href: "/briefing", label: "Briefing", Icon: ClipboardList },
-  { href: "/team", label: "Team", Icon: Users },
-  { href: "/members", label: "Members", Icon: Contact },
-  { href: "/statistics", label: "Statistics", Icon: BarChart3 },
-  { href: "/rural-health", label: "Rural Health", Icon: HeartPulse },
-  { href: "/activity", label: "Activity", Icon: Activity },
+// Grouped by what a person is trying to DO, not by feature. Five short
+// sections to scan instead of eleven flat tabs - much easier for new or
+// less technical users to find their way. "Members" and "Legislators"
+// both live under People so the overlap reads as intentional.
+const NAV_GROUPS = [
+  {
+    label: "Track",
+    items: [
+      { href: "/dashboard", label: "My bills", Icon: FileText },
+      { href: "/activity", label: "Activity", Icon: Activity },
+    ],
+  },
+  {
+    label: "Analyze",
+    items: [
+      { href: "/impact", label: "Impact", Icon: GitBranch },
+      { href: "/statistics", label: "Statistics", Icon: BarChart3 },
+      { href: "/rural-health", label: "Rural Health", Icon: HeartPulse },
+    ],
+  },
+  {
+    label: "People",
+    items: [
+      { href: "/legislators", label: "Legislators", Icon: Landmark },
+      { href: "/members", label: "Members", Icon: Contact },
+      { href: "/team", label: "Team", Icon: Users },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [{ href: "/briefing", label: "Briefing", Icon: ClipboardList }],
+  },
+];
+
+// Plumbing and preferences sit apart at the foot of the nav, out of the
+// daily path.
+const UTILITY_ITEMS = [
   { href: "/api-usage", label: "API Usage", Icon: Gauge },
   { href: "/settings", label: "Settings", Icon: Settings },
 ];
@@ -94,16 +121,33 @@ export default function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className={`sidebar-link${pathname === item.href ? " sidebar-link-active" : ""}`}
-            >
-              <item.Icon size={16} className="sidebar-icon" aria-hidden="true" />
-              {item.label}
-            </a>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="sidebar-group">
+              <div className="sidebar-group-label">{group.label}</div>
+              {group.items.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`sidebar-link${pathname === item.href ? " sidebar-link-active" : ""}`}
+                >
+                  <item.Icon size={16} className="sidebar-icon" aria-hidden="true" />
+                  {item.label}
+                </a>
+              ))}
+            </div>
           ))}
+          <div className="sidebar-group sidebar-group-utility">
+            {UTILITY_ITEMS.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link${pathname === item.href ? " sidebar-link-active" : ""}`}
+              >
+                <item.Icon size={16} className="sidebar-icon" aria-hidden="true" />
+                {item.label}
+              </a>
+            ))}
+          </div>
         </nav>
 
         <div className="sidebar-cmdk-hint muted">

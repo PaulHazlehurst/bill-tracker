@@ -3,19 +3,21 @@
 import { useEffect, useState } from "react";
 
 const THEMES = [
-  { id: "parchment", label: "Parchment", swatch: "#2f5d50" },
-  { id: "midnight", label: "Midnight", swatch: "#14181a" },
-  { id: "capitol", label: "Capitol", swatch: "#1f3a5f" },
+  { id: "terminal", label: "Terminal", swatch: "#0d1219" },
+  { id: "terminal-light", label: "Terminal Light", swatch: "#eef1f5" },
 ] as const;
 
+const VALID = new Set(THEMES.map((t) => t.id));
 const STORAGE_KEY = "billtracker-theme";
 
 export default function ThemeSwitcher() {
-  const [theme, setTheme] = useState<string>("parchment");
+  const [theme, setTheme] = useState<string>("terminal");
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved) setTheme(saved);
+    // Ignore stale theme names from the old (Capitol/Parchment/Midnight)
+    // palette so the switcher never shows an option that no longer exists.
+    if (saved && VALID.has(saved)) setTheme(saved);
   }, []);
 
   function choose(id: string) {

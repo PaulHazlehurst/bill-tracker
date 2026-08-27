@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
         {/* Runs before paint so the saved theme and font size apply
@@ -29,8 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html: `try {
+              var valid = { terminal: 1, "terminal-light": 1 };
               var t = localStorage.getItem("billtracker-theme");
-              if (t) document.documentElement.setAttribute("data-theme", t);
+              if (t && valid[t]) document.documentElement.setAttribute("data-theme", t);
               var f = localStorage.getItem("billtracker-font-size");
               if (f) document.documentElement.setAttribute("data-font-size", f);
               var d = localStorage.getItem("billtracker-density");
