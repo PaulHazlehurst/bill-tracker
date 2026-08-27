@@ -93,18 +93,28 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
     try {
       const res = await fetch("/api/prospective/discover-now", { method: "POST" });
       const body = await res.json();
+
+      // TEMP diagnostic — shows exactly what each search source returned, so
+      // we can tell whether GovInfo is the thing failing. Remove once fixed.
+      let diagLine = "";
+      if (body.diag) {
+        const d = body.diag;
+        const gi = d.govinfo?.ok
+          ? `GovInfo ${d.govinfo.count}${d.govinfo.count ? ` (${d.govinfo.sample.join(", ")})` : ""}`
+          : `GovInfo ERROR: ${d.govinfo?.error}`;
+        const tm = d.titleMatch?.ok ? `title-match ${d.titleMatch.count}` : `title-match ERROR: ${d.titleMatch?.error}`;
+        diagLine = `  ·  [diag "${d.topic}": ${gi}; ${tm}; key govinfo=${d.keys?.govinfo} congress=${d.keys?.congress}]`;
+      }
+
       if (body.reason === "no topics configured") {
         setCheckResult("Add a topic below first.");
       } else if (body.searchFailed) {
-        // Distinct from "checked, nothing found" - the search itself
-        // couldn't run (congress.gov unreachable, rate limited, etc.),
-        // so saying "no new matches" here would hide a real problem.
-        setCheckResult(`Couldn't reach congress.gov to check ${body.failedTopics?.length > 1 ? "those topics" : "that topic"} right now - try again shortly.`);
+        setCheckResult(`Couldn't reach congress.gov to check ${body.failedTopics?.length > 1 ? "those topics" : "that topic"} right now - try again shortly.${diagLine}`);
       } else {
         setCheckResult(
-          body.added > 0
+          (body.added > 0
             ? `Found ${body.added} new bill${body.added === 1 ? "" : "s"}.`
-            : "No new matches right now - checked again tomorrow automatically."
+            : "No new matches right now - checked again tomorrow automatically.") + diagLine
         );
         if (body.added > 0) {
           load(); // refresh per-topic match counts, not just the list
