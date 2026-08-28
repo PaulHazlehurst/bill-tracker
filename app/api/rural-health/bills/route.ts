@@ -17,7 +17,9 @@ import { searchBillsSmart } from "@/lib/congress-api";
 // on. Each preset is a set of queries because no single phrase catches a
 // policy area - "telehealth" alone misses "remote patient monitoring," and
 // so on. Results are merged and de-duplicated.
-export const RURAL_TOPICS: Record<string, { label: string; queries: string[] }> = {
+// NOT exported: Next.js only allows specific exports from a route file
+// (GET/POST/dynamic/revalidate/...), and a stray named export fails the build.
+const RURAL_TOPICS: Record<string, { label: string; queries: string[] }> = {
   "rural-hospitals": {
     label: "Rural hospitals",
     queries: ["rural hospital", "critical access hospital", "hospital closure rural"],
