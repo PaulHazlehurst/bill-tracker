@@ -3,6 +3,20 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { billUpdateEmail } from "@/lib/emailTemplate";
 import { sendWeeklyDigests } from "@/lib/weeklyDigest";
+import { runDiscoveryForAllOwners } from "@/lib/topicDiscovery";
+import { deadline } from "@/lib/batch";
+
+// Same reasoning as the poll cron: without an explicit value Vercel applies
+// a short default and kills the function mid-run.
+export const maxDuration = 60;
+
+// Total wall-clock allowance, kept under maxDuration so the run always ends
+// on a clean write rather than being cut off by the platform.
+const TOTAL_BUDGET_MS = 50_000;
+// Never hand discovery less than this - below it, it can't finish even one
+// owner, so it's better to skip it entirely this cycle and let the next run
+// (with a smaller notification backlog) do the work.
+const MIN_DISCOVERY_MS = 8_000;
 
 export async function GET(req: NextRequest) {
   // See app/api/cron/poll/route.ts for why both a header and a query param
@@ -15,6 +29,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const clock = deadline(TOTAL_BUDGET_MS);
   const supabase = createAdminClient();
   const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -141,7 +156,43 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ eventsProcessed: events?.length ?? 0, emailsSent, smsSent, emailsSkippedNoOptIn, digest });
+  // Topic discovery. This used to live at the end of the POLL cron, where it
+  // was unreachable in practice: polling 200 bills one at a time consumed
+  // the whole function timeout before discovery was ever reached, which is
+  // why suggestions only ever appeared when someone clicked "Check now" by
+  // hand. It runs here instead, where the work above it is now a handful of
+  // batched queries, and it gets an explicit time budget so it degrades by
+  // covering fewer owners rather than by being killed.
+  //
+  // Wrapped so a discovery problem can never break notifications.
+  //
+  // The budget is whatever is LEFT of this function's allowance after the
+  // notification work above, not a fixed number - on a heavy morning
+  // (lots of events, lots of emails) discovery gets less time and covers
+  // fewer owners; on a quiet one it gets nearly the whole minute. Owners
+  // are rotated by day, so anyone skipped is first in line next time.
+  let discovery: Awaited<ReturnType<typeof runDiscoveryForAllOwners>> | null = null;
+  const discoveryBudget = clock.remainingMs();
+  if (discoveryBudget >= MIN_DISCOVERY_MS) {
+    try {
+      discovery = await runDiscoveryForAllOwners(discoveryBudget);
+    } catch (err) {
+      console.error("topic discovery failed", err);
+    }
+  } else {
+    console.warn(`skipping discovery: only ${discoveryBudget}ms left in budget`);
+  }
+
+  return NextResponse.json({
+    eventsProcessed: events?.length ?? 0,
+    emailsSent,
+    smsSent,
+    emailsSkippedNoOptIn,
+    digest,
+    discovery,
+    discoveryBudgetMs: discoveryBudget,
+    ms: clock.elapsedMs(),
+  });
 }
 
 async function sendSms(to: string, body: string) {

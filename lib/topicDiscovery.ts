@@ -8,9 +8,15 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { searchBillsSmart, getBill, getRelatedBills, inferStage, progressForStage } from "@/lib/congress-api";
+import { mapLimit, deadline, rotateByDay } from "@/lib/batch";
 
 const CURRENT_CONGRESS = 119;
 const MAX_PER_TOPIC = 15; // keep this bounded - a broad topic word could otherwise flood the list
+const CANDIDATE_CONCURRENCY = 6;
+// How many tracked bills may have their related-bills cache warmed per run.
+// Bounded so this stays a background nicety, never the thing that blows the
+// time budget.
+const MAX_RELATED_WARMUPS = 3;
 
 async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, billId: string, congress: number, billType: string, billNumber: string): Promise<{ ok: boolean; error?: string }> {
   const { data: existing } = await admin.from("bills").select("id").eq("id", billId).maybeSingle();
@@ -84,6 +90,51 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
   const { data: existingProspectiveRows } = await existingProspectiveQuery;
   const alreadySuggested = new Set((existingProspectiveRows ?? []).map((r) => r.bill_id));
 
+  // ------------------------------------------------------------------
+  // Companion-bill exclusion, done from cached data instead of one API
+  // call per candidate.
+  //
+  // This check exists so a Senate companion of a House bill the owner
+  // already tracks isn't offered as a "new" opportunity - it's the same
+  // policy. It used to call getRelatedBills() for EVERY candidate: up to 15
+  // extra congress.gov round-trips per topic, sequentially. That single line
+  // was the bulk of discovery's runtime and the main reason this job never
+  // finished inside the function's time limit.
+  //
+  // congress.gov's relatedBills data is bidirectional (HR 123 lists S 456
+  // and S 456 lists HR 123), so the same question can be answered from the
+  // TRACKED side, where the answer is already cached in bills.related_bills.
+  // That's a single database read instead of N network calls.
+  //
+  // Caveat, stated honestly: related_bills is populated on demand when
+  // someone opens a bill's detail page, so a tracked bill nobody has opened
+  // yet contributes nothing here. That means an occasional companion slips
+  // through as a suggestion - which is the same trade-off the old code chose
+  // when its API call failed, and far better than the job not running at all.
+  // A few of those gaps are warmed each run (see below).
+  const trackedIdList = Array.from(trackedBillIds);
+  const companionsOfTracked = new Set<string>();
+  const needsWarming: { id: string; congress: number; bill_type: string; bill_number: number }[] = [];
+
+  if (trackedIdList.length > 0) {
+    const { data: trackedBillRows } = await admin
+      .from("bills")
+      .select("id, congress, bill_type, bill_number, related_bills")
+      .in("id", trackedIdList);
+
+    for (const row of trackedBillRows ?? []) {
+      const rel = (row as any).related_bills;
+      if (Array.isArray(rel)) {
+        for (const r of rel) {
+          if (!r?.type || !r?.number || !r?.congress) continue;
+          companionsOfTracked.add(`${String(r.type).toLowerCase()}-${r.number}-${r.congress}`);
+        }
+      } else if (rel == null) {
+        needsWarming.push(row as any);
+      }
+    }
+  }
+
   let added = 0;
   const failedTopics: string[] = [];
 
@@ -104,73 +155,104 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
       continue;
     }
 
+    // Filter down to genuinely new candidates BEFORE doing any network work.
+    // The companion check is now a Set lookup against cached data rather than
+    // an API call, so this whole filter costs nothing.
+    const fresh: typeof results = [];
     for (const r of results.slice(0, MAX_PER_TOPIC)) {
       debug.candidates++;
       const billId = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
       if (trackedBillIds.has(billId) || alreadySuggested.has(billId)) { debug.skippedKnown++; continue; }
+      if (companionsOfTracked.has(billId)) { debug.skippedCompanion++; continue; }
+      alreadySuggested.add(billId); // claim it now so a second topic can't duplicate it
+      fresh.push(r);
+    }
 
-      // The real point: exclude companion/duplicate bills of anything
-      // already tracked. A Senate companion of a House bill the org
-      // already tracks isn't a new opportunity, it's the same policy.
-      let isCompanionOfTracked = false;
-      try {
-        const related = await getRelatedBills(r.congress, r.type, r.number);
-        for (const rel of related) {
-          const relId = `${rel.type.toLowerCase()}-${rel.number}-${rel.congress}`;
-          if (trackedBillIds.has(relId)) {
-            isCompanionOfTracked = true;
-            break;
-          }
-        }
-      } catch (err) {
-        // If the related-bills check fails, err on the side of still
-        // showing the suggestion rather than silently dropping it -
-        // a missed duplicate is a much smaller problem than a missed
-        // genuine opportunity.
-        console.error(`discovery: related-bills check failed for ${billId}`, err);
-      }
-      if (isCompanionOfTracked) { debug.skippedCompanion++; continue; }
-
+    // Cache each surviving candidate's bill record (one getBill each, only
+    // for bills we don't already have), several at a time rather than
+    // strictly one after another.
+    const cachedResults = await mapLimit(fresh, CANDIDATE_CONCURRENCY, async (r) => {
+      const billId = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
       const cached = await ensureBillCached(admin, billId, r.congress, r.type, r.number);
+      return { billId, cached };
+    });
+
+    const toInsert: any[] = [];
+    for (const { billId, cached } of cachedResults) {
       if (!cached.ok) {
         debug.cacheFailed++;
         if (!debug.firstError) debug.firstError = cached.error ?? "cache failed";
+        alreadySuggested.delete(billId); // it didn't land; allow a retry next run
         continue;
       }
-
-      const { error: insertError } = await admin.from("prospective_bills").insert({
+      toInsert.push({
         organization_id: organizationId ?? null,
         user_id: organizationId ? null : userId,
         bill_id: billId,
         matched_topic: topic,
       });
+    }
+
+    // One insert for the whole topic instead of one per bill.
+    if (toInsert.length > 0) {
+      const { error: insertError } = await admin.from("prospective_bills").insert(toInsert);
       if (!insertError) {
-        added++;
-        debug.inserted++;
-        alreadySuggested.add(billId); // avoid a second topic re-adding the same bill in this same run
+        added += toInsert.length;
+        debug.inserted += toInsert.length;
       } else {
-        debug.prospectiveFailed++;
+        debug.prospectiveFailed += toInsert.length;
         if (!debug.firstError) debug.firstError = `prospective insert: ${insertError.message}`;
+        for (const row of toInsert) alreadySuggested.delete(row.bill_id);
       }
     }
+  }
+
+  // Opportunistically warm a few tracked bills' related-bills cache, so the
+  // companion check above gets more accurate over time without anyone having
+  // to open those bills manually. Strictly bounded, and failures are ignored:
+  // this is a background nicety, not part of the result.
+  if (needsWarming.length > 0) {
+    const warmTargets = needsWarming.slice(0, MAX_RELATED_WARMUPS);
+    await mapLimit(warmTargets, 2, async (row) => {
+      try {
+        const related = await getRelatedBills(row.congress, row.bill_type, row.bill_number);
+        await admin
+          .from("bills")
+          .update({ related_bills: related, related_bills_fetched_at: new Date().toISOString() })
+          .eq("id", row.id);
+      } catch {
+        /* ignore - we'll try again on a future run */
+      }
+    });
   }
 
   return { added, failedTopics, debug };
 }
 
 // Runs discovery across every org and every solo (no-org) user that has
-// topics configured. Called from the daily poll cron - see the note in
-// that file about not registering a separate cron endpoint.
-export async function runDiscoveryForAllOwners(): Promise<{ owners: number; added: number }> {
+// topics configured. Called from the notify cron (see the note in
+// app/api/cron/poll about why it moved off the polling job).
+//
+// `budgetMs` is a wall-clock allowance: owners are processed until it's
+// spent, then the run stops cleanly. Because the owner list is rotated by
+// day, a deployment with more owners than fit in one run still covers
+// everyone over successive days rather than always serving the same few and
+// starving the rest.
+export async function runDiscoveryForAllOwners(
+  budgetMs = 30_000
+): Promise<{ owners: number; added: number; skipped: number; timedOut: boolean }> {
   const admin = createAdminClient();
+  const clock = deadline(budgetMs);
   let totalAdded = 0;
   let ownerCount = 0;
+
+  type Owner = { kind: "org" | "user"; id: string; topics: string[] };
+  const owners: Owner[] = [];
 
   const { data: orgs } = await admin.from("organizations").select("id, topics").not("topics", "eq", "{}");
   for (const org of orgs ?? []) {
     if (!org.topics || org.topics.length === 0) continue;
-    ownerCount++;
-    totalAdded += (await runDiscoveryForOwner({ organizationId: org.id, topics: org.topics })).added;
+    owners.push({ kind: "org", id: org.id, topics: org.topics });
   }
 
   const { data: soloProfiles } = await admin
@@ -180,9 +262,29 @@ export async function runDiscoveryForAllOwners(): Promise<{ owners: number; adde
     .not("topics", "eq", "{}");
   for (const profile of soloProfiles ?? []) {
     if (!profile.topics || profile.topics.length === 0) continue;
-    ownerCount++;
-    totalAdded += (await runDiscoveryForOwner({ userId: profile.id, topics: profile.topics })).added;
+    owners.push({ kind: "user", id: profile.id, topics: profile.topics });
   }
 
-  return { owners: ownerCount, added: totalAdded };
+  const ordered = rotateByDay(owners);
+  let timedOut = false;
+
+  for (const owner of ordered) {
+    if (clock.expired()) {
+      timedOut = true;
+      break;
+    }
+    try {
+      const res =
+        owner.kind === "org"
+          ? await runDiscoveryForOwner({ organizationId: owner.id, topics: owner.topics })
+          : await runDiscoveryForOwner({ userId: owner.id, topics: owner.topics });
+      totalAdded += res.added;
+      ownerCount++;
+    } catch (err) {
+      // One owner's bad topic or upstream hiccup must not abort everyone else.
+      console.error(`discovery failed for ${owner.kind} ${owner.id}`, err);
+    }
+  }
+
+  return { owners: ownerCount, added: totalAdded, skipped: ordered.length - ownerCount, timedOut };
 }
