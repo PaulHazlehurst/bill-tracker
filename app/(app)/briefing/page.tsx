@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { extractMeta, STAGE_LABELS, formatDate } from "@/lib/billMeta";
 import { Printer, Download, ArrowLeft } from "lucide-react";
+import Spinner from "@/components/Spinner";
 
 type BillRow = {
   bill_id: string;
@@ -58,7 +59,7 @@ export default function BriefingPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="container" style={{ padding: 40 }}>Loading briefing...</div>;
+  if (loading) return <div className="container-wide"><Spinner label="Loading briefing…" large /></div>;
   if (!data || data.bills.length === 0) return (
     <div className="container" style={{ padding: 40 }}>
       <p>No tracked bills to include in a briefing. Track some bills first, then come back here.</p>

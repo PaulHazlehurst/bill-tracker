@@ -20,13 +20,15 @@ import { BarChart3 } from "lucide-react";
 // so a color here means the same thing it means everywhere else in the
 // app - real visual recognition, not a second, uncoordinated palette.
 const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
+// Tokens, not hex - so these adapt to dark mode and stay identical to the
+// StageFlow ribbon. See "Legislative stage colors" in globals.css.
 const STAGE_COLORS: Record<string, string> = {
-  introduced: "#4a5769",
-  committee: "#8a5a1a",
-  passed_house: "#1d6d3b",
-  passed_senate: "#1d6d3b",
-  to_president: "#15803d",
-  enacted: "#15803d",
+  introduced: "var(--stage-introduced)",
+  committee: "var(--stage-committee)",
+  passed_house: "var(--stage-passed)",
+  passed_senate: "var(--stage-passed)",
+  to_president: "var(--stage-enacted)",
+  enacted: "var(--stage-enacted)",
 };
 
 type Row = {

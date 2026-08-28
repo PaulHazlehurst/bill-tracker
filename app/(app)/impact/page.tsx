@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { ArrowLeft, TrendingUp, TrendingDown, Activity, Zap, AlertTriangle, ChevronDown, ChevronRight, FileText, Star } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
+import Spinner from "@/components/Spinner";
 
 type ImpactBill = {
   billId: string;
@@ -88,7 +89,7 @@ export default function ImpactDashboardPage() {
     });
   }
 
-  if (loading) return <div className="container" style={{ padding: 40 }}>Loading impact dashboard...</div>;
+  if (loading) return <div className="container-wide"><Spinner label="Loading impact dashboard…" large /></div>;
   if (error) return (
     <div className="container" style={{ padding: 40 }}>
       <p className="error-text">{error}</p>

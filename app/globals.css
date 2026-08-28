@@ -888,6 +888,27 @@ button.ghost:active:not(:disabled) {
   --pos-watching-soft: #2a2113;
 }
 
+/* ── Legislative stage colors ───────────────────────────────────────
+   One definition for the four stage colors used by StageFlow, the
+   Statistics charts and anywhere else stages are visualised. These used
+   to be hardcoded hex values duplicated inside two TSX files, which meant
+   they stayed dark-on-dark in dark mode and drifted apart from each other.
+   Defined as tokens here so both themes are handled and there is a single
+   source of truth.                                                        */
+:root,
+[data-theme="light"] {
+  --stage-introduced: #4a5769;
+  --stage-committee: #8a5a1a;
+  --stage-passed: #1d6d3b;
+  --stage-enacted: #15803d;
+}
+[data-theme="dark"] {
+  --stage-introduced: #93a3ba;
+  --stage-committee: #d8b25a;
+  --stage-passed: #46cf8c;
+  --stage-enacted: #6ee7a8;
+}
+
 .badge-position {
   display: inline-block;
   padding: 3px 9px;
@@ -4654,3 +4675,244 @@ textarea:focus-visible,
   border-radius: 6px;
 }
 .app-main:focus { outline: none; }
+
+/* ============================================================
+   Shared section heading
+   Every page previously set its own h2 size inline (0.9375rem,
+   1rem, 1.0625rem, or nothing at all), so section headings drifted
+   across the app. This is the one definition.
+   ============================================================ */
+.section-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ============================================================
+   Rural Health — bill finder + state delegation
+   (components/RuralBillFinder.tsx, components/StateDelegation.tsx)
+   ============================================================ */
+.rbf {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px 22px;
+  margin-bottom: 26px;
+  box-shadow: var(--shadow-elevated);
+}
+.rbf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.rbf-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  flex-shrink: 0;
+}
+.rbf-search-icon {
+  position: absolute;
+  left: 11px;
+  color: var(--text-soft);
+  pointer-events: none;
+}
+.rbf-search input {
+  padding: 8px 12px 8px 32px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  min-width: 230px;
+  font-family: inherit;
+}
+.rbf-search input:focus { outline: none; border-color: var(--accent); }
+.rbf-search .primary { padding: 8px 16px; font-size: 0.82rem; }
+
+.rbf-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+.rbf-preset {
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.rbf-preset:hover { color: var(--text); border-color: var(--accent); transform: translateY(-1px); }
+.rbf-preset-active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.rbf-clear {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.rbf-list { display: flex; flex-direction: column; }
+.rbf-row {
+  display: grid;
+  grid-template-columns: 82px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+}
+.rbf-num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.rbf-title {
+  font-size: 0.875rem;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.rbf-title:hover { text-decoration: underline; color: var(--accent); }
+.rbf-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.rbf-ext {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-soft);
+  padding: 5px;
+  border-radius: 6px;
+}
+.rbf-ext:hover { color: var(--accent); }
+.rbf-track.primary { padding: 5px 12px; font-size: 0.75rem; }
+.rbf-tracked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pos-support);
+  white-space: nowrap;
+}
+
+.rbf-loading { display: flex; flex-direction: column; gap: 9px; }
+.rbf-skel {
+  height: 38px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-soft) 25%, var(--border) 50%, var(--surface-soft) 75%);
+  background-size: 200% 100%;
+  animation: rbf-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes rbf-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rbf-skel { animation: none; }
+}
+
+@media (max-width: 700px) {
+  .rbf-row { grid-template-columns: 1fr auto; }
+  .rbf-num { grid-column: 1 / -1; }
+  .rbf-search input { min-width: 0; width: 100%; }
+  .rbf-search { width: 100%; }
+}
+
+/* ── State delegation ─────────────────────────────────────────── */
+.rh-delegation {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px 22px;
+  margin-top: 22px;
+  box-shadow: var(--shadow-elevated);
+}
+.rh-deleg-group { margin-top: 14px; }
+.rh-deleg-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-soft);
+  margin-bottom: 9px;
+}
+.rh-deleg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 9px;
+}
+.rh-deleg-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-soft);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+  min-width: 0;
+}
+.rh-deleg-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+.rh-deleg-photo {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--border);
+}
+.rh-deleg-photo-blank { display: inline-block; }
+.rh-deleg-info { display: flex; flex-direction: column; min-width: 0; }
+.rh-deleg-name {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rh-deleg-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+.rh-deleg-party {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}

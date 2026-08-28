@@ -63,7 +63,9 @@ export function weeklyDigestEmail({
   userId: string;
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const discoveryUrl = `${appUrl}/discovery`;
+  // Topic discovery lives on the dashboard now (the standalone /discovery
+  // page was retired), so point the digest's call-to-action there.
+  const discoveryUrl = `${appUrl}/dashboard`;
   const settingsUrl = `${appUrl}/settings`;
   const unsubscribeUrl = `${appUrl}/unsubscribe?uid=${userId}`;
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useSession } from "@/components/SessionProvider";
 import { timeAgo } from "@/lib/billMeta";
 import { useTicker } from "@/lib/useTicker";
 import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, HeartPulse, Contact, Landmark, ClipboardList, GitBranch } from "lucide-react";
@@ -55,33 +56,22 @@ export default function Sidebar() {
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
-  const [email, setEmail] = useState<string | null>(null);
-  const [orgName, setOrgName] = useState<string | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  // Identity comes from the shared session (one fetch for the whole app)
+  // rather than this component running its own auth + profile queries.
+  const { email, org } = useSession();
+  const orgName = org?.name ?? null;
+  const logoUrl = org?.logo_url ?? null;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lastChecked, setLastChecked] = useState<string | null>(null);
   useTicker(60_000);
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setEmail(user.email ?? null);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id, organizations(name, logo_url)")
-        .eq("id", user.id)
-        .single();
-
-      const org = Array.isArray(profile?.organizations) ? profile?.organizations[0] : profile?.organizations;
-      setOrgName((org as any)?.name ?? null);
-      setLogoUrl((org as any)?.logo_url ?? null);
-
       // A small, honest "the system is actually watching" signal - real
       // data (the most recent poll across every bill we track), not just
-      // decoration. Cheap: one indexed query, run once since this
-      // component stays mounted across client-side navigation.
+      // decoration. One indexed query (see bills_last_polled_at_idx in
+      // supabase/add-performance-indexes.sql), run once since this component
+      // stays mounted across client-side navigation.
       const { data: recent } = await supabase
         .from("bills")
         .select("last_polled_at")
@@ -90,6 +80,7 @@ export default function Sidebar() {
         .maybeSingle();
       if (recent?.last_polled_at) setLastChecked(recent.last_polled_at);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

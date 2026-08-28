@@ -174,8 +174,19 @@ export default function BillDetailPage() {
     }
 
     const [{ data: billData, error: billError }, { data: eventData }, { data: trackedData }] = await Promise.all([
-      supabase.from("bills").select("*").eq("id", billId).single(),
-      supabase.from("bill_events").select("id, event_type, summary, occurred_at").eq("bill_id", billId).order("occurred_at", { ascending: false }),
+      // Explicit column list rather than select("*"): the bills table carries
+      // ~10 large JSONB cache columns (related_bills, actions_cache,
+      // summaries, hearing_details, news_items, …) that this page fetches
+      // on demand through their own endpoints instead. select("*") was
+      // dragging all of them across the wire on every bill view.
+      supabase
+        .from("bills")
+        .select("id, congress, bill_type, bill_number, title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot, last_polled_at")
+        .eq("id", billId)
+        .single(),
+      // Capped: a long-running bill accumulates events for years, and the
+      // Timeline only ever shows the recent history.
+      supabase.from("bill_events").select("id, event_type, summary, occurred_at").eq("bill_id", billId).order("occurred_at", { ascending: false }).limit(50),
       supabase.from("tracked_bills").select("id, notify_email, notify_sms").eq("bill_id", billId).eq("user_id", user.id).maybeSingle(),
     ]);
 

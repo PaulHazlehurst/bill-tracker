@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { avatarColorFor } from "@/lib/billMeta";
 import { useUI } from "@/components/UIProvider";
+import { useSession } from "@/components/SessionProvider";
 import { Sparkles, Plus, X, RefreshCw } from "lucide-react";
 
 // Lives on the dashboard, right above the tracked bills table. Topics
@@ -13,11 +14,12 @@ import { Sparkles, Plus, X, RefreshCw } from "lucide-react";
 export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void }) {
   const supabase = createClient();
   const { toast } = useUI();
+  // Identity + topics come from the shared session - no separate auth or
+  // profile query from this component any more.
+  const { userId, profile, effectiveTopics, loading: sessionLoading, refresh } = useSession();
+  const orgId = profile?.organization_id ?? null;
   const [topics, setTopics] = useState<string[]>([]);
-  const [orgId, setOrgId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [newTopic, setNewTopic] = useState("");
-  const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<string | null>(null);
   // Per-topic match history (across all time, dismissed or not) - not a
@@ -26,24 +28,19 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
   // information rather than a mystery.
   const [topicMatchCounts, setTopicMatchCounts] = useState<Record<string, number>>({});
 
+  // Mirror the session's topics into local state so edits feel instant.
   useEffect(() => {
-    load();
-  }, []);
+    setTopics(effectiveTopics);
+  }, [effectiveTopics.join(" ")]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function load() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setUserId(user.id);
+  useEffect(() => {
+    if (!sessionLoading) loadMatchCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionLoading]);
 
-    const { data: profile } = await supabase.from("profiles").select("organization_id, topics, organizations(topics)").eq("id", user.id).single();
-    setOrgId(profile?.organization_id ?? null);
-    const org = Array.isArray(profile?.organizations) ? profile?.organizations[0] : profile?.organizations;
-    setTopics((profile?.organization_id ? (org as any)?.topics : profile?.topics) ?? []);
-    setLoading(false);
-
+  async function loadMatchCounts() {
     // RLS already scopes prospective_bills to this caller's own org/user
-    // (see schema.sql), so no extra filter is needed here - same pattern
-    // the rest of this file already relies on.
+    // (see schema.sql), so no extra filter is needed here.
     const { data: matchRows } = await supabase.from("prospective_bills").select("matched_topic");
     const counts: Record<string, number> = {};
     for (const row of matchRows ?? []) {
@@ -51,6 +48,13 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
     }
     setTopicMatchCounts(counts);
   }
+
+  async function load() {
+    await refresh();
+    await loadMatchCounts();
+  }
+
+  const loading = sessionLoading;
 
   async function saveTopics(next: string[]) {
     // Guard: don't try to save if we haven't loaded the user yet.
@@ -94,30 +98,15 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
       const res = await fetch("/api/prospective/discover-now", { method: "POST" });
       const body = await res.json();
 
-      // TEMP diagnostic — shows exactly what each search source returned, so
-      // we can tell whether GovInfo is the thing failing. Remove once fixed.
-      let diagLine = "";
-      if (body.diag) {
-        const d = body.diag;
-        const gi = d.govinfo?.ok
-          ? `GovInfo ${d.govinfo.count}${d.govinfo.count ? ` (${d.govinfo.sample.join(", ")})` : ""}`
-          : `GovInfo ERROR: ${d.govinfo?.error}`;
-        const tm = d.titleMatch?.ok ? `title-match ${d.titleMatch.count}` : `title-match ERROR: ${d.titleMatch?.error}`;
-        const dv = d.discovery
-          ? ` | discovery: cand ${d.discovery.candidates}, knownSkip ${d.discovery.skippedKnown}, companionSkip ${d.discovery.skippedCompanion}, cacheFail ${d.discovery.cacheFailed}, prospFail ${d.discovery.prospectiveFailed}, inserted ${d.discovery.inserted}${d.discovery.firstError ? `, err: ${d.discovery.firstError}` : ""}`
-          : "";
-        diagLine = `  ·  [diag "${d.topic}": ${gi}; ${tm}; key govinfo=${d.keys?.govinfo} congress=${d.keys?.congress}${dv}]`;
-      }
-
       if (body.reason === "no topics configured") {
         setCheckResult("Add a topic below first.");
       } else if (body.searchFailed) {
-        setCheckResult(`Couldn't reach congress.gov to check ${body.failedTopics?.length > 1 ? "those topics" : "that topic"} right now - try again shortly.${diagLine}`);
+        setCheckResult(`Couldn't reach congress.gov to check ${body.failedTopics?.length > 1 ? "those topics" : "that topic"} right now - try again shortly.`);
       } else {
         setCheckResult(
-          (body.added > 0
+          body.added > 0
             ? `Found ${body.added} new bill${body.added === 1 ? "" : "s"}.`
-            : "No new matches right now - checked again tomorrow automatically.") + diagLine
+            : "No new matches right now - checked again tomorrow automatically."
         );
         if (body.added > 0) {
           load(); // refresh per-topic match counts, not just the list

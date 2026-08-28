@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Phone, Globe, FileText, Star, User, Award, CalendarClock, Scale } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
+import Spinner from "@/components/Spinner";
 
 type MemberDetail = {
   bioguideId: string;
@@ -77,7 +78,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
       .catch(() => { setError("Couldn't load this legislator."); setLoading(false); });
   }, [bioguideId]);
 
-  if (loading) return <div className="container" style={{ padding: 40 }}>Loading profile...</div>;
+  if (loading) return <div className="container-wide"><Spinner label="Loading profile…" large /></div>;
   if (error || !member) return (
     <div className="container" style={{ padding: 40 }}>
       <p className="error-text">{error ?? "Legislator not found."}</p>

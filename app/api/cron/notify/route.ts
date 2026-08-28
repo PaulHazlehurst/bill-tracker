@@ -33,28 +33,48 @@ export async function GET(req: NextRequest) {
   let smsSent = 0;
   let emailsSkippedNoOptIn = 0;
 
+  // ---------------------------------------------------------------------
+  // Batch the lookups ONCE for the whole run, instead of per event.
+  //
+  // This loop used to query tracked_bills and profiles inside the per-event
+  // loop, then update each event individually - up to 100 events x 3 queries
+  // = ~300 sequential round-trips per run, re-fetching the same trackers
+  // repeatedly whenever one bill had several events. That was the app's
+  // biggest scaling risk as the team and the bill list grow. Now it's three
+  // queries total, no matter how many events are in the batch.
+  //
+  // NOTE: this deliberately does NOT embed profiles(email, phone) from
+  // tracked_bills - there's no foreign key between those two tables (both
+  // reference auth.users, not each other), so that embed silently returns
+  // nothing and every send gets skipped. Fetch separately, match in code.
+  // ---------------------------------------------------------------------
+  const allBillIds = Array.from(new Set((events ?? []).map((e) => e.bill_id)));
+
+  const { data: allTrackers } = allBillIds.length
+    ? await supabase
+        .from("tracked_bills")
+        .select("bill_id, user_id, notify_email, notify_sms")
+        .in("bill_id", allBillIds)
+    : { data: [] as any[] };
+
+  const allUserIds = Array.from(new Set((allTrackers ?? []).map((t) => t.user_id)));
+  const { data: allProfiles } = allUserIds.length
+    ? await supabase.from("profiles").select("id, email, phone, email_notifications_enabled").in("id", allUserIds)
+    : { data: [] as any[] };
+
+  const profileById = new Map((allProfiles ?? []).map((p) => [p.id, p]));
+  const trackersByBill = new Map<string, any[]>();
+  for (const t of allTrackers ?? []) {
+    const list = trackersByBill.get(t.bill_id) ?? [];
+    list.push(t);
+    trackersByBill.set(t.bill_id, list);
+  }
+
   for (const event of events ?? []) {
-    // NOTE: this does NOT try to embed profiles(email, phone) from
-    // tracked_bills - there's no foreign key between those two tables
-    // (both reference auth.users, not each other), so that embed silently
-    // returns nothing and every send gets skipped. This was a real bug:
-    // notifications have likely never actually been delivered because of
-    // it. Fixed by fetching trackers and profiles separately and matching
-    // them in code, same fix as the team page's tracker-email lookup.
-    const { data: trackers } = await supabase
-      .from("tracked_bills")
-      .select("user_id, notify_email, notify_sms")
-      .eq("bill_id", event.bill_id);
-
-    const userIds = Array.from(new Set((trackers ?? []).map((t) => t.user_id)));
-    const { data: profiles } = userIds.length
-      ? await supabase.from("profiles").select("id, email, phone, email_notifications_enabled").in("id", userIds)
-      : { data: [] as any[] };
-
-    const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const trackers = trackersByBill.get(event.bill_id) ?? [];
     const billTitle = Array.isArray(event.bills) ? event.bills[0]?.title : (event.bills as any)?.title;
 
-    for (const t of trackers ?? []) {
+    for (const t of trackers) {
       const profile = profileById.get(t.user_id);
       if (!profile) continue;
 
@@ -96,8 +116,16 @@ export async function GET(req: NextRequest) {
         }
       }
     }
+  }
 
-    await supabase.from("bill_events").update({ notified_at: new Date().toISOString() }).eq("id", event.id);
+  // One bulk update to close out the whole batch, rather than one UPDATE per
+  // event inside the loop.
+  const processedIds = (events ?? []).map((e) => e.id);
+  if (processedIds.length > 0) {
+    await supabase
+      .from("bill_events")
+      .update({ notified_at: new Date().toISOString() })
+      .in("id", processedIds);
   }
 
   // Weekly discovery digest, folded into this daily cron rather than a

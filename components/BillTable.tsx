@@ -242,7 +242,7 @@ export default function BillTable({
                   <td>
                     {editable && (
                       <button className="ghost" style={{ fontSize: '0.6875rem', padding: "4px 8px" }} onClick={() => handleUntrack(row)}>
-                        Untrack
+                        Stop tracking
                       </button>
                     )}
                   </td>

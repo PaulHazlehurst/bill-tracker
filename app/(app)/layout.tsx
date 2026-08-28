@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import { UIProvider } from "@/components/UIProvider";
+import { SessionProvider } from "@/components/SessionProvider";
 import CommandPalette from "@/components/CommandPalette";
 import ShortcutsHelp from "@/components/ShortcutsHelp";
 import PageTransition from "@/components/PageTransition";
@@ -12,17 +13,19 @@ import VersionBadge from "@/components/VersionBadge";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <UIProvider>
-      <a href="#main-content" className="skip-link">Skip to content</a>
-      <div className="app-shell">
-        <Sidebar />
-        <main className="app-main" id="main-content" tabIndex={-1}>
-          <CapitolWatermark />
-          <PageTransition>{children}</PageTransition>
-        </main>
-      </div>
-      <CommandPalette />
-      <ShortcutsHelp />
-      <VersionBadge />
+      <SessionProvider>
+        <a href="#main-content" className="skip-link">Skip to content</a>
+        <div className="app-shell">
+          <Sidebar />
+          <main className="app-main" id="main-content" tabIndex={-1}>
+            <CapitolWatermark />
+            <PageTransition>{children}</PageTransition>
+          </main>
+        </div>
+        <CommandPalette />
+        <ShortcutsHelp />
+        <VersionBadge />
+      </SessionProvider>
     </UIProvider>
   );
 }

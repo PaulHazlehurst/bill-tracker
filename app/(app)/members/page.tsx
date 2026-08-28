@@ -260,7 +260,7 @@ export default function MembersPage() {
                               {m.category && <span className="member-cat-badge" style={{ color: CATEGORY_COLORS[m.category] ?? "var(--text-soft)" }}>{m.category}</span>}
                             </div>
                           </div>
-                          <button className="member-icon-btn" onClick={() => startEdit(m)} title="Edit details"><Pencil size={13} /></button>
+                          <button className="member-icon-btn" onClick={() => startEdit(m)} title="Edit details" aria-label={`Edit details for ${m.name}`}><Pencil size={13} /></button>
                         </div>
 
                         {(m.email || m.phone) && (

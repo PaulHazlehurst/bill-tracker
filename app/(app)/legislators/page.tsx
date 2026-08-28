@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useCallback } from "react";
 import { Search, ExternalLink, User } from "lucide-react";
+import Spinner from "@/components/Spinner";
 
 type MemberRow = {
   bioguideId: string;
@@ -82,7 +83,7 @@ export default function LegislatorsPage() {
       {error && <p className="error-text">{error}</p>}
 
       {loading ? (
-        <div className="muted" style={{ padding: 40, textAlign: "center" }}>Loading members of Congress...</div>
+        <Spinner label="Loading members of Congress…" large />
       ) : displayed.length === 0 ? (
         <p className="muted" style={{ padding: 20 }}>No members found{query ? ` matching "${query}"` : ""}.</p>
       ) : (

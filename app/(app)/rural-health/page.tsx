@@ -10,6 +10,8 @@ import CountUp from "@/components/CountUp";
 import DonutChart from "@/components/DonutChart";
 import RadialProgress from "@/components/RadialProgress";
 import Reveal from "@/components/Reveal";
+import RuralBillFinder from "@/components/RuralBillFinder";
+import StateDelegation from "@/components/StateDelegation";
 import { AlertTriangle, MapPinned } from "lucide-react";
 
 const STATES = [
@@ -73,9 +75,9 @@ export default function RuralHealthPage() {
   const ruralPercent = hpsa && totalShortage > 0 ? Math.round((hpsa.ruralHPSAs / totalShortage) * 100) : 0;
 
   const disciplineData = hpsa ? [
-    { label: "Primary care", value: hpsa.primaryCareHPSAs, color: "#2c5f9e" },
-    { label: "Dental", value: hpsa.dentalHPSAs, color: "#a16207" },
-    { label: "Mental health", value: hpsa.mentalHealthHPSAs, color: "#6d28d9" },
+    { label: "Primary care", value: hpsa.primaryCareHPSAs, color: "var(--party-dem)" },
+    { label: "Dental", value: hpsa.dentalHPSAs, color: "var(--accent-gold)" },
+    { label: "Mental health", value: hpsa.mentalHealthHPSAs, color: "var(--party-ind)" },
   ] : [];
 
   const maxCountyCount = hpsa?.topCounties[0]?.count ?? 1;
@@ -84,13 +86,20 @@ export default function RuralHealthPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
-          <span className="page-eyebrow">Field data</span>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Rural Health</h1>
+          <span className="page-eyebrow">Issue desk</span>
+          <h1>Rural Health</h1>
           <p className="muted" style={{ marginTop: 4 }}>
-            Provider shortage areas, funding, and program activity — from HRSA's official federal data and the Rural Health Transformation Program.
+            Find the legislation that matters to rural care, see who represents the places that need it most, and track it — with HRSA's official shortage data alongside.
           </p>
         </div>
       </div>
+
+      {/* Legislation first. This page used to open with national funding
+          statistics, which read as trivia: you couldn't do anything with
+          them. The bill finder is the reason to come here, so it leads. */}
+      <Reveal>
+        <RuralBillFinder />
+      </Reveal>
 
       {loading ? (
         <Spinner label="Loading…" />
@@ -121,7 +130,7 @@ export default function RuralHealthPage() {
               page, built around HRSA's own daily-updated shortage data. */}
           <Reveal delay={60}>
             <div className="rh-state-header">
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 500, margin: 0, fontFamily: 'var(--font-display), Georgia, serif' }}>
+              <h2 className="section-title" style={{ fontSize: '1.25rem' }}>
                 <AlertTriangle size={18} style={{ color: "var(--pos-oppose)", marginRight: 10, verticalAlign: -3 }} />
                 Where care is hardest to reach
               </h2>
@@ -192,6 +201,12 @@ export default function RuralHealthPage() {
                     )}
                   </div>
                 </div>
+              </Reveal>
+
+              {/* The bridge from "this state has a shortage" to "here's who
+                  can act on it" - previously the page stopped at the data. */}
+              <Reveal delay={150}>
+                <StateDelegation stateName={stateName} />
               </Reveal>
             </>
           ) : (

@@ -8,19 +8,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BillTable, { TableRow } from "@/components/BillTable";
 import BillSearch from "@/components/BillSearch";
-import Spinner from "@/components/Spinner";
 import TableSkeleton from "@/components/TableSkeleton";
-import ActivityMini from "@/components/ActivityMini";
-import PositionBreakdown from "@/components/PositionBreakdown";
-import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import FirstRunHero from "@/components/FirstRunHero";
 import Reveal from "@/components/Reveal";
-import TrendingBills from "@/components/TrendingBills";
 import TopicsHero from "@/components/TopicsHero";
 import ProspectiveBills from "@/components/ProspectiveBills";
 import { useUI } from "@/components/UIProvider";
-import StageFlow from "@/components/StageFlow";
+import { useSession } from "@/components/SessionProvider";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
@@ -31,6 +26,13 @@ export default function DashboardPage() {
   const router = useRouter();
   useTicker(); // keeps "Checked Xm ago" style timestamps fresh without a reload
 
+  // Identity from the shared session - the dashboard no longer runs its own
+  // auth or profile queries (it previously did three of each per load).
+  const { userId, profile, loading: sessionLoading } = useSession();
+  const hasTeam = !!profile?.organization_id;
+  const hasPhone = !!profile?.phone;
+  const hasEmailEnabled = !!profile?.email_notifications_enabled;
+
   const [tracked, setTracked] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,23 +41,22 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [search, setSearch] = useState("");
   const [recentlyViewed, setRecentlyViewed] = useState<RecentBill[]>([]);
-  const [hasTeam, setHasTeam] = useState(false);
-  const [hasPhone, setHasPhone] = useState(false);
-  const [hasEmailEnabled, setHasEmailEnabled] = useState(false);
-  const [weeklyActivityCount, setWeeklyActivityCount] = useState<number | null>(null);
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [prospectiveRefreshKey, setProspectiveRefreshKey] = useState(0);
 
   async function loadTracked() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!userId) return;
+    // NOTE on raw_snapshot: it's a large JSON blob and it would be nice not to
+    // fetch it here, but BillTable reads the sponsor name out of it for the
+    // Sponsor column, so dropping it would blank that column for every row.
+    // The real fix is a scalar `sponsor_name` column on bills written by the
+    // poller; until that exists (and is backfilled), fetching the blob is the
+    // honest trade. The heavy lifting for dashboard speed is done by the
+    // indexes in supabase/add-performance-indexes.sql and by no longer
+    // running duplicate auth/profile/tracked_bills queries on this page.
     const { data, error: queryError } = await supabase
       .from("tracked_bills")
       .select("id, bill_id, notify_email, notify_sms, position, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot, last_polled_at)")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (queryError) {
@@ -68,42 +69,22 @@ export default function DashboardPage() {
     setError(null);
     setTracked((data as any) ?? []);
     setLoading(false);
-
-    // For the onboarding checklist - a small, separate query rather than
-    // complicating the select above with a join that isn't otherwise needed.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("organization_id, phone, email_notifications_enabled")
-      .eq("id", user.id)
-      .single();
-    setHasTeam(!!profile?.organization_id);
-    setHasPhone(!!profile?.phone);
-    setHasEmailEnabled(!!profile?.email_notifications_enabled);
   }
 
   useEffect(() => {
-    loadTracked();
     setRecentlyViewed(getRecentlyViewed());
-    loadWeeklyActivityCount();
   }, []);
 
-  async function loadWeeklyActivityCount() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: myBills } = await supabase.from("tracked_bills").select("bill_id").eq("user_id", user.id);
-    const billIds = Array.from(new Set((myBills ?? []).map((r) => r.bill_id)));
-    if (billIds.length === 0) {
-      setWeeklyActivityCount(0);
+  // Wait for the session before querying - and redirect out if there's no user.
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!userId) {
+      router.push("/login");
       return;
     }
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { count } = await supabase
-      .from("bill_events")
-      .select("id", { count: "exact", head: true })
-      .in("bill_id", billIds)
-      .gte("occurred_at", weekAgo);
-    setWeeklyActivityCount(count ?? 0);
-  }
+    loadTracked();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionLoading, userId]);
 
   async function handleUntrack(trackedBillId: string) {
     const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(trackedBillId)}`, { method: "DELETE" });
@@ -120,24 +101,6 @@ export default function DashboardPage() {
     setTracked((prev) => prev.filter((r) => !ids.includes(r.id)));
     toast(`Stopped tracking ${ids.length} bill${ids.length > 1 ? "s" : ""}`, "info");
   }
-
-  const counts = { active: 0, committee: 0, passed: 0, enacted: 0 };
-  const positionCounts: Record<string, number> = { support: 0, oppose: 0, watching: 0, none: 0 };
-  const partyCounts: Record<string, number> = { D: 0, R: 0, I: 0 };
-  tracked.forEach((row) => {
-    const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
-    const stage = bill?.status_stage;
-    positionCounts[row.position] = (positionCounts[row.position] ?? 0) + 1;
-    const sponsorParty = (bill?.raw_snapshot?.sponsors?.[0]?.party ?? "").toUpperCase();
-    if (sponsorParty === "D") partyCounts.D++;
-    else if (sponsorParty === "R") partyCounts.R++;
-    else if (sponsorParty) partyCounts.I++;
-    if (!stage) return;
-    if (stage === "enacted") counts.enacted++;
-    else if (stage === "passed_house" || stage === "passed_senate" || stage === "to_president") counts.passed++;
-    else if (stage === "committee") counts.committee++;
-    else counts.active++;
-  });
 
   const filtered = tracked
     .filter((row) => {
@@ -180,63 +143,13 @@ export default function DashboardPage() {
 
       <BillSearch onTracked={loadTracked} />
 
-      {/* Portfolio snapshot: compact stat strip that's always visible
-          when the user has tracked bills, plus a collapsible detail panel
-          beneath it. Replaces the old toggle-hidden analytics section
-          so the key numbers are visible at a glance. */}
-      {!loading && !error && tracked.length > 0 && (
-        <Reveal>
-          <div className="portfolio-strip">
-            <div className="portfolio-strip-stats">
-              <div className="portfolio-stat">
-                <span className="portfolio-stat-value">{tracked.length}</span>
-                <span className="portfolio-stat-label">Tracking</span>
-              </div>
-              {counts.committee > 0 && (
-                <div className="portfolio-stat">
-                  <span className="portfolio-stat-value">{counts.committee}</span>
-                  <span className="portfolio-stat-label">In committee</span>
-                </div>
-              )}
-              {(counts.passed > 0) && (
-                <div className="portfolio-stat">
-                  <span className="portfolio-stat-value">{counts.passed}</span>
-                  <span className="portfolio-stat-label">Passed a chamber</span>
-                </div>
-              )}
-              {counts.enacted > 0 && (
-                <div className="portfolio-stat">
-                  <span className="portfolio-stat-value">{counts.enacted}</span>
-                  <span className="portfolio-stat-label">Enacted</span>
-                </div>
-              )}
-              {weeklyActivityCount !== null && weeklyActivityCount > 0 && (
-                <div className="portfolio-stat">
-                  <span className="portfolio-stat-value">{weeklyActivityCount}</span>
-                  <span className="portfolio-stat-label">Updates this week</span>
-                </div>
-              )}
-            </div>
-            <div className="portfolio-strip-bar">
-              <StageFlow counts={counts} />
-            </div>
-            <button className="portfolio-detail-toggle" onClick={() => setShowAnalytics((v) => !v)}>
-              {showAnalytics ? "Less detail ▲" : "More detail ▼"}
-            </button>
-          </div>
-
-          {showAnalytics && (
-            <div className="portfolio-detail-grid">
-              <ActivityMini scope="personal" />
-              <PositionBreakdown counts={positionCounts} />
-              <TrendingBills />
-              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
-              )}
-            </div>
-          )}
-        </Reveal>
-      )}
+      {/* The portfolio stat strip ("8 Tracking · 6 In committee" + stage bar
+          + collapsible analytics) used to sit here. Removed deliberately: it
+          repeated numbers you can already read off the list below it, and
+          every chart it hid behind "More detail" already lives, in more depth,
+          on the Statistics and Activity pages. Dropping it also let the
+          dashboard stop fetching each bill's full raw_snapshot JSON blob,
+          which was the single heaviest query on the page. */}
 
       {recentlyViewed.length > 0 && (
         <Reveal delay={80}>
@@ -254,7 +167,7 @@ export default function DashboardPage() {
       {(loading || tracked.length > 0) && (
       <div style={{ marginTop: 28 }}>
         <div className="table-toolbar">
-          <h2 style={{ fontSize: '1.0625rem', fontWeight: 500, margin: 0 }}>Currently tracking ({filtered.length})</h2>
+          <h2 className="section-title">Currently tracking ({filtered.length})</h2>
           <div className="table-toolbar-controls">
             <input
               type="search"
@@ -281,6 +194,7 @@ export default function DashboardPage() {
               <option value="title">Title (A-Z)</option>
               <option value="progress">Most progress</option>
             </select>
+            <a href="/statistics"><button className="ghost">Analytics</button></a>
             <a href="/api/export?scope=personal"><button className="ghost">Export all</button></a>
           </div>
         </div>

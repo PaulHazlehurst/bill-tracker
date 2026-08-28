@@ -5,11 +5,14 @@
 // elegant visual that shows relative proportion at a glance, using the
 // same stage colors as the pill component and the statistics donut, so
 // this reads as the same story everywhere in the app.
+// Colors come from CSS tokens (see "Legislative stage colors" in
+// globals.css) so they adapt to dark mode and stay in sync with the
+// Statistics charts, instead of being hardcoded hex in two separate files.
 const SEGMENTS = [
-  { key: "active", label: "Introduced", color: "#4a5769" },
-  { key: "committee", label: "In committee", color: "#8a5a1a" },
-  { key: "passed", label: "Passed a chamber", color: "#1d6d3b" },
-  { key: "enacted", label: "Enacted", color: "#15803d" },
+  { key: "active", label: "Introduced", color: "var(--stage-introduced)" },
+  { key: "committee", label: "In committee", color: "var(--stage-committee)" },
+  { key: "passed", label: "Passed a chamber", color: "var(--stage-passed)" },
+  { key: "enacted", label: "Enacted", color: "var(--stage-enacted)" },
 ];
 
 export default function StageFlow({ counts }: { counts: Record<string, number> }) {
