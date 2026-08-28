@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { extractMeta, STAGE_LABELS, formatDate } from "@/lib/billMeta";
-import { Printer, Download, ArrowLeft } from "lucide-react";
+import { Printer, Download, ArrowLeft, ClipboardList } from "lucide-react";
 import Spinner from "@/components/Spinner";
 
 type BillRow = {
@@ -62,9 +62,13 @@ export default function BriefingPage() {
 
   if (loading) return <div className="container-wide"><Spinner label="Loading briefing…" large /></div>;
   if (!data || data.bills.length === 0) return (
-    <div className="container" style={{ padding: 40 }}>
-      <p>No tracked bills to include in a briefing. Track some bills first, then come back here.</p>
-      <Link href="/dashboard"><button className="primary"><ArrowLeft size={14} /> Back to dashboard</button></Link>
+    <div className="container-wide">
+      <div className="empty-cta">
+        <div className="empty-cta-icon"><ClipboardList size={22} strokeWidth={1.5} /></div>
+        <h2 className="section-title" style={{ marginBottom: 6 }}>Nothing to brief on yet</h2>
+        <p className="muted" style={{ margin: "0 0 16px" }}>Briefings pull from your tracked bills — sponsor, stage, positions, recent activity — into a print-ready PDF you can hand a client.</p>
+        <Link href="/dashboard"><button className="primary">Go to your bills →</button></Link>
+      </div>
     </div>
   );
 

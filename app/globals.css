@@ -5286,3 +5286,30 @@ textarea:focus-visible,
 }
 /* Tighter rhythm between the stacked dashboard panels. */
 .topics-hero { margin-bottom: 14px; }
+
+/* ============================================================
+   Empty-with-call-to-action state
+   Used on pages that only make sense once you've tracked bills:
+   Impact, Statistics, Briefing, Compare landing.
+   ============================================================ */
+.empty-cta {
+  max-width: 460px;
+  margin: 40px auto;
+  padding: 34px 28px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+}
+.empty-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.empty-cta .section-title { text-align: center; }

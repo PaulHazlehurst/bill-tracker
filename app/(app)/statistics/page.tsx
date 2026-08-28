@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -154,9 +155,11 @@ export default function StatisticsPage() {
       ) : error ? (
         <p className="error-text">Couldn't load statistics: {error}</p>
       ) : totalBills === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon"><BarChart3 size={22} strokeWidth={1.5} /></div>
-          <p className="muted" style={{ margin: 0 }}>Nothing tracked yet - statistics will show up once you are.</p>
+        <div className="empty-cta">
+          <div className="empty-cta-icon"><BarChart3 size={22} strokeWidth={1.5} /></div>
+          <h2 className="section-title" style={{ marginBottom: 6 }}>Nothing to summarise yet</h2>
+          <p className="muted" style={{ margin: "0 0 16px" }}>Statistics fill in automatically as your team tracks bills — sponsor party, stage progress, contested positions.</p>
+          <Link href="/dashboard"><button className="primary">Track your first bill →</button></Link>
         </div>
       ) : (
         <>

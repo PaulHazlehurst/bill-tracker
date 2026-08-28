@@ -88,7 +88,16 @@ export default function ComparePage() {
       {loading ? (
         <Spinner label="Loading comparison…" />
       ) : error ? (
-        <p className="error-text">{error}</p>
+        // Landing here without at least two bill ids is the natural entry
+        // point from the sidebar link - so this isn't an error, it's a
+        // "here's how to use this feature" prompt with a clear next step.
+        <div className="empty-cta">
+          <h2 className="section-title" style={{ marginBottom: 8 }}>Pick bills to compare</h2>
+          <p className="muted" style={{ margin: "0 0 16px" }}>
+            Open your dashboard, tick 2–4 bills, and choose <strong style={{ color: "var(--text)" }}>Compare selected</strong>. This page then shows them side by side — sponsor, stage, cosponsors, your team's positions.
+          </p>
+          <Link href="/dashboard"><button className="primary">Go to your bills →</button></Link>
+        </div>
       ) : (
         <div className="compare-grid">
           {bills.map((bill) => {

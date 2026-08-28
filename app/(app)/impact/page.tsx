@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, TrendingUp, TrendingDown, Activity, Zap, AlertTriangle, ChevronDown, ChevronRight, FileText, Star } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Activity, Zap, AlertTriangle, ChevronDown, ChevronRight, FileText, Star, GitBranch } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import Spinner from "@/components/Spinner";
 
@@ -99,9 +99,13 @@ export default function ImpactDashboardPage() {
   );
 
   if (!health || allBills.length === 0) return (
-    <div className="container" style={{ padding: 40 }}>
-      <p className="muted">Track some bills first to see your cross-bill impact analysis.</p>
-      <Link href="/dashboard"><button className="primary"><ArrowLeft size={14} /> Back to dashboard</button></Link>
+    <div className="container-wide">
+      <div className="empty-cta">
+        <div className="empty-cta-icon"><GitBranch size={22} strokeWidth={1.5} /></div>
+        <h2 className="section-title" style={{ marginBottom: 6 }}>No portfolio to analyse yet</h2>
+        <p className="muted" style={{ margin: "0 0 16px" }}>Impact shows momentum, stalls, and policy overlap across everything you track. Start tracking a few bills and it fills in on its own.</p>
+        <Link href="/dashboard"><button className="primary">Go to your bills →</button></Link>
+      </div>
     </div>
   );
 
