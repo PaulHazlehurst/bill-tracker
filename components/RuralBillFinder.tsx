@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useUI } from "@/components/UIProvider";
-import { Search, Plus, Check, FileText, ExternalLink } from "lucide-react";
+import { useSession } from "@/components/SessionProvider";
+import { createClient } from "@/lib/supabase/client";
+import { Search, Plus, Check, FileText, ExternalLink, Eye } from "lucide-react";
 
 // The part of the Rural Health page that turns data into action.
 //
@@ -39,6 +42,8 @@ type FoundBill = {
 
 export default function RuralBillFinder() {
   const { toast } = useUI();
+  const supabase = createClient();
+  const { userId, profile, effectiveTopics, refresh } = useSession();
   const [activePreset, setActivePreset] = useState<string>("rural-hospitals");
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
@@ -46,6 +51,40 @@ export default function RuralBillFinder() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [chamber, setChamber] = useState<"all" | "house" | "senate">("all");
+  const [watching, setWatching] = useState(false);
+
+  const activeLabel = submittedQuery
+    ? submittedQuery
+    : PRESETS.find((p) => p.key === activePreset)?.label ?? "";
+
+  // Is the thing currently being viewed already one of the org's daily
+  // discovery topics? If so we show "Watching" rather than offering to add
+  // it again.
+  const alreadyWatched = effectiveTopics.some(
+    (t) => t.toLowerCase() === activeLabel.toLowerCase()
+  );
+
+  // Adds the current search/preset to the account's topic list, so the daily
+  // discovery run starts surfacing new matching bills automatically. This is
+  // the bridge from "I searched for this once" to "tell me when new ones
+  // appear" - previously you'd have to retype it on the dashboard.
+  async function watchTopic() {
+    if (!userId || !activeLabel || alreadyWatched) return;
+    setWatching(true);
+    const orgId = profile?.organization_id ?? null;
+    const table = orgId ? "organizations" : "profiles";
+    const id = orgId ?? userId;
+    const next = [...effectiveTopics, activeLabel];
+    const { error: saveError } = await supabase.from(table).update({ topics: next }).eq("id", id);
+    setWatching(false);
+    if (saveError) {
+      toast(`Couldn't save that topic: ${saveError.message}`, "error");
+      return;
+    }
+    await refresh();
+    toast(`Now watching “${activeLabel}” — new matches will appear on your dashboard.`, "success");
+  }
 
   useEffect(() => {
     run();
@@ -106,6 +145,13 @@ export default function RuralBillFinder() {
     }
   }
 
+  // House bills are hr/hres/hjres/hconres; Senate are s/sres/sjres/sconres.
+  const visible = (bills ?? []).filter((b) => {
+    if (chamber === "all") return true;
+    const isHouse = b.billType.toLowerCase().startsWith("h");
+    return chamber === "house" ? isHouse : !isHouse;
+  });
+
   return (
     <div className="rbf">
       <div className="rbf-head">
@@ -146,11 +192,41 @@ export default function RuralBillFinder() {
         })}
       </div>
 
-      {submittedQuery && (
-        <p className="muted" style={{ fontSize: "0.8125rem", marginBottom: 10 }}>
-          Results for <strong style={{ color: "var(--text)" }}>“{submittedQuery}”</strong> ·{" "}
-          <button className="rbf-clear" onClick={() => choosePreset(activePreset)}>clear</button>
-        </p>
+      {/* Result bar: how many, filter by chamber, and the "watch this" bridge
+          into daily discovery. */}
+      {!loading && !error && bills && bills.length > 0 && (
+        <div className="rbf-bar">
+          <span className="rbf-count">
+            <strong>{visible.length}</strong> {visible.length === 1 ? "bill" : "bills"}
+            {submittedQuery && <> for “{submittedQuery}”</>}
+            {chamber !== "all" && <> · {chamber === "house" ? "House" : "Senate"}</>}
+          </span>
+          <div className="rbf-bar-controls">
+            <div className="rbf-seg" role="group" aria-label="Filter by chamber">
+              {(["all", "house", "senate"] as const).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setChamber(c)}
+                  className={chamber === c ? "rbf-seg-on" : ""}
+                  aria-pressed={chamber === c}
+                >
+                  {c === "all" ? "All" : c === "house" ? "House" : "Senate"}
+                </button>
+              ))}
+            </div>
+            {submittedQuery && (
+              <button className="rbf-clear" onClick={() => choosePreset(activePreset)}>clear search</button>
+            )}
+            {alreadyWatched ? (
+              <span className="rbf-watching"><Eye size={13} /> Watching daily</span>
+            ) : (
+              <button className="ghost rbf-watch" onClick={watchTopic} disabled={watching} title="Add this to your daily topic checks">
+                <Eye size={13} style={{ marginRight: 5, verticalAlign: -2 }} />
+                {watching ? "Adding…" : "Watch daily"}
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {loading ? (
@@ -163,12 +239,20 @@ export default function RuralBillFinder() {
         <p className="muted" style={{ fontSize: "0.875rem" }}>
           No bills matched that. Try a broader phrase, or one of the issue buttons above.
         </p>
+      ) : visible.length === 0 ? (
+        <p className="muted" style={{ fontSize: "0.875rem" }}>
+          No {chamber === "house" ? "House" : "Senate"} bills in these results.{" "}
+          <button className="rbf-clear" onClick={() => setChamber("all")}>Show all</button>
+        </p>
       ) : (
-        <div className="rbf-list">
-          {bills.map((b) => (
+        /* Fixed-height scroll area: a preset can return 40 bills, and this
+           panel must never push the shortage data and delegation off the
+           bottom of a long page. */
+        <div className="rbf-list rbf-list-scroll">
+          {visible.map((b) => (
             <div key={b.id} className="rbf-row">
               <span className="rbf-num">{b.billType.toUpperCase()} {b.billNumber}</span>
-              <a href={`/bill/${b.id}`} className="rbf-title" title={b.title}>{b.title}</a>
+              <Link href={`/bill/${b.id}`} className="rbf-title" title={b.title}>{b.title}</Link>
               <div className="rbf-actions">
                 <a
                   href={`https://www.congress.gov/bill/${b.congress}th-congress/${

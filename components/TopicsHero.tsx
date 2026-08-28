@@ -127,7 +127,10 @@ export default function TopicsHero({ onDiscovered }: { onDiscovered: () => void 
       <div className="topics-hero-top">
         <div>
           <div className="first-run-badge"><Sparkles size={13} /> {orgId ? "Your team's topics" : "Your topics"}</div>
-          <h1 className="topics-hero-headline">What should we watch for?</h1>
+          {/* h2, not h1: this sits inside the dashboard, which owns the page
+              heading. Two h1s on a page is both a screen-reader problem and a
+              visual competition for attention. */}
+          <h2 className="topics-hero-headline">What should we watch for?</h2>
           <p className="first-run-sub" style={{ marginBottom: 0 }}>
             Every day, we check for new bills that match these - and flag anything worth tracking that isn't already on your list.
           </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
@@ -49,11 +50,11 @@ export default function LandingPage() {
         <div className="lnav-right">
           <ThemeSwitcher />
           {signedIn ? (
-            <a href="/dashboard"><button className="primary">Go to dashboard <span className="btn-arw">→</span></button></a>
+            <Link href="/dashboard"><button className="primary">Go to dashboard <span className="btn-arw">→</span></button></Link>
           ) : (
             <>
-              <a href="/login" className="landing-nav-link">Log in</a>
-              <a href="/signup"><button className="primary">Get started <span className="btn-arw">→</span></button></a>
+              <Link href="/login" className="landing-nav-link">Log in</Link>
+              <Link href="/signup"><button className="primary">Get started <span className="btn-arw">→</span></button></Link>
             </>
           )}
         </div>
@@ -69,8 +70,8 @@ export default function LandingPage() {
             summaries, for you and your whole team.
           </p>
           <div className="lhero-cta">
-            <a href="/signup"><button className="primary">Start tracking <span className="btn-arw">→</span></button></a>
-            <a href="/login" className="lhero-link">Log in →</a>
+            <Link href="/signup"><button className="primary">Start tracking <span className="btn-arw">→</span></button></Link>
+            <Link href="/login" className="lhero-link">Log in →</Link>
           </div>
         </div>
       </header>
@@ -128,14 +129,14 @@ export default function LandingPage() {
           <section className="lcta">
             <h2>Stop refreshing Congress.gov.</h2>
             <p>Start every week knowing exactly where your portfolio stands — and what changed while you slept. Every fact traces back to an official government source.</p>
-            <a href="/signup"><button className="primary">Start tracking free <span className="btn-arw">→</span></button></a>
+            <Link href="/signup"><button className="primary">Start tracking free <span className="btn-arw">→</span></button></Link>
           </section>
         </Reveal>
       </div>
 
       <footer className="lfoot">
-        <a href="/terms" className="landing-nav-link">Terms</a>
-        <a href="/privacy" className="landing-nav-link">Privacy</a>
+        <Link href="/terms" className="landing-nav-link">Terms</Link>
+        <Link href="/privacy" className="landing-nav-link">Privacy</Link>
       </footer>
       <VersionBadge />
     </div>

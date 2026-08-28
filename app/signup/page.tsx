@@ -6,6 +6,7 @@
 // pre-build static HTML (which would run before any Supabase session exists).
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, setRememberMe } from "@/lib/supabase/client";
@@ -124,7 +125,7 @@ export default function SignupPage() {
           {loading ? "Creating account…" : "Sign up"}
         </button>
       </form>
-      <p className="muted">Already have an account? <a href="/login">Log in</a></p>
+      <p className="muted">Already have an account? <Link href="/login">Log in</Link></p>
     </div>
   );
 }

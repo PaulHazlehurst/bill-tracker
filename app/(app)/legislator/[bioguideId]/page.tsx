@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Phone, Globe, FileText, Star, User, Award, CalendarClock, Scale } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
@@ -82,7 +83,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
   if (error || !member) return (
     <div className="container" style={{ padding: 40 }}>
       <p className="error-text">{error ?? "Legislator not found."}</p>
-      <a href="/legislators"><button className="ghost"><ArrowLeft size={14} /> Back to directory</button></a>
+      <Link href="/legislators"><button className="ghost"><ArrowLeft size={14} /> Back to directory</button></Link>
     </div>
   );
 
@@ -92,9 +93,9 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
 
   return (
     <div className="container-wide">
-      <a href="/legislators" className="briefing-back" style={{ marginBottom: 20, display: "inline-flex" }}>
+      <Link href="/legislators" className="briefing-back" style={{ marginBottom: 20, display: "inline-flex" }}>
         <ArrowLeft size={14} /> All legislators
-      </a>
+      </Link>
 
       <div className="legislator-profile-header">
         <div className="legislator-profile-photo">
@@ -198,14 +199,14 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
         <div style={{ marginBottom: 16 }}>
           <h3 className="legislator-section-label"><Star size={13} style={{ color: "var(--accent-gold)" }} /> In your portfolio</h3>
           {trackedInList.map((b) => (
-            <a key={b.billId} href={`/bill/${b.billId}`} className="legislator-bill-row legislator-bill-tracked">
+            <Link key={b.billId} href={`/bill/${b.billId}`} className="legislator-bill-row legislator-bill-tracked">
               <FileText size={14} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="legislator-bill-title">{b.title}</div>
                 {b.latestActionText && <div className="muted" style={{ fontSize: "0.75rem" }}>{b.latestActionText}</div>}
               </div>
               <span className="legislator-tracked-badge">Tracked</span>
-            </a>
+            </Link>
           ))}
         </div>
       )}
@@ -214,13 +215,13 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
         <div>
           {trackedInList.length > 0 && <h3 className="legislator-section-label">Other bills</h3>}
           {otherInList.map((b) => (
-            <a key={b.billId} href={`/bill/${b.billId}`} className="legislator-bill-row">
+            <Link key={b.billId} href={`/bill/${b.billId}`} className="legislator-bill-row">
               <FileText size={14} className="muted" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="legislator-bill-title">{b.title}</div>
                 {b.latestActionText && <div className="muted" style={{ fontSize: "0.75rem" }}>{b.latestActionText}</div>}
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       )}

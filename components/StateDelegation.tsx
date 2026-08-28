@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Users, ExternalLink } from "lucide-react";
 
@@ -99,7 +100,7 @@ export default function StateDelegation({ stateName }: { stateName: string }) {
 function MemberChip({ m }: { m: Member }) {
   const color = PARTY_COLORS[m.party] ?? "var(--text-soft)";
   return (
-    <a href={`/legislator/${m.bioguideId}`} className="rh-deleg-chip">
+    <Link href={`/legislator/${m.bioguideId}`} className="rh-deleg-chip">
       {m.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={m.imageUrl} alt="" className="rh-deleg-photo" />
@@ -113,6 +114,6 @@ function MemberChip({ m }: { m: Member }) {
           {m.district ? `District ${m.district}` : "Statewide"}
         </span>
       </span>
-    </a>
+    </Link>
   );
 }

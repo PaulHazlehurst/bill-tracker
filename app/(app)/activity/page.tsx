@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -98,9 +99,9 @@ export default function ActivityPage() {
                 <Icon size={15} className="muted" style={{ marginTop: 3, flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
                   {bill?.title && (
-                    <a href={`/bill/${row.bill_id}`} style={{ fontSize: '0.875rem', fontWeight: 500, textDecoration: "none" }}>
+                    <Link href={`/bill/${row.bill_id}`} style={{ fontSize: '0.875rem', fontWeight: 500, textDecoration: "none" }}>
                       {bill.title}
-                    </a>
+                    </Link>
                   )}
                   <div style={{ fontSize: '0.8125rem', marginTop: 2 }}>{row.summary}</div>
                   <div className="muted" style={{ fontSize: '0.6875rem', marginTop: 2 }}>

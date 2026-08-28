@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TrendingUp } from "lucide-react";
@@ -68,7 +69,7 @@ export default function TrendingBills() {
         {rows.map((r, i) => (
           <div key={r.billId} className="trending-row">
             <span className="trending-rank">{i + 1}</span>
-            <a href={`/bill/${r.billId}`} className="trending-title">{r.title}</a>
+            <Link href={`/bill/${r.billId}`} className="trending-title">{r.title}</Link>
             <span className="trending-delta">
               <TrendingUp size={12} /> +{r.total}
             </span>

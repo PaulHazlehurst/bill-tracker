@@ -3066,12 +3066,15 @@ textarea:focus-visible,
   flex-wrap: wrap;
 }
 .topics-hero-headline {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 2rem;
-  font-weight: 500;
+  /* Demoted from a 2rem hero to a section heading. This box manages topic
+     keywords - useful, but secondary to "here are your bills." At hero size
+     it dominated the dashboard and pushed the tracked list below the fold. */
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.15;
-  margin: 0 0 8px;
+  line-height: 1.2;
+  margin: 0 0 5px;
 }
 .topics-hero-result {
   font-size: 0.8125rem;
@@ -3154,7 +3157,7 @@ textarea:focus-visible,
 
 @media (max-width: 640px) {
   .topics-hero { padding: 22px 18px 20px; }
-  .topics-hero-headline { font-size: 1.5rem; }
+  .topics-hero-headline { font-size: 1.05rem; }
 }
 
 .analytics-toggle {
@@ -4916,3 +4919,370 @@ textarea:focus-visible,
   font-weight: 700;
   flex-shrink: 0;
 }
+
+/* ============================================================
+   Route-level loading skeleton  —  app/(app)/loading.tsx
+   Painted instantly on navigation so a click never looks like
+   nothing happened.
+   ============================================================ */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.pageskel { padding-top: 6px; }
+.shimmer {
+  background: linear-gradient(90deg, var(--surface-soft) 25%, var(--border) 50%, var(--surface-soft) 75%);
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.pageskel-eyebrow { height: 11px; width: 92px; border-radius: 4px; margin-bottom: 14px; }
+.pageskel-title   { height: 34px; width: min(380px, 60%); margin-bottom: 12px; }
+.pageskel-sub     { height: 13px; width: min(540px, 85%); margin-bottom: 26px; }
+.pageskel-card    { height: 104px; border-radius: 16px; margin-bottom: 20px; }
+.pageskel-row     { height: 52px; border-radius: 10px; margin-bottom: 10px; }
+@media (prefers-reduced-motion: reduce) {
+  .shimmer { animation: none; }
+}
+
+/* ── Rural bill finder: result bar, chamber filter, scroll area ──── */
+.rbf-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+}
+.rbf-count { font-size: 0.8125rem; color: var(--text-soft); }
+.rbf-count strong { color: var(--text); font-family: var(--font-mono); }
+.rbf-bar-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rbf-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+.rbf-seg button {
+  border: none;
+  background: none;
+  padding: 5px 13px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.rbf-seg button:hover { color: var(--text); }
+.rbf-seg .rbf-seg-on { background: var(--text); color: var(--bg); }
+.rbf-watch.ghost { padding: 5px 12px; font-size: 0.76rem; }
+.rbf-watching {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Bounded scroll so a 40-result preset can't swallow the page */
+.rbf-list-scroll {
+  max-height: 340px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  /* fade the bottom edge so it's visibly scrollable */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%);
+  padding-right: 4px;
+}
+.rbf-list-scroll .rbf-row:first-child { border-top: none; }
+.rbf-list-scroll::-webkit-scrollbar { width: 8px; }
+.rbf-list-scroll::-webkit-scrollbar-track { background: transparent; }
+.rbf-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+.rbf-list-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-soft); }
+
+/* ============================================================
+   Team page — two-column layout, next-actions board, side rail
+   ============================================================ */
+.team-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+.team-main { min-width: 0; }
+.team-rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
+.team-rail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 15px;
+  box-shadow: var(--shadow-elevated);
+}
+.team-rail-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-soft);
+}
+.team-rail-head svg { color: var(--accent); }
+.team-rail-count {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text);
+}
+.team-rail-members { display: flex; flex-direction: column; margin-top: 10px; }
+.team-rail-member {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+.team-rail-member:first-child { border-top: none; }
+.team-rail-member-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.team-rail-email {
+  font-size: 0.78rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-rail-tags { display: flex; gap: 5px; align-items: center; margin-top: 1px; }
+.team-rail-you { font-size: 0.65rem; color: var(--text-soft); }
+.team-rail-remove {
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.team-rail-remove:hover { color: var(--danger); background: var(--surface-soft); }
+.team-rail-invite { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border); }
+.team-rail-invite-label {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+.team-rail-invite-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+.team-rail-invite-row .invite-code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.team-rail-invite-row .ghost { padding: 4px 10px; font-size: 0.72rem; }
+.team-rail-admin summary { list-style: none; }
+.team-rail-admin summary::-webkit-details-marker { display: none; }
+
+/* Contested bills strip */
+.team-contested {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--pos-oppose) 30%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+}
+.team-contested-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--pos-oppose);
+  flex-shrink: 0;
+}
+.team-contested-list { display: flex; gap: 7px; flex-wrap: wrap; }
+.team-contested-chip {
+  font-size: 0.78rem;
+  color: var(--text);
+  text-decoration: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-contested-chip:hover { border-color: var(--pos-oppose); }
+
+/* ── Next actions board ─────────────────────────────────────────── */
+.tna {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px 20px;
+  box-shadow: var(--shadow-elevated);
+}
+.tna-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.tna-counts { display: flex; gap: 7px; flex-shrink: 0; }
+.tna-pill {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tna-pill strong { color: var(--text); font-family: var(--font-mono); }
+.tna-pill-over {
+  color: var(--pos-oppose);
+  border-color: color-mix(in srgb, var(--pos-oppose) 40%, var(--border));
+}
+.tna-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0 12px;
+}
+.tna-form .tna-body { flex: 1 1 260px; min-width: 0; }
+.tna-form .toolbar-select { flex: 0 1 auto; max-width: 190px; }
+.tna-form .tna-due { flex: 0 0 auto; }
+.tna-form .primary { flex-shrink: 0; }
+.tna-tabs { display: flex; gap: 4px; margin-bottom: 6px; }
+.tna-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 10px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+.tna-tab-on { color: var(--text); border-bottom-color: var(--accent); font-weight: 700; }
+.tna-list { display: flex; flex-direction: column; max-height: 400px; overflow-y: auto; }
+.tna-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.tna-check {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px;
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+.tna-row:has(.tna-body-done) .tna-check { color: var(--accent); }
+.tna-main { flex: 1; min-width: 0; }
+.tna-body-text { font-size: 0.875rem; color: var(--text); line-height: 1.4; }
+.tna-body-done { text-decoration: line-through; color: var(--text-soft); }
+.tna-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.tna-billtag {
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tna-billtag:hover { text-decoration: underline; }
+.tna-assignee {
+  font-size: 0.7rem;
+  color: var(--text-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.tna-due-tag { font-size: 0.7rem; color: var(--text-soft); font-family: var(--font-mono); }
+.tna-due-over { color: var(--pos-oppose); font-weight: 600; }
+.tna-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-soft);
+  padding: 4px;
+  flex-shrink: 0;
+}
+.tna-del:hover { color: var(--danger); }
+
+@media (max-width: 1000px) {
+  .team-layout { grid-template-columns: minmax(0, 1fr); }
+  .team-rail { position: static; flex-direction: row; flex-wrap: wrap; }
+  .team-rail-card { flex: 1 1 260px; }
+}
+
+/* ── Dashboard polish ───────────────────────────────────────────── */
+/* Recently viewed as a quiet footer strip below the table, rather than a
+   full section interrupting the flow above it. */
+.dash-recent {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.dash-recent-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+/* Filtered-to-nothing state gets a way out, not just a dead end. */
+.dash-nomatch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+/* Tighter rhythm between the stacked dashboard panels. */
+.topics-hero { margin-bottom: 14px; }

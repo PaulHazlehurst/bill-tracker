@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -184,7 +185,7 @@ export default function MembersPage() {
 
       {!hasTeam ? (
         <EmptyState icon={Users2}>
-          Members belong to a team. <a href="/settings">Create or join one</a> first.
+          Members belong to a team. <Link href="/settings">Create or join one</Link> first.
         </EmptyState>
       ) : loading ? (
         <Spinner label="Loading members…" />

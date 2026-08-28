@@ -2,19 +2,17 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BillTable, { TableRow } from "@/components/BillTable";
 import TableSkeleton from "@/components/TableSkeleton";
-import CountUp from "@/components/CountUp";
-import ActivityMini from "@/components/ActivityMini";
-import PositionBreakdown from "@/components/PositionBreakdown";
-import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import OrgLogoUploader from "@/components/OrgLogoUploader";
+import TeamNextActions from "@/components/TeamNextActions";
 import { useUI } from "@/components/UIProvider";
 import EmptyState from "@/components/EmptyState";
-import { Users2 } from "lucide-react";
+import { Users2, Settings2 } from "lucide-react";
 import { useTicker } from "@/lib/useTicker";
 
 type Member = { id: string; email: string };
@@ -140,32 +138,22 @@ export default function TeamPage() {
   members.forEach((m) => { trackerEmails[m.id] = m.email; });
   const isOwner = selfId && ownerId === selfId;
 
-  // Team alignment stats - pure client-side aggregation of data already
-  // loaded above, no extra query and definitely no extra congress.gov call.
+  // "Contested" - bills where teammates have taken opposing positions. This
+  // is the one team statistic worth surfacing, because it's the only thing
+  // here you can't see by reading the table: it needs cross-referencing
+  // several people's positions on the same bill. The rest of the old
+  // overview (bill counts, position donut, sponsors-by-party) was removed -
+  // it duplicated the table below it and the Statistics page.
   const byBill: Record<string, TableRow[]> = {};
   rows.forEach((r) => { (byBill[r.bill_id] ??= []).push(r); });
-  const totalBills = Object.keys(byBill).length;
-  let consensusCount = 0;
-  let contestedCount = 0;
-  const positionCounts: Record<string, number> = { support: 0, oppose: 0, watching: 0, none: 0 };
-  rows.forEach((r) => { positionCounts[r.position] = (positionCounts[r.position] ?? 0) + 1; });
-  // Party counts use one entry per DISTINCT bill, not per tracker row - a
-  // bill tracked by three people should count once toward "sponsors by
-  // party", not three times.
-  const partyCounts: Record<string, number> = { D: 0, R: 0, I: 0 };
-  Object.values(byBill).forEach((group) => {
-    const bill = Array.isArray(group[0].bills) ? group[0].bills[0] : group[0].bills;
-    const party = ((bill as any)?.raw_snapshot?.sponsors?.[0]?.party ?? "").toUpperCase();
-    if (party === "D") partyCounts.D++;
-    else if (party === "R") partyCounts.R++;
-    else if (party) partyCounts.I++;
-  });
-  Object.values(byBill).forEach((group) => {
+  const contested: { billId: string; title: string }[] = [];
+  Object.entries(byBill).forEach(([billId, group]) => {
     if (group.length < 2) return;
     const positions = new Set(group.map((g) => g.position).filter((p) => p !== "none"));
-    if (positions.size === 0) return;
-    if (positions.has("support") && positions.has("oppose")) contestedCount++;
-    else if (positions.size === 1) consensusCount++;
+    if (positions.has("support") && positions.has("oppose")) {
+      const bill = Array.isArray(group[0].bills) ? group[0].bills[0] : group[0].bills;
+      contested.push({ billId, title: (bill as any)?.title ?? billId });
+    }
   });
 
   return (
@@ -173,110 +161,122 @@ export default function TeamPage() {
       <div className="page-header">
         <div>
           <span className="page-eyebrow">Organization</span>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Team tracking</h1>
+          <h1>{orgName ?? "Your team"}</h1>
           <p className="muted" style={{ marginTop: 4 }}>
-            {orgName ? `Everything ${orgName} is tracking.` : "Everything your team is tracking."}
+            What the team is working on, and everything it's tracking.
           </p>
         </div>
-        {inviteCode && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>Invite code:</span>
-            <code className="invite-code">{inviteCode}</code>
-            <button className="ghost" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
-          </div>
-        )}
       </div>
 
       {error && !noOrg ? (
         <p className="error-text">Couldn't load your team: {error}</p>
       ) : noOrg ? (
         <p className="muted">
-          You're not part of a team yet. Create or join one from <a href="/settings">Settings</a>.
+          You're not part of a team yet. Create or join one from <Link href="/settings">Settings</Link>.
         </p>
       ) : (
-        <>
-          {!loading && rows.length > 0 && (
-            <div className="stat-grid" style={{ marginTop: 8, marginBottom: 8 }}>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={totalBills} /></div>
-                <div className="stat-label">Bills tracked</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={members.length} /></div>
-                <div className="stat-label">Team members</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={consensusCount} /></div>
-                <div className="stat-label">Team consensus</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value"><CountUp value={contestedCount} /></div>
-                <div className="stat-label">Contested</div>
-              </div>
-            </div>
-          )}
+        /* Two columns: the work on the left, the people and admin tucked into
+           a narrow rail on the right. The old stat grid and chart widgets are
+           gone - they duplicated the table below and the Statistics page. */
+        <div className="team-layout">
+          <div className="team-main">
+            {/* Next actions leads: it's the thing you come here to DO. */}
+            <TeamNextActions members={members} />
 
-          {!loading && rows.length > 0 && (
-            <div className="widget-grid">
-              <ActivityMini scope="team" />
-              <PositionBreakdown counts={positionCounts} />
-              {(partyCounts.D > 0 || partyCounts.R > 0 || partyCounts.I > 0) && (
-                <div className="card">
-                  <PartyBreakdownChart counts={partyCounts} title="Sponsors by party" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {!loading && orgId && (
-            <div className="settings-section" style={{ marginTop: 24 }}>
-              <h2>Team logo</h2>
-              <p className="settings-desc">Shown in the sidebar for everyone in your organization.</p>
-              <OrgLogoUploader orgId={orgId} currentLogoUrl={logoUrl} onUploaded={setLogoUrl} />
-            </div>
-          )}
-
-          {!loading && members.length > 0 && (
-            <div className="settings-section">
-              <h2>Team members ({members.length})</h2>
-              <div className="card">
-                <div className="member-list">
-                  {members.map((m) => (
-                    <div key={m.id} className="member-row">
-                      <div className="member-avatar">{initials(m.email)}</div>
-                      <span style={{ flex: 1 }}>
-                        {m.email}
-                        {m.id === selfId && <span className="muted"> (you)</span>}
-                        {m.id === ownerId && <span className="owner-badge">Owner</span>}
-                      </span>
-                      {isOwner && m.id !== selfId && (
-                        <button className="ghost" style={{ fontSize: '0.6875rem', padding: "4px 8px" }} onClick={() => handleRemove(m)} disabled={removing === m.id}>
-                          {removing === m.id ? "Removing…" : "Remove"}
-                        </button>
-                      )}
-                    </div>
+            {/* The one cross-referenced insight worth surfacing: bills where
+                teammates actively disagree. You can't see this by reading
+                the table. */}
+            {!loading && contested.length > 0 && (
+              <div className="team-contested">
+                <span className="team-contested-label">Team is split on</span>
+                <div className="team-contested-list">
+                  {contested.map((c) => (
+                    <Link key={c.billId} href={`/bill/${c.billId}`} className="team-contested-chip" title={c.title}>
+                      {c.title}
+                    </Link>
                   ))}
                 </div>
               </div>
-              {!ownerId && <p className="muted" style={{ marginTop: 8 }}>This team has no owner set, so no one can rename it or remove members right now.</p>}
-            </div>
-          )}
+            )}
 
-          <div className="table-toolbar" style={{ marginBottom: 12 }}>
-            <h2 style={{ fontSize: '1.0625rem', fontWeight: 500, margin: 0 }}>Tracked bills ({rows.length})</h2>
-            <a href="/api/export?scope=team"><button className="ghost">Export CSV</button></a>
+            <div className="table-toolbar" style={{ marginBottom: 12, marginTop: 26 }}>
+              <h2 className="section-title">Tracked bills ({rows.length})</h2>
+              <a href="/api/export?scope=team"><button className="ghost">Export CSV</button></a>
+            </div>
+
+            {loading ? (
+              <TableSkeleton />
+            ) : error ? (
+              <p className="error-text">Couldn't load your team's tracked bills: {error}</p>
+            ) : rows.length === 0 ? (
+              <EmptyState icon={Users2}>No one on your team is tracking any bills yet.</EmptyState>
+            ) : (
+              <BillTable rows={rows} editable={false} trackerEmails={trackerEmails} selfId={selfId} />
+            )}
           </div>
 
-          {loading ? (
-            <TableSkeleton />
-          ) : error ? (
-            <p className="error-text">Couldn't load your team's tracked bills: {error}</p>
-          ) : rows.length === 0 ? (
-            <EmptyState icon={Users2}>No one on your team is tracking any bills yet.</EmptyState>
-          ) : (
-            <BillTable rows={rows} editable={false} trackerEmails={trackerEmails} selfId={selfId} />
-          )}
-        </>
+          <aside className="team-rail">
+            <div className="team-rail-card">
+              <div className="team-rail-head">
+                <Users2 size={14} />
+                <span>Members</span>
+                <span className="team-rail-count">{members.length}</span>
+              </div>
+              <div className="team-rail-members">
+                {members.map((m) => (
+                  <div key={m.id} className="team-rail-member">
+                    <div className="member-avatar">{initials(m.email)}</div>
+                    <div className="team-rail-member-info">
+                      <span className="team-rail-email" title={m.email}>{m.email}</span>
+                      <span className="team-rail-tags">
+                        {m.id === selfId && <span className="team-rail-you">you</span>}
+                        {m.id === ownerId && <span className="owner-badge">Owner</span>}
+                      </span>
+                    </div>
+                    {isOwner && m.id !== selfId && (
+                      <button
+                        className="team-rail-remove"
+                        onClick={() => handleRemove(m)}
+                        disabled={removing === m.id}
+                        aria-label={`Remove ${m.email}`}
+                        title="Remove from team"
+                      >
+                        {removing === m.id ? "…" : "×"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {inviteCode && (
+                <div className="team-rail-invite">
+                  <span className="team-rail-invite-label">Invite code</span>
+                  <div className="team-rail-invite-row">
+                    <code className="invite-code">{inviteCode}</code>
+                    <button className="ghost" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
+                  </div>
+                </div>
+              )}
+
+              {!ownerId && (
+                <p className="muted" style={{ fontSize: "0.7rem", marginTop: 10 }}>
+                  This team has no owner set, so no one can rename it or remove members.
+                </p>
+              )}
+            </div>
+
+            {orgId && (
+              <details className="team-rail-card team-rail-admin">
+                <summary className="team-rail-head" style={{ cursor: "pointer" }}>
+                  <Settings2 size={14} />
+                  <span>Team logo</span>
+                </summary>
+                <p className="settings-desc" style={{ marginTop: 8 }}>Shown in the sidebar for everyone.</p>
+                <OrgLogoUploader orgId={orgId} currentLogoUrl={logoUrl} onUploaded={setLogoUrl} />
+              </details>
+            )}
+          </aside>
+        </div>
       )}
     </div>
   );

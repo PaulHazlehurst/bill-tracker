@@ -3,6 +3,7 @@
 // Session-dependent - no static version of "your tracked bills" makes sense.
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -151,19 +152,6 @@ export default function DashboardPage() {
           dashboard stop fetching each bill's full raw_snapshot JSON blob,
           which was the single heaviest query on the page. */}
 
-      {recentlyViewed.length > 0 && (
-        <Reveal delay={80}>
-          <div className="settings-section" style={{ marginTop: 24 }}>
-            <h2>Recently viewed</h2>
-            <div className="recent-viewed-chips">
-              {recentlyViewed.map((r) => (
-                <a key={r.billId} href={`/bill/${r.billId}`} className="recent-viewed-chip" title={r.title}>{r.title}</a>
-              ))}
-            </div>
-          </div>
-        </Reveal>
-      )}
-
       {(loading || tracked.length > 0) && (
       <div style={{ marginTop: 28 }}>
         <div className="table-toolbar">
@@ -194,7 +182,7 @@ export default function DashboardPage() {
               <option value="title">Title (A-Z)</option>
               <option value="progress">Most progress</option>
             </select>
-            <a href="/statistics"><button className="ghost">Analytics</button></a>
+            <Link href="/statistics"><button className="ghost">Analytics</button></Link>
             <a href="/api/export?scope=personal"><button className="ghost">Export all</button></a>
           </div>
         </div>
@@ -204,11 +192,36 @@ export default function DashboardPage() {
         ) : loading ? (
           <TableSkeleton />
         ) : filtered.length === 0 ? (
-          <p className="muted">No tracked bills match those filters.</p>
+          <div className="dash-nomatch">
+            <p className="muted" style={{ margin: 0 }}>No tracked bills match those filters.</p>
+            <button
+              className="ghost"
+              onClick={() => { setSearch(""); setStageFilter("all"); setPositionFilter("all"); }}
+            >
+              Clear filters
+            </button>
+          </div>
         ) : (
           <BillTable rows={filtered} editable onUntrack={handleUntrack} onBulkUntrack={handleBulkUntrack} />
         )}
       </div>
+      )}
+
+      {/* Recently viewed moved BELOW the table. It used to sit between the
+          search box and the tracked list, interrupting the main flow with
+          secondary information; as a quiet footer strip it's still one click
+          away without competing for attention. */}
+      {recentlyViewed.length > 0 && (
+        <Reveal delay={80}>
+          <div className="dash-recent">
+            <span className="dash-recent-label">Recently viewed</span>
+            <div className="recent-viewed-chips">
+              {recentlyViewed.map((r) => (
+                <Link key={r.billId} href={`/bill/${r.billId}`} className="recent-viewed-chip" title={r.title}>{r.title}</Link>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       )}
     </div>
   );

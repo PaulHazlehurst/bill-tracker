@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Sparkles, Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { avatarColorFor } from "@/lib/billMeta";
@@ -90,7 +91,7 @@ export default function ProspectiveBills({ onTracked }: { onTracked: () => void 
             return (
               <div key={item.id} className="prospect-row">
                 <span className="prospect-tag" style={{ color, borderColor: color }}>{item.matched_topic}</span>
-                <a href={`/bill/${item.bill_id}`} className="prospect-title" title={bill.title}>{bill.title}</a>
+                <Link href={`/bill/${item.bill_id}`} className="prospect-title" title={bill.title}>{bill.title}</Link>
                 <div className="prospect-actions">
                   <button className="primary prospect-track" onClick={() => handleTrack(item)} disabled={actingOn === item.id}>
                     <Plus size={12} /> Track

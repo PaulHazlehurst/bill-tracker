@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, TrendingUp, TrendingDown, Activity, Zap, AlertTriangle, ChevronDown, ChevronRight, FileText, Star } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
@@ -93,14 +94,14 @@ export default function ImpactDashboardPage() {
   if (error) return (
     <div className="container" style={{ padding: 40 }}>
       <p className="error-text">{error}</p>
-      <a href="/dashboard"><button className="ghost"><ArrowLeft size={14} /> Back to dashboard</button></a>
+      <Link href="/dashboard"><button className="ghost"><ArrowLeft size={14} /> Back to dashboard</button></Link>
     </div>
   );
 
   if (!health || allBills.length === 0) return (
     <div className="container" style={{ padding: 40 }}>
       <p className="muted">Track some bills first to see your cross-bill impact analysis.</p>
-      <a href="/dashboard"><button className="primary"><ArrowLeft size={14} /> Back to dashboard</button></a>
+      <Link href="/dashboard"><button className="primary"><ArrowLeft size={14} /> Back to dashboard</button></Link>
     </div>
   );
 
@@ -123,9 +124,9 @@ export default function ImpactDashboardPage() {
 
   return (
     <div className="container-wide">
-      <a href="/dashboard" className="briefing-back" style={{ marginBottom: 20, display: "inline-flex" }}>
+      <Link href="/dashboard" className="briefing-back" style={{ marginBottom: 20, display: "inline-flex" }}>
         <ArrowLeft size={14} /> Dashboard
-      </a>
+      </Link>
 
       <span className="page-eyebrow">Portfolio Intelligence</span>
       <h1 style={{ fontSize: "1.5rem", fontWeight: 500, marginBottom: 4 }}>Cross-Bill Impact</h1>
@@ -212,7 +213,7 @@ export default function ImpactDashboardPage() {
                 {isOpen && (
                   <div className="impact-group-bills">
                     {group.bills.map((b) => (
-                      <a key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row">
+                      <Link key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row">
                         <FileText size={14} className="muted" />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="impact-bill-title">{b.title}</div>
@@ -232,7 +233,7 @@ export default function ImpactDashboardPage() {
                           <div className="impact-mini-track"><div className="impact-mini-fill" style={{ width: `${b.progressPct}%` }} /></div>
                           <span className="muted" style={{ fontSize: "0.7rem" }}>{b.progressPct}%</span>
                         </div>
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -250,7 +251,7 @@ export default function ImpactDashboardPage() {
                 <TrendingUp size={15} style={{ color: "var(--pos-support)" }} /> Advancing ({advancing.length})
               </h3>
               {advancing.map((b) => (
-                <a key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row impact-bill-advancing">
+                <Link key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row impact-bill-advancing">
                   <FileText size={14} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="impact-bill-title">{b.title}</div>
@@ -259,7 +260,7 @@ export default function ImpactDashboardPage() {
                       {b.latestAction && <span className="muted" style={{ fontSize: "0.7rem" }}>{b.latestAction}</span>}
                     </div>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           )}
@@ -272,7 +273,7 @@ export default function ImpactDashboardPage() {
               {active.map((b) => {
                 const days = daysSince(b.latestActionDate);
                 return (
-                  <a key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row">
+                  <Link key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row">
                     <FileText size={14} className="muted" />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="impact-bill-title">{b.title}</div>
@@ -281,7 +282,7 @@ export default function ImpactDashboardPage() {
                         {days !== null && <span className="muted">{days}d ago</span>}
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 );
               })}
             </div>
@@ -295,7 +296,7 @@ export default function ImpactDashboardPage() {
               {stalled.map((b) => {
                 const days = daysSince(b.latestActionDate);
                 return (
-                  <a key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row impact-bill-stalled">
+                  <Link key={b.billId} href={`/bill/${b.billId}`} className="impact-bill-row impact-bill-stalled">
                     <FileText size={14} className="muted" />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="impact-bill-title">{b.title}</div>
@@ -304,7 +305,7 @@ export default function ImpactDashboardPage() {
                         {days !== null && <span className="muted">{days}d with no action</span>}
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 );
               })}
             </div>

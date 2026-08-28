@@ -3,6 +3,7 @@
 // Session-dependent (tracking state, notify toggles) - no static version.
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -349,7 +350,7 @@ export default function BillDetailPage() {
     return (
       <div className="container-wide">
         <p className="error-text">Couldn't load this bill{error ? `: ${error}` : "."}</p>
-        <a href="/dashboard">← Back to your bills</a>
+        <Link href="/dashboard">← Back to your bills</Link>
       </div>
     );
   }
@@ -370,7 +371,7 @@ export default function BillDetailPage() {
           whole dossier even though only one tab shows on screen. */}
       <style>{`@media print { [data-billpanel] { display: block !important; } .bill-tabbar { display: none !important; } }`}</style>
 
-      <a href="/dashboard" className="muted" style={{ display: "inline-block", marginBottom: 16 }}>← Back to your bills</a>
+      <Link href="/dashboard" className="muted" style={{ display: "inline-block", marginBottom: 16 }}>← Back to your bills</Link>
 
       {showCelebration && (
         <>

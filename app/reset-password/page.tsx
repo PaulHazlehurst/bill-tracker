@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -48,7 +49,7 @@ export default function ResetPasswordPage() {
           </button>
         </form>
       )}
-      <p className="muted"><a href="/login">Back to log in</a></p>
+      <p className="muted"><Link href="/login">Back to log in</Link></p>
     </div>
   );
 }

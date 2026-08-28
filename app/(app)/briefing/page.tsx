@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { extractMeta, STAGE_LABELS, formatDate } from "@/lib/billMeta";
 import { Printer, Download, ArrowLeft } from "lucide-react";
@@ -63,7 +64,7 @@ export default function BriefingPage() {
   if (!data || data.bills.length === 0) return (
     <div className="container" style={{ padding: 40 }}>
       <p>No tracked bills to include in a briefing. Track some bills first, then come back here.</p>
-      <a href="/dashboard"><button className="primary"><ArrowLeft size={14} /> Back to dashboard</button></a>
+      <Link href="/dashboard"><button className="primary"><ArrowLeft size={14} /> Back to dashboard</button></Link>
     </div>
   );
 
@@ -88,7 +89,7 @@ export default function BriefingPage() {
     <div className="briefing-page">
       {/* Print controls — hidden in print output */}
       <div className="briefing-controls no-print">
-        <a href="/dashboard" className="briefing-back"><ArrowLeft size={14} /> Dashboard</a>
+        <Link href="/dashboard" className="briefing-back"><ArrowLeft size={14} /> Dashboard</Link>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="primary" onClick={() => window.print()}>
             <Printer size={14} /> Save as PDF

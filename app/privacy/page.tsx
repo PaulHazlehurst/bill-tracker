@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function PrivacyPage() {
   return (
     <div className="container" style={{ maxWidth: 680 }}>
@@ -33,7 +34,7 @@ export default function PrivacyPage() {
         </p>
       </div>
 
-      <p className="muted"><a href="/">← Back home</a></p>
+      <p className="muted"><Link href="/">← Back home</Link></p>
     </div>
   );
 }

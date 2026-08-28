@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
@@ -62,7 +63,7 @@ export default function ActivityMini({ scope, limit = 5 }: { scope: "personal" |
     <div className="card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: 0 }}>Recent activity</h2>
-        <a href="/activity" className="muted" style={{ fontSize: '0.75rem' }}>See all →</a>
+        <Link href="/activity" className="muted" style={{ fontSize: '0.75rem' }}>See all →</Link>
       </div>
       <div>
         {rows.map((row) => {
@@ -73,9 +74,9 @@ export default function ActivityMini({ scope, limit = 5 }: { scope: "personal" |
               <Icon size={13} className="muted" style={{ flexShrink: 0, marginTop: 3 }} />
               <div style={{ minWidth: 0 }}>
                 {bill?.title && (
-                  <a href={`/bill/${row.bill_id}`} style={{ fontSize: '0.8125rem', fontWeight: 500, textDecoration: "none" }}>
+                  <Link href={`/bill/${row.bill_id}`} style={{ fontSize: '0.8125rem', fontWeight: 500, textDecoration: "none" }}>
                     {bill.title.length > 60 ? bill.title.slice(0, 60) + "…" : bill.title}
-                  </a>
+                  </Link>
                 )}
                 <div className="muted" style={{ fontSize: '0.75rem' }}>{row.summary}</div>
                 <div className="muted" style={{ fontSize: '0.6875rem' }}>{timeAgo(row.occurred_at)}</div>

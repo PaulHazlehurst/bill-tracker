@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
@@ -42,7 +43,7 @@ export default function UnsubscribePage() {
   return (
     <div>
       <nav className="nav">
-        <a href="/" className="brand" style={{ textDecoration: "none" }}>Bill Tracker</a>
+        <Link href="/" className="brand" style={{ textDecoration: "none" }}>Bill Tracker</Link>
       </nav>
 
       <div className="container" style={{ maxWidth: 480, paddingTop: 80, textAlign: "center" }}>

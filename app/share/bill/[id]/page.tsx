@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { STAGE_LABELS, formatDate, parseVoteInfo } from "@/lib/billMeta";
@@ -53,9 +54,9 @@ export default function PublicBillSharePage() {
   return (
     <div>
       <nav className="nav">
-        <a href="/" className="brand" style={{ textDecoration: "none" }}>Bill Tracker</a>
+        <Link href="/" className="brand" style={{ textDecoration: "none" }}>Bill Tracker</Link>
         <div className="nav-right">
-          <a href="/signup"><button className="primary">Track bills like this</button></a>
+          <Link href="/signup"><button className="primary">Track bills like this</button></Link>
         </div>
       </nav>
 
@@ -135,7 +136,7 @@ export default function PublicBillSharePage() {
               <p className="muted" style={{ fontSize: '0.8125rem', margin: 0 }}>
                 Want to track this bill yourself, get notified of changes, and see votes, hearings, and lobbying activity?
               </p>
-              <a href="/signup"><button className="primary" style={{ marginTop: 10 }}>Sign up free</button></a>
+              <Link href="/signup"><button className="primary" style={{ marginTop: 10 }}>Sign up free</button></Link>
             </div>
           </>
         )}

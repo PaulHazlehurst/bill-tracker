@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -119,27 +120,29 @@ export default function Sidebar() {
             <div key={group.label} className="sidebar-group">
               <div className="sidebar-group-label">{group.label}</div>
               {group.items.map((item) => (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
+                  prefetch
                   className={`sidebar-link${pathname === item.href ? " sidebar-link-active" : ""}`}
                 >
                   <item.Icon size={16} className="sidebar-icon" aria-hidden="true" />
                   {item.label}
-                </a>
+                </Link>
               ))}
             </div>
           ))}
           <div className="sidebar-group sidebar-group-utility">
             {UTILITY_ITEMS.map((item) => (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 className={`sidebar-link${pathname === item.href ? " sidebar-link-active" : ""}`}
               >
                 <item.Icon size={16} className="sidebar-icon" aria-hidden="true" />
                 {item.label}
-              </a>
+              </Link>
             ))}
           </div>
         </nav>

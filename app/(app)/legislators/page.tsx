@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { Search, ExternalLink, User } from "lucide-react";
 import Spinner from "@/components/Spinner";
@@ -89,7 +90,7 @@ export default function LegislatorsPage() {
       ) : (
         <div className="legislator-grid">
           {displayed.map((m) => (
-            <a key={m.bioguideId} href={`/legislator/${m.bioguideId}`} className="legislator-card">
+            <Link key={m.bioguideId} href={`/legislator/${m.bioguideId}`} className="legislator-card">
               <div className="legislator-card-photo">
                 {m.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -108,7 +109,7 @@ export default function LegislatorsPage() {
                   <span className="muted">{m.chamber}</span>
                 </div>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       )}

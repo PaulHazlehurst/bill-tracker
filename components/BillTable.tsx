@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { STAGE_LABELS, extractMeta, timeAgo, parseVoteInfo } from "@/lib/billMeta";
 import { useUI } from "@/components/UIProvider";
@@ -135,9 +136,9 @@ export default function BillTable({
               Export selected
             </button>
             {selected.size >= 2 && selected.size <= 4 && (
-              <a href={`/compare?ids=${displayRows.filter((r) => selected.has(r.id)).map((r) => r.bill_id).join(",")}`}>
+              <Link href={`/compare?ids=${displayRows.filter((r) => selected.has(r.id)).map((r) => r.bill_id).join(",")}`}>
                 <button className="primary">Compare selected</button>
-              </a>
+              </Link>
             )}
             {editable && <button className="ghost" onClick={handleBulkUntrack}>Stop tracking selected</button>}
           </div>
@@ -177,7 +178,7 @@ export default function BillTable({
                     <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
                   </td>
                   <td className="bill-table-title">
-                    <a href={`/bill/${row.bill_id}`}>{bill.title}</a>
+                    <Link href={`/bill/${row.bill_id}`}>{bill.title}</Link>
                     {isRecent && <span className="activity-pulse" title="Activity in the last 48 hours" />}
                     {bill.congress_url && (
                       <a

@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -81,7 +82,7 @@ export default function ComparePage() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Compare bills</h1>
           <p className="muted" style={{ marginTop: 4 }}>Side by side, at a glance.</p>
         </div>
-        <a href="/dashboard"><button className="ghost">← Back to your bills</button></a>
+        <Link href="/dashboard"><button className="ghost">← Back to your bills</button></Link>
       </div>
 
       {loading ? (
@@ -98,7 +99,7 @@ export default function ComparePage() {
 
             return (
               <div key={bill.id} className="card compare-column">
-                <a href={`/bill/${bill.id}`} className="compare-title">{bill.title}</a>
+                <Link href={`/bill/${bill.id}`} className="compare-title">{bill.title}</Link>
 
                 <div className="compare-row">
                   <span className="muted">Stage</span>

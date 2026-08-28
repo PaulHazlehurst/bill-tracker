@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function TermsPage() {
   return (
     <div className="container" style={{ maxWidth: 680 }}>
@@ -38,7 +39,7 @@ export default function TermsPage() {
         <p>These terms may change. Continued use after a change means you accept the updated terms.</p>
       </div>
 
-      <p className="muted"><a href="/">← Back home</a></p>
+      <p className="muted"><Link href="/">← Back home</Link></p>
     </div>
   );
 }
