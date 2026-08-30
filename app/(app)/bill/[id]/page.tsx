@@ -21,6 +21,7 @@ import ExpandableText from "@/components/ExpandableText";
 import MemberPositions from "@/components/MemberPositions";
 import MomentumSignals from "@/components/MomentumSignals";
 import BillWorkspace from "@/components/BillWorkspace";
+import BillNewsSection from "@/components/BillNewsSection";
 
 const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
 
@@ -85,7 +86,15 @@ type RecordMentionItem = { title: string; date: string | null; section: string |
 
 type TextVersionItem = { type: string; date: string | null; formats: { type: string; url: string }[] };
 
-type NewsItemType = { title: string; source: string; url: string; publishedAt: string | null };
+type NewsItemType = {
+  title: string;
+  source: string;
+  url: string;
+  publisherUrl?: string | null;
+  publishedAt: string | null;
+  snippet?: string | null;
+  tier?: "wire" | "mainstream" | "trade" | "local" | "other";
+};
 
 type LobbyingFilingItem = {
   filingUuid: string;
@@ -806,34 +815,12 @@ export default function BillDetailPage() {
           </div>
         )}
 
-        {/* Related news coverage - real article links only. */}
+        {/* Related news coverage - real article links only. Filter chips
+            for freshness and outlet tier, snippet where the feed provided
+            one, real publisher URL when we could pull it out of Google's
+            redirector so the browser skips the redirect entirely. */}
         {!newsLoading && newsItems.length > 0 && (
-          <div className="card" id="section-news">
-            <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Related news coverage</h2>
-            <p className="settings-desc">
-              Real articles mentioning this bill, linked directly - read the actual reporting, not a summary of it.
-            </p>
-            <div className="entity-grid">
-              {newsItems.map((n, i) => {
-                const favicon = faviconFor(n.url);
-                return (
-                  <a key={i} href={n.url} target="_blank" rel="noreferrer" className="entity-card news-card">
-                    <span className="entity-card-summary">
-                      {favicon ? (
-                        <img src={favicon} alt="" className="news-favicon" />
-                      ) : (
-                        <span className="entity-avatar" style={{ background: "var(--text-soft)" }}>{initialsFor(n.source)}</span>
-                      )}
-                      <span>
-                        <span className="entity-card-name">{n.title}</span>
-                        <span className="entity-card-meta">{n.source}{n.publishedAt && ` · ${formatDate(n.publishedAt)}`}</span>
-                      </span>
-                    </span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
+          <BillNewsSection newsItems={newsItems} />
         )}
 
         {/* Timeline - the recorded change history for this bill */}
