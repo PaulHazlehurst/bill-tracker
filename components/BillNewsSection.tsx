@@ -39,9 +39,6 @@ const RANGES: { key: "24h" | "week" | "all"; label: string; ms: number | null }[
 ];
 
 export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }) {
-  const [range, setRange] = useState<"24h" | "week" | "all">("all");
-  const [tier, setTier] = useState<"all" | NonNullable<NewsItem["tier"]>>("all");
-
   // Which tiers actually appear in this bill's coverage. No point offering
   // a "Wire" filter chip on a bill that has no wire articles.
   const availableTiers = useMemo(() => {
@@ -49,6 +46,15 @@ export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }
     for (const n of newsItems) if (n.tier) s.add(n.tier);
     return s;
   }, [newsItems]);
+
+  // Default to "mainstream" so the first view is major-outlet coverage
+  // rather than a wall of local rewrites. Falls back to "all" for bills
+  // that have no mainstream articles at all, so the section never opens
+  // on an empty state.
+  const [range, setRange] = useState<"24h" | "week" | "all">("all");
+  const [tier, setTier] = useState<"all" | NonNullable<NewsItem["tier"]>>(
+    availableTiers.has("mainstream") ? "mainstream" : "all"
+  );
 
   const filtered = useMemo(() => {
     const now = Date.now();
@@ -100,7 +106,20 @@ export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }
           Nothing in that window. Try widening the time range or clearing the outlet filter.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        // Bounded scroll area so a bill with a lot of coverage never pushes
+        // everything below it off the page. Same fade-at-bottom treatment
+        // as the Rural Bill Finder for a visible "there is more" signal.
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: 360,
+            overflowY: "auto",
+            paddingRight: 4,
+            WebkitMaskImage: "linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%)",
+            maskImage: "linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%)",
+          }}
+        >
           {filtered.map((n, i) => {
             // Prefer the real publisher URL; fall back to Google's link
             // (which still resolves, just via a redirect).
