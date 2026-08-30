@@ -12,6 +12,10 @@ export async function GET(req: NextRequest) {
 
   const billId = req.nextUrl.searchParams.get("billId");
   const title = req.nextUrl.searchParams.get("title");
+  // Optional but genuinely useful: "H.R. 1234" as a matcher for the
+  // curated-newsletter pass. Feed items that name the bill by its
+  // formal citation always match, regardless of title overlap.
+  const citation = req.nextUrl.searchParams.get("citation");
   if (!billId || !title) return NextResponse.json({ error: "missing billId or title" }, { status: 400 });
 
   const { data: cached } = await supabase
@@ -30,7 +34,7 @@ export async function GET(req: NextRequest) {
   try {
     // Query the bill's own title - specific enough to stay on-topic
     // without needing a separate keyword-list feature yet.
-    const items = await searchNews(title);
+    const items = await searchNews(title, citation);
     const admin = createAdminClient();
     await admin.from("bills").update({
       news_items: items,

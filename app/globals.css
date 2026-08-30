@@ -25,10 +25,11 @@
   --party-ind: #6d28d9;
   --party-ind-soft: #eee5fc;
   /* Shadows default to the light theme; dark overrides them below. */
-  --shadow-sm: 0 1px 2px rgba(20, 20, 25, 0.05);
-  --shadow-md: 0 6px 20px rgba(20, 20, 25, 0.09);
-  --shadow-elevated: 0 1px 2px rgba(20, 20, 25, 0.04), 0 14px 30px -18px rgba(20, 20, 25, 0.18);
-  --shadow-elevated-hover: 0 2px 6px rgba(20, 20, 25, 0.07), 0 20px 40px -18px rgba(20, 20, 25, 0.24);
+  /* Slightly deeper shadows so cards lift off the (now warmer) ground. */
+  --shadow-sm: 0 1px 2px rgba(20, 20, 25, 0.08);
+  --shadow-md: 0 8px 22px rgba(20, 20, 25, 0.11);
+  --shadow-elevated: 0 1px 2px rgba(20, 20, 25, 0.06), 0 16px 34px -18px rgba(20, 20, 25, 0.22);
+  --shadow-elevated-hover: 0 2px 6px rgba(20, 20, 25, 0.09), 0 22px 44px -18px rgba(20, 20, 25, 0.28);
   /* Gold is the single restrained accent, used sparingly (light default). */
   --accent-gold: #b3873a;
   --accent-gold-soft: #f6eddc;
@@ -45,13 +46,16 @@
 :root,
 [data-theme="light"] {
   /* Phenomenon Light (default) — warm off-white paper, near-black ink,
-     one restrained gold accent, semantic status colors for movement. */
-  --bg: #f4f4f2;
+     one restrained gold accent, semantic status colors for movement.
+     Ground shade deepened a touch and border strengthened so white cards
+     read as objects on paper, not white text on white paper - previously
+     the whole page washed together into a single sheet. */
+  --bg: #ecebe6;
   --surface: #ffffff;
-  --surface-soft: #ececea;
+  --surface-soft: #e1dfd8;
   --text: #121316;
   --text-soft: #6f7278;
-  --border: #e4e4e2;
+  --border: #d5d3ce;
   --accent: #b3873a;
   --accent-soft: #f6eddc;
   --accent-contrast: #ffffff;
@@ -4687,11 +4691,12 @@ textarea:focus-visible,
    ============================================================ */
 .section-title {
   font-family: var(--font-display), sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   color: var(--text);
   margin: 0;
+  line-height: 1.2;
 }
 
 /* ============================================================

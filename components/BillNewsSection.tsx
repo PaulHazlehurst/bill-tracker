@@ -55,10 +55,14 @@ export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }
   const [tier, setTier] = useState<"all" | NonNullable<NewsItem["tier"]>>(
     availableTiers.has("mainstream") ? "mainstream" : "all"
   );
+  // Free-text outlet search: types 'reuters' → only Reuters items. Applied
+  // on top of the tier filter, so "trade" + "politico" narrows further.
+  const [outletQuery, setOutletQuery] = useState("");
 
   const filtered = useMemo(() => {
     const now = Date.now();
     const cutoff = RANGES.find((r) => r.key === range)?.ms ?? null;
+    const q = outletQuery.trim().toLowerCase();
     return newsItems.filter((n) => {
       if (tier !== "all" && n.tier !== tier) return false;
       if (cutoff !== null) {
@@ -66,19 +70,37 @@ export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }
         const t = Date.parse(n.publishedAt);
         if (Number.isNaN(t) || now - t > cutoff) return false;
       }
+      if (q && !n.source.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [newsItems, range, tier]);
+  }, [newsItems, range, tier, outletQuery]);
 
   return (
     <div className="card" id="section-news">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 6 }}>
         <div>
           <h2 className="section-title">Related news coverage</h2>
           <p className="settings-desc" style={{ marginTop: 3 }}>
             Real articles mentioning this bill, linked directly. Similar stories are grouped so one event is one entry.
           </p>
         </div>
+        <input
+          type="search"
+          value={outletQuery}
+          onChange={(e) => setOutletQuery(e.target.value)}
+          placeholder="Filter by outlet…"
+          aria-label="Search news by outlet name"
+          style={{
+            padding: "7px 12px",
+            border: "1px solid var(--border)",
+            borderRadius: 999,
+            background: "var(--surface-soft)",
+            color: "var(--text)",
+            fontSize: "0.8rem",
+            minWidth: 200,
+            fontFamily: "inherit",
+          }}
+        />
       </div>
 
       {/* Filter chip row. Inline-styled so this component ships without

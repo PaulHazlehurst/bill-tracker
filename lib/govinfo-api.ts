@@ -29,6 +29,7 @@ export type RecordMention = {
   date: string | null;
   section: string | null; // House, Senate, Extensions of Remarks
   url: string | null;
+  snippet: string | null;
 };
 
 export async function searchCongressionalRecord(billCitation: string, congress: number): Promise<RecordMention[]> {
@@ -63,11 +64,29 @@ export async function searchCongressionalRecord(billCitation: string, congress: 
       ? `https://www.govinfo.gov/app/details/${packageId}${granuleId ? `/${granuleId}` : ""}`
       : null;
 
+    // GovInfo's Search Service is a "public preview" and its response
+    // shape is not stable, so we try several plausible snippet fields and
+    // fall back to null (Read-more still works, it just links out with
+    // no preview). Fields observed in practice: `teaser`, `summary`,
+    // `excerpts.excerpts[]`. Everything is optional-chained.
+    const excerpts = Array.isArray(r?.excerpts?.excerpts)
+      ? r.excerpts.excerpts.filter((s: any) => typeof s === "string").join(" ")
+      : null;
+    const rawSnippet: string | null = r.teaser ?? r.summary ?? excerpts ?? null;
+    const snippet = rawSnippet
+      ? String(rawSnippet)
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 260) || null
+      : null;
+
     return {
       title: r.title ?? "Congressional Record entry",
       date: r.dateIssued ?? null,
       section: r.section ?? null,
       url: publicUrl,
+      snippet,
     };
   });
 }

@@ -151,7 +151,32 @@ function dedupe(items: NewsItem[]): NewsItem[] {
   });
 }
 
-export async function searchNews(query: string): Promise<NewsItem[]> {
+// Public entry point. Google News for breadth, plus a curated set of
+// policy-focused RSS feeds (see lib/rssAggregator-api.ts) for trade press
+// depth. Both sources go through the same dedup pass, so the same story
+// from the AP wire and Politico collapses to a single item.
+export async function searchNews(query: string, billCitation: string | null = null): Promise<NewsItem[]> {
+  const [google, newsletters] = await Promise.all([
+    searchGoogleNews(query).catch((e) => { console.error("google news failed", e); return [] as NewsItem[]; }),
+    // Newsletter aggregation is a nice-to-have, never break the panel if
+    // one of its feeds hiccups.
+    (async () => {
+      try {
+        const { searchNewsletters } = await import("@/lib/rssAggregator-api");
+        return await searchNewsletters(query, billCitation);
+      } catch (e) {
+        console.error("newsletter aggregator failed", e);
+        return [] as NewsItem[];
+      }
+    })(),
+  ]);
+
+  // If both sources are empty we cannot fabricate news, but if Google
+  // returned nothing and newsletters returned something, we still ship it.
+  return dedupe([...google, ...newsletters]).slice(0, 20);
+}
+
+async function searchGoogleNews(query: string): Promise<NewsItem[]> {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
   // Hourly cache at the fetch layer, on top of the 6h database cache the
   // API route applies. Two independent layers, both cheap.
@@ -191,7 +216,7 @@ export async function searchNews(query: string): Promise<NewsItem[]> {
     });
   }
 
-  return dedupe(items).slice(0, 15);
+  return items; // pre-dedup - the caller merges with newsletters then dedupes once
 }
 
 function decodeXmlEntities(s: string): string {

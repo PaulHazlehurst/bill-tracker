@@ -23,6 +23,7 @@ import MomentumSignals from "@/components/MomentumSignals";
 import BillWorkspace from "@/components/BillWorkspace";
 import BillNewsSection from "@/components/BillNewsSection";
 import BillLobbyingSection from "@/components/BillLobbyingSection";
+import BillRecordSection from "@/components/BillRecordSection";
 
 const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
 
@@ -83,7 +84,7 @@ type HearingDetailItem = {
 
 type BillSummaryItem = { text: string; actionDesc: string; actionDate: string; updateDate: string };
 
-type RecordMentionItem = { title: string; date: string | null; section: string | null; url: string | null };
+type RecordMentionItem = { title: string; date: string | null; section: string | null; url: string | null; snippet?: string | null };
 
 type TextVersionItem = { type: string; date: string | null; formats: { type: string; url: string }[] };
 
@@ -287,7 +288,9 @@ export default function BillDetailPage() {
       .catch(() => setTextVersions([]))
       .finally(() => setTextVersionsLoading(false));
 
-    fetch(`/api/bills/news?billId=${billId}&title=${encodeURIComponent(billData.title)}`)
+    // citation is what RSS newsletters actually mention ("H.R. 1234"),
+    // so pass it as a strong-signal matcher on top of the fuzzy title match.
+    fetch(`/api/bills/news?billId=${billId}&title=${encodeURIComponent(billData.title)}&citation=${encodeURIComponent(`${billData.bill_type.toUpperCase()} ${billData.bill_number}`)}`)
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((body) => setNewsItems(body.items ?? []))
       .catch(() => setNewsItems([]))
@@ -769,97 +772,8 @@ export default function BillDetailPage() {
         )}
 
         {/* Congressional Record mentions */}
-        {/* Congressional Record mentions, same visual language as the
-            lobbying and news sections below. Vertical list with dividers,
-            small ink chip, mono meta label - reads as one system. */}
         {!recordMentionsLoading && recordMentions.length > 0 && (
-          <div className="card" id="section-record">
-            <h2 className="section-title">Congressional Record mentions</h2>
-            <p className="settings-desc" style={{ marginTop: 3 }}>
-              Floor speeches and remarks that mention this bill, straight from the official record. Best-effort search, may not be exhaustive.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
-              {recordMentions.map((m, i) => (
-                <a
-                  key={i}
-                  href={m.url ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 12,
-                    padding: "12px 0",
-                    borderTop: i === 0 ? "none" : "1px solid var(--border)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 34,
-                      height: 34,
-                      borderRadius: 8,
-                      flexShrink: 0,
-                      background: "color-mix(in srgb, var(--text) 8%, var(--surface))",
-                      color: "var(--text)",
-                      marginTop: 1,
-                    }}
-                  >
-                    <ScrollText size={16} />
-                  </span>
-                  <span style={{ minWidth: 0, flex: 1 }}>
-                    <span
-                      style={{
-                        display: "block",
-                        fontFamily: "var(--font-display), sans-serif",
-                        fontSize: "0.9rem",
-                        fontWeight: 700,
-                        color: "var(--text)",
-                        lineHeight: 1.35,
-                        letterSpacing: "-0.01em",
-                      }}
-                    >
-                      {m.title}
-                    </span>
-                    <span
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: 8,
-                        marginTop: 4,
-                        fontSize: "0.72rem",
-                        color: "var(--text-soft)",
-                      }}
-                    >
-                      <span style={{ fontStyle: "italic" }}>
-                        {m.section ?? "Congressional Record"}
-                      </span>
-                      {m.date && (
-                        <span
-                          style={{
-                            fontFamily: "var(--font-mono), monospace",
-                            padding: "1px 7px",
-                            borderRadius: 999,
-                            background: "var(--surface-soft)",
-                            border: "1px solid var(--border)",
-                            fontSize: "0.62rem",
-                            letterSpacing: 0.8,
-                          }}
-                        >
-                          {formatDate(m.date)}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
+          <BillRecordSection mentions={recordMentions} />
         )}
 
         {/* Related news coverage - real article links only. Filter chips
