@@ -14,10 +14,23 @@ export async function GET() {
     .select("id, bill_id, matched_topic, discovered_at, bills(title, status_stage, progress_pct)")
     .eq("dismissed", false)
     .order("discovered_at", { ascending: false })
-    .limit(30);
+    .limit(60); // pull a bit more than we display, so filtering out simple/concurrent resolutions still leaves plenty
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ prospective: data ?? [] });
+
+  // Hide ceremonial and procedural resolutions from the suggestions strip.
+  // HRES / SRES = simple resolutions (one chamber only, ceremonial).
+  // HCONRES / SCONRES = concurrent resolutions (both chambers, no force of law).
+  // We keep HR / S (regular bills) and HJRES / SJRES (joint resolutions,
+  // which do become law when signed - e.g. continuing appropriations,
+  // war powers, constitutional amendments).
+  const RESOLUTION_TYPES = new Set(["hres", "sres", "hconres", "sconres"]);
+  const filtered = (data ?? []).filter((row) => {
+    const type = String(row.bill_id ?? "").split("-")[0]?.toLowerCase();
+    return !RESOLUTION_TYPES.has(type ?? "");
+  }).slice(0, 30);
+
+  return NextResponse.json({ prospective: filtered });
 }
 
 // PATCH { id } - dismiss a suggestion. RLS ensures this only ever touches

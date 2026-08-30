@@ -155,13 +155,24 @@ export async function runDiscoveryForOwner(opts: { organizationId?: string; user
       continue;
     }
 
+    // Skip ceremonial/procedural resolutions entirely. HRES and SRES are
+    // simple resolutions (one chamber, no force of law - "recognizing
+    // National Rural Health Day" and similar). HCONRES and SCONRES are
+    // concurrent resolutions (both chambers, still no force of law).
+    // HJRES and SJRES are joint resolutions and DO become law when signed
+    // (continuing appropriations, war powers, constitutional amendments) -
+    // those stay in.
+    const RESOLUTION_TYPES = new Set(["hres", "sres", "hconres", "sconres"]);
+
     // Filter down to genuinely new candidates BEFORE doing any network work.
     // The companion check is now a Set lookup against cached data rather than
     // an API call, so this whole filter costs nothing.
     const fresh: typeof results = [];
     for (const r of results.slice(0, MAX_PER_TOPIC)) {
       debug.candidates++;
-      const billId = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
+      const typeKey = r.type.toLowerCase();
+      if (RESOLUTION_TYPES.has(typeKey)) { debug.skippedKnown++; continue; }
+      const billId = `${typeKey}-${r.number}-${r.congress}`;
       if (trackedBillIds.has(billId) || alreadySuggested.has(billId)) { debug.skippedKnown++; continue; }
       if (companionsOfTracked.has(billId)) { debug.skippedCompanion++; continue; }
       alreadySuggested.add(billId); // claim it now so a second topic can't duplicate it
