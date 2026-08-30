@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/components/SessionProvider";
 import { timeAgo } from "@/lib/billMeta";
 import { useTicker } from "@/lib/useTicker";
-import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, HeartPulse, Contact, Landmark, ClipboardList, GitBranch, Columns3 } from "lucide-react";
+import { FileText, Users, Activity, Settings, Menu, LogOut, Gauge, BarChart3, HeartPulse, Contact, Landmark, ClipboardList, GitBranch, Columns3, Scale } from "lucide-react";
 
 // Grouped by what a person is trying to DO, not by feature. Five short
 // sections to scan instead of eleven flat tabs - much easier for new or
@@ -21,6 +21,7 @@ const NAV_GROUPS = [
     label: "Track",
     items: [
       { href: "/dashboard", label: "My bills", Icon: FileText },
+      { href: "/regulations", label: "Regulations", Icon: Scale },
       { href: "/activity", label: "Activity", Icon: Activity },
     ],
   },

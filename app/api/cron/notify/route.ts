@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { billUpdateEmail } from "@/lib/emailTemplate";
 import { sendWeeklyDigests } from "@/lib/weeklyDigest";
 import { runDiscoveryForAllOwners } from "@/lib/topicDiscovery";
+import { runRegDiscoveryForAllOwners } from "@/lib/regulationDiscovery";
 import { deadline } from "@/lib/batch";
 
 // Same reasoning as the poll cron: without an explicit value Vercel applies
@@ -172,15 +173,36 @@ export async function GET(req: NextRequest) {
   // fewer owners; on a quiet one it gets nearly the whole minute. Owners
   // are rotated by day, so anyone skipped is first in line next time.
   let discovery: Awaited<ReturnType<typeof runDiscoveryForAllOwners>> | null = null;
-  const discoveryBudget = clock.remainingMs();
-  if (discoveryBudget >= MIN_DISCOVERY_MS) {
+  // Split the remaining time budget between bill discovery and regulation
+  // discovery. The 65/35 split leans toward bills because they're more
+  // conversational (topics move more frequently on the legislative side)
+  // and because regulation discovery is cheaper per owner (one FR API call
+  // per topic vs. several congress.gov calls per candidate).
+  const remaining = clock.remainingMs();
+  const billBudget = Math.floor(remaining * 0.65);
+  const regBudget = remaining - billBudget;
+  if (billBudget >= MIN_DISCOVERY_MS) {
     try {
-      discovery = await runDiscoveryForAllOwners(discoveryBudget);
+      discovery = await runDiscoveryForAllOwners(billBudget);
     } catch (err) {
       console.error("topic discovery failed", err);
     }
   } else {
-    console.warn(`skipping discovery: only ${discoveryBudget}ms left in budget`);
+    console.warn(`skipping bill discovery: only ${billBudget}ms left in budget`);
+  }
+
+  // Federal regulation discovery. Same pattern, own budget. Wrapped so an
+  // FR API blip can never break notifications or bill discovery.
+  let regDiscovery: Awaited<ReturnType<typeof runRegDiscoveryForAllOwners>> | null = null;
+  const regBudgetActual = clock.remainingMs(); // recompute in case bills ran long
+  if (regBudgetActual >= MIN_DISCOVERY_MS) {
+    try {
+      regDiscovery = await runRegDiscoveryForAllOwners(Math.min(regBudgetActual, regBudget + 2000));
+    } catch (err) {
+      console.error("regulation discovery failed", err);
+    }
+  } else {
+    console.warn(`skipping reg discovery: only ${regBudgetActual}ms left in budget`);
   }
 
   return NextResponse.json({
@@ -190,7 +212,7 @@ export async function GET(req: NextRequest) {
     emailsSkippedNoOptIn,
     digest,
     discovery,
-    discoveryBudgetMs: discoveryBudget,
+    regDiscovery,
     ms: clock.elapsedMs(),
   });
 }

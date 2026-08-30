@@ -15,6 +15,7 @@ import FirstRunHero from "@/components/FirstRunHero";
 import Reveal from "@/components/Reveal";
 import TopicsHero from "@/components/TopicsHero";
 import ProspectiveBills from "@/components/ProspectiveBills";
+import RegulationsTeaser from "@/components/RegulationsTeaser";
 import { useUI } from "@/components/UIProvider";
 import { useSession } from "@/components/SessionProvider";
 import { STAGE_LABELS } from "@/lib/billMeta";
@@ -139,6 +140,7 @@ export default function DashboardPage() {
         <Reveal>
           <TopicsHero onDiscovered={() => setProspectiveRefreshKey((k) => k + 1)} />
           <ProspectiveBills key={prospectiveRefreshKey} onTracked={() => { loadTracked(); setProspectiveRefreshKey((k) => k + 1); }} />
+          <RegulationsTeaser />
         </Reveal>
       )}
 
