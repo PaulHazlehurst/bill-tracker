@@ -9,7 +9,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import { useUI } from "@/components/UIProvider";
-import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS, avatarColorFor, initialsFor, faviconFor } from "@/lib/billMeta";
+import { STAGE_LABELS, extractMeta, formatDate, timeAgo, parseVoteInfo, EVENT_TYPE_ICONS } from "@/lib/billMeta";
 import { recordView } from "@/lib/recentlyViewed";
 import { hasSeenEnactedCelebration, markEnactedCelebrationSeen } from "@/lib/celebrationTracker";
 import Confetti from "@/components/Confetti";
@@ -22,6 +22,7 @@ import MemberPositions from "@/components/MemberPositions";
 import MomentumSignals from "@/components/MomentumSignals";
 import BillWorkspace from "@/components/BillWorkspace";
 import BillNewsSection from "@/components/BillNewsSection";
+import BillLobbyingSection from "@/components/BillLobbyingSection";
 
 const TIMELINE_ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
 
@@ -679,33 +680,10 @@ export default function BillDetailPage() {
         {/* Your team's recorded positions on this bill */}
         <MemberPositions billId={billId} />
 
-        {/* Lobbying activity (LDA.gov) - shown only when we found something. */}
+        {/* Lobbying activity - restyled section, same visual language as
+            Congressional Record and news below. See BillLobbyingSection. */}
         {lobbyingFilings.length > 0 && (
-          <div className="card" id="section-lobbying">
-            <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Lobbying activity</h2>
-            <p className="settings-desc">
-              Filings that mention this bill, via LDA.gov (the official House/Senate lobbying disclosure database). Best-effort text match - may not be exhaustive.
-            </p>
-            <div className="entity-grid">
-              {lobbyingFilings.map((f) => (
-                <details key={f.filingUuid} className="entity-card">
-                  <summary className="entity-card-summary">
-                    <span className="entity-avatar" style={{ background: avatarColorFor(f.clientName) }}>
-                      {initialsFor(f.clientName)}
-                    </span>
-                    <span>
-                      <span className="entity-card-name">{f.clientName}</span>
-                      <span className="entity-card-meta">via {f.registrantName} · {f.filingYear}</span>
-                    </span>
-                  </summary>
-                  <p style={{ fontSize: '0.8125rem', marginTop: 10, lineHeight: 1.5 }}>{f.issueDescription}</p>
-                  <a href={f.documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: "inline-block", marginTop: 4 }}>
-                    View filing →
-                  </a>
-                </details>
-              ))}
-            </div>
-          </div>
+          <BillLobbyingSection filings={lobbyingFilings} />
         )}
       </div>
 
@@ -791,22 +769,91 @@ export default function BillDetailPage() {
         )}
 
         {/* Congressional Record mentions */}
+        {/* Congressional Record mentions, same visual language as the
+            lobbying and news sections below. Vertical list with dividers,
+            small ink chip, mono meta label - reads as one system. */}
         {!recordMentionsLoading && recordMentions.length > 0 && (
           <div className="card" id="section-record">
-            <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>Congressional Record mentions</h2>
-            <p className="settings-desc">
-              Floor speeches and remarks that mention this bill, straight from the official record. Best-effort search - may not be exhaustive.
+            <h2 className="section-title">Congressional Record mentions</h2>
+            <p className="settings-desc" style={{ marginTop: 3 }}>
+              Floor speeches and remarks that mention this bill, straight from the official record. Best-effort search, may not be exhaustive.
             </p>
-            <div className="entity-grid">
+            <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
               {recordMentions.map((m, i) => (
-                <a key={i} href={m.url ?? undefined} target="_blank" rel="noreferrer" className="entity-card">
-                  <span className="entity-card-summary">
-                    <span className="entity-avatar" style={{ background: avatarColorFor(m.section ?? "Record") }}>
-                      <ScrollText size={16} />
+                <a
+                  key={i}
+                  href={m.url ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    padding: "12px 0",
+                    borderTop: i === 0 ? "none" : "1px solid var(--border)",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      flexShrink: 0,
+                      background: "color-mix(in srgb, var(--text) 8%, var(--surface))",
+                      color: "var(--text)",
+                      marginTop: 1,
+                    }}
+                  >
+                    <ScrollText size={16} />
+                  </span>
+                  <span style={{ minWidth: 0, flex: 1 }}>
+                    <span
+                      style={{
+                        display: "block",
+                        fontFamily: "var(--font-display), sans-serif",
+                        fontSize: "0.9rem",
+                        fontWeight: 700,
+                        color: "var(--text)",
+                        lineHeight: 1.35,
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {m.title}
                     </span>
-                    <span>
-                      <span className="entity-card-name">{m.title}</span>
-                      <span className="entity-card-meta">{m.section ?? "Congressional Record"}{m.date && ` · ${formatDate(m.date)}`}</span>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        marginTop: 4,
+                        fontSize: "0.72rem",
+                        color: "var(--text-soft)",
+                      }}
+                    >
+                      <span style={{ fontStyle: "italic" }}>
+                        {m.section ?? "Congressional Record"}
+                      </span>
+                      {m.date && (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono), monospace",
+                            padding: "1px 7px",
+                            borderRadius: 999,
+                            background: "var(--surface-soft)",
+                            border: "1px solid var(--border)",
+                            fontSize: "0.62rem",
+                            letterSpacing: 0.8,
+                          }}
+                        >
+                          {formatDate(m.date)}
+                        </span>
+                      )}
                     </span>
                   </span>
                 </a>
