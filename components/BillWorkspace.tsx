@@ -126,7 +126,7 @@ export default function BillWorkspace({ billId }: { billId: string }) {
       <div className="card">
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <ListChecks size={17} style={{ color: "var(--accent)" }} />
-          <h2 style={{ fontSize: "1rem", fontWeight: 500, margin: 0 }}>Tasks</h2>
+          <h2 className="card-title">Tasks</h2>
           {tasks.length > 0 && (
             <span className="muted" style={{ fontSize: "0.75rem", marginLeft: "auto" }}>
               {openTasks} open · {tasks.length - openTasks} done
@@ -192,7 +192,7 @@ export default function BillWorkspace({ billId }: { billId: string }) {
       <div className="card">
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <StickyNote size={17} style={{ color: "var(--accent)" }} />
-          <h2 style={{ fontSize: "1rem", fontWeight: 500, margin: 0 }}>{orgId ? "Team notes" : "Notes"}</h2>
+          <h2 className="card-title">{orgId ? "Team notes" : "Notes"}</h2>
         </div>
         <p className="settings-desc">
           {orgId ? "Analysis and context, visible to everyone on your team." : "Your private analysis and context for this bill."}

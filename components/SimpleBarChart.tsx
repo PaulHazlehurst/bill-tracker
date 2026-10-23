@@ -20,7 +20,7 @@ export default function SimpleBarChart({
 
   return (
     <div>
-      {title && <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 10 }}>{title}</h2>}
+      {title && <h2 className="card-title">{title}</h2>}
       <div>
         {sorted.map((d) => (
           <div key={d.label} className="simple-bar-row">

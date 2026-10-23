@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, shouldEndSession } from "@/lib/supabase/client";
 
 // One place that knows who you are.
 //
@@ -58,6 +58,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    // "Keep me logged in" was unchecked and the browser has been closed since.
+    if (shouldEndSession()) {
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setUserId(null);

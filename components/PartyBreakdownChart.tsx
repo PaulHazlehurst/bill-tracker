@@ -25,7 +25,7 @@ export default function PartyBreakdownChart({
 
   return (
     <div>
-      <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 10 }}>{title}</h2>
+      <h2 className="card-title" style={{ marginBottom: 12 }}>{title}</h2>
       <div className="position-bar">
         {PARTIES.map((p) => {
           const count = counts[p.key] ?? 0;

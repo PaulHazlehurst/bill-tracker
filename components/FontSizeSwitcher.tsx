@@ -31,7 +31,7 @@ export default function FontSizeSwitcher() {
   }
 
   return (
-    <div className="font-size-switcher" role="group" aria-label="Choose text size">
+    <div className="seg" role="group" aria-label="Choose text size">
       {SIZES.map((s) => (
         <button
           key={s.id}

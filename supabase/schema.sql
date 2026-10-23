@@ -145,6 +145,43 @@ create index on bill_events (bill_id);
 
 -- ── Row Level Security ──────────────────────────────────────────────
 
+-- (These two helper functions must exist before any policy below uses
+-- them. They used to be defined further down, which made a fresh,
+-- top-to-bottom run of this file fail.)
+
+-- Looks up the signed-in user's organization_id WITHOUT going through RLS
+-- on profiles. Needed because two policies below need this value while
+-- themselves being evaluated as part of profiles/tracked_bills RLS checks -
+-- a plain subquery there would re-trigger the same policy checking itself,
+-- which Postgres detects as infinite recursion. SECURITY DEFINER runs this
+-- with the function owner's privileges, bypassing RLS just for this lookup.
+create or replace function public.current_user_org_id()
+returns uuid
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select organization_id from public.profiles where id = auth.uid()
+$$;
+
+-- Same idea as above, but for looking up ANY user's current organization,
+-- not just the caller's. Used below so team visibility is computed live
+-- from each tracker's current profile, instead of a value copied onto
+-- tracked_bills at the moment they tracked it (which goes stale the
+-- instant that person changes teams, and silently hides their bills from
+-- teammates with no error anywhere - this was a real bug, not theoretical).
+create or replace function public.user_org_id(target_user uuid)
+returns uuid
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select organization_id from public.profiles where id = target_user
+$$;
+
+
 alter table organizations enable row level security;
 alter table profiles enable row level security;
 alter table bills enable row level security;
@@ -235,38 +272,6 @@ create policy "authenticated users can replace org logos"
   to authenticated
   using (bucket_id = 'org-logos')
   with check (bucket_id = 'org-logos');
-
--- Looks up the signed-in user's organization_id WITHOUT going through RLS
--- on profiles. Needed because two policies below need this value while
--- themselves being evaluated as part of profiles/tracked_bills RLS checks -
--- a plain subquery there would re-trigger the same policy checking itself,
--- which Postgres detects as infinite recursion. SECURITY DEFINER runs this
--- with the function owner's privileges, bypassing RLS just for this lookup.
-create or replace function public.current_user_org_id()
-returns uuid
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select organization_id from public.profiles where id = auth.uid()
-$$;
-
--- Same idea as above, but for looking up ANY user's current organization,
--- not just the caller's. Used below so team visibility is computed live
--- from each tracker's current profile, instead of a value copied onto
--- tracked_bills at the moment they tracked it (which goes stale the
--- instant that person changes teams, and silently hides their bills from
--- teammates with no error anywhere - this was a real bug, not theoretical).
-create or replace function public.user_org_id(target_user uuid)
-returns uuid
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select organization_id from public.profiles where id = target_user
-$$;
 
 -- Profiles: read your own; read teammates' (needed for the team page's
 -- "who's tracking this" list) but note this table has no notify prefs in it,

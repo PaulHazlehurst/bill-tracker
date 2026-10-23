@@ -1,16 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Circle, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 const DISMISS_KEY = "billtracker-onboarding-dismissed";
 
-type Step = { done: boolean; label: string; href: string; cta: string };
-
-// Every step here is computed from REAL account data the parent page already
-// has (tracked bill count, profile fields) - not a static "did you click
-// through this" tutorial. That's what lets it disappear on its own once
-// someone's actually set up, rather than needing to be manually dismissed.
+// Built from real account data, so each step ticks itself off once it's
+// actually done and the whole card disappears when setup is complete.
 export default function OnboardingChecklist({
   hasTrackedBill,
   hasEmailEnabled,
@@ -22,46 +19,43 @@ export default function OnboardingChecklist({
   hasTeam: boolean;
   hasPhone: boolean;
 }) {
-  const [dismissed, setDismissed] = useState(true); // default true avoids a flash before we check localStorage
+  const [dismissed, setDismissed] = useState(true); // avoids a flash before localStorage is read
 
   useEffect(() => {
-    setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
+    try { setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1"); } catch { setDismissed(false); }
   }, []);
 
-  const steps: Step[] = [
-    { done: hasTrackedBill, label: "Track your first bill", href: "#track", cta: "Search above ↑" },
-    { done: hasEmailEnabled, label: "Turn on email notifications", href: "/settings", cta: "Go to Settings" },
-    { done: hasTeam, label: "Join or create a team", href: "/settings", cta: "Go to Settings" },
-    { done: hasPhone, label: "Add a phone number for text alerts", href: "/settings", cta: "Go to Settings" },
+  const steps = [
+    { done: hasTrackedBill, label: "Track a bill" },
+    { done: hasEmailEnabled, label: "Turn on email alerts" },
+    { done: hasTeam, label: "Join or create a team" },
+    { done: hasPhone, label: "Add a phone for text alerts" },
   ];
-
-  const allDone = steps.every((s) => s.done);
-  if (allDone || dismissed) return null;
-
-  function dismiss() {
-    window.localStorage.setItem(DISMISS_KEY, "1");
-    setDismissed(true);
-  }
+  const doneCount = steps.filter((s) => s.done).length;
+  if (doneCount === steps.length || dismissed) return null;
 
   return (
-    <div className="card onboarding-card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: 0 }}>Get set up</h2>
-        <button onClick={dismiss} aria-label="Dismiss" className="onboarding-dismiss">
-          <X size={14} />
-        </button>
-      </div>
-      <div style={{ marginTop: 10 }}>
+    <div className="setup">
+      <div className="setup-progress" aria-hidden="true"><span style={{ width: `${(doneCount / steps.length) * 100}%` }} /></div>
+      <p className="setup-title">Finish setting up <span>{doneCount} of {steps.length}</span></p>
+      <ul className="setup-steps">
         {steps.map((s) => (
-          <div key={s.label} className="onboarding-step">
-            {s.done ? <CheckCircle2 size={16} className="onboarding-check-done" /> : <Circle size={16} className="onboarding-check-todo" />}
-            <span className={s.done ? "onboarding-step-done" : ""}>{s.label}</span>
-            {!s.done && (
-              <a href={s.href} className="onboarding-cta">{s.cta}</a>
-            )}
-          </div>
+          <li key={s.label} className={s.done ? "is-done" : ""}>
+            <span className="setup-check">{s.done && <Check size={12} strokeWidth={3} />}</span>
+            {s.done ? s.label : <Link href="/settings">{s.label}</Link>}
+          </li>
         ))}
-      </div>
+      </ul>
+      <button
+        className="icon-btn setup-x"
+        onClick={() => {
+          try { window.localStorage.setItem(DISMISS_KEY, "1"); } catch {}
+          setDismissed(true);
+        }}
+        aria-label="Hide setup checklist"
+      >
+        <X size={15} />
+      </button>
     </div>
   );
 }

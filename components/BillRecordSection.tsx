@@ -89,13 +89,12 @@ export default function BillRecordSection({ mentions }: { mentions: Mention[] })
                     {m.date && (
                       <span
                         style={{
-                          fontFamily: "var(--font-mono), monospace",
+                          fontFamily: "var(--font-ui)",
                           padding: "1px 7px",
                           borderRadius: 999,
                           background: "var(--surface-soft)",
                           border: "1px solid var(--border)",
                           fontSize: "0.62rem",
-                          letterSpacing: 0.8,
                         }}
                       >
                         {formatDate(m.date)}

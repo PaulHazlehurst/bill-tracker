@@ -35,7 +35,7 @@ export default function RadialProgress({
       </svg>
       <div style={{
         position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "var(--font-display), Georgia, serif", fontWeight: 500,
+        fontFamily: "var(--font-display)", fontWeight: 650,
         fontSize: size > 70 ? "1.375rem" : "1rem", color: "var(--text)",
       }}>
         {Math.round(clamped)}%

@@ -146,10 +146,9 @@ export default function BillLobbyingSection({ filings }: { filings: Filing[] }) 
                       flexShrink: 0,
                       background: tone.bg,
                       color: tone.fg,
-                      fontFamily: "var(--font-mono), monospace",
+                      fontFamily: "var(--font-ui)",
                       fontSize: 10,
                       fontWeight: 700,
-                      letterSpacing: 0.5,
                     }}
                   >
                     {initialsFor(f.clientName)}
@@ -186,13 +185,12 @@ export default function BillLobbyingSection({ filings }: { filings: Filing[] }) 
                     <div style={{ marginTop: 5 }}>
                       <span
                         style={{
-                          fontFamily: "var(--font-mono), monospace",
+                          fontFamily: "var(--font-ui)",
                           padding: "1px 7px",
                           borderRadius: 999,
                           background: "var(--surface-soft)",
                           border: "1px solid var(--border)",
                           fontSize: "0.6rem",
-                          letterSpacing: 0.8,
                           color: "var(--text-soft)",
                         }}
                       >
@@ -203,7 +201,7 @@ export default function BillLobbyingSection({ filings }: { filings: Filing[] }) 
                   <span
                     aria-hidden="true"
                     style={{
-                      fontFamily: "var(--font-mono), monospace",
+                      fontFamily: "var(--font-ui)",
                       fontSize: 12,
                       color: "var(--text-soft)",
                       marginLeft: 4,

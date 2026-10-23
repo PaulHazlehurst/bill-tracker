@@ -6,11 +6,7 @@
 // signals a real analyst would look at, and lets the reader draw their own
 // conclusion - all computed from data already on the page, no extra fetch.
 
-function daysSince(dateStr: string | null | undefined): number | null {
-  if (!dateStr) return null;
-  const ms = Date.now() - new Date(dateStr).getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
-}
+import { daysSince } from "@/lib/billMeta";
 
 export default function MomentumSignals({
   introducedDate,
@@ -56,9 +52,9 @@ export default function MomentumSignals({
 
   return (
     <div>
-      <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Momentum signals</h2>
-      <p className="settings-desc">Real, verifiable facts - not a prediction. We don't claim to know if this bill will pass.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+      <h2 className="card-title">Momentum</h2>
+      <p className="card-sub">Verifiable facts, not a prediction. Nobody can honestly say whether a bill will pass.</p>
+      <div className="signal-grid">
         {signals.map((s) => (
           <div key={s.label} className={`signal-chip signal-${s.tone}`}>
             <div className="signal-value">{s.value}</div>

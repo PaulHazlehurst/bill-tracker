@@ -169,13 +169,12 @@ export default function TeamNextActions({ members }: { members: Member[] }) {
       <div className="tna-head">
         <div>
           <h2 className="section-title">
-            <ListChecks size={16} style={{ color: "var(--accent)", marginRight: 8, verticalAlign: -2 }} />
             Next actions
           </h2>
           <p className="settings-desc" style={{ marginTop: 4 }}>
             {orgId
-              ? "Shared with everyone on the team. Anything attached to a bill also shows on that bill's Workspace tab."
-              : "Your working list. Anything attached to a bill also shows on that bill's Workspace tab."}
+              ? "Shared with everyone on the team. Anything attached to a bill also shows in that bill's Team notes tab."
+              : "Your working list. Anything attached to a bill also shows in that bill's Team notes tab."}
           </p>
         </div>
         <div className="tna-counts">
@@ -188,7 +187,7 @@ export default function TeamNextActions({ members }: { members: Member[] }) {
 
       {tableMissing ? (
         <p className="muted" style={{ fontSize: "0.8125rem" }}>
-          Next actions need one quick database step — run <code>supabase/add-team-next-actions.sql</code> in the Supabase SQL Editor, then reload this page.
+          Next actions need one database step: run <code>supabase/add-bill-workspace-table.sql</code> and then <code>supabase/2026-10-activity-and-discovery.sql</code> in the Supabase SQL Editor, then reload this page.
         </p>
       ) : (
         <>

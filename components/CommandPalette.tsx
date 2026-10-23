@@ -1,147 +1,184 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LayoutDashboard, Users2, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact, Columns3, Scale } from "lucide-react";
+import { useSession } from "@/components/SessionProvider";
+import { citationFor } from "@/lib/billMeta";
+import {
+  LayoutGrid, Users, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact, Columns3, Scale, BarChart3, Plus, ArrowRight, Gauge,
+} from "lucide-react";
 
-type NavItem = { type: "nav"; label: string; href: string; icon: any };
-type BillItem = { type: "bill"; label: string; href: string };
-type Item = NavItem | BillItem;
+type Item = { id: string; group: string; label: string; hint?: string; icon: any; run: () => void };
 
-const NAV_ITEMS: NavItem[] = [
-  { type: "nav", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { type: "nav", label: "Regulations", href: "/regulations", icon: Scale },
-  { type: "nav", label: "Congress", href: "/legislators", icon: Landmark },
-  { type: "nav", label: "Contacts", href: "/members", icon: Contact },
-  { type: "nav", label: "Impact Dashboard", href: "/impact", icon: GitBranch },
-  { type: "nav", label: "Compare bills", href: "/compare", icon: Columns3 },
-  { type: "nav", label: "Stakeholder Briefing", href: "/briefing", icon: ClipboardList },
-  { type: "nav", label: "Team", href: "/team", icon: Users2 },
-  { type: "nav", label: "Activity", href: "/activity", icon: Activity },
-  { type: "nav", label: "Settings", href: "/settings", icon: Settings },
+const PAGES = [
+  { label: "My bills", href: "/dashboard", icon: LayoutGrid, words: "dashboard home tracked" },
+  { label: "Activity", href: "/activity", icon: Activity, words: "feed changes updates" },
+  { label: "Regulations", href: "/regulations", icon: Scale, words: "federal register rules" },
+  { label: "Impact", href: "/impact", icon: GitBranch, words: "health portfolio momentum" },
+  { label: "Statistics", href: "/statistics", icon: BarChart3, words: "charts analytics" },
+  { label: "Compare bills", href: "/compare", icon: Columns3, words: "side by side" },
+  { label: "Congress", href: "/legislators", icon: Landmark, words: "legislators members senators representatives" },
+  { label: "Contacts", href: "/members", icon: Contact, words: "stakeholders crm" },
+  { label: "Team", href: "/team", icon: Users, words: "teammates tasks" },
+  { label: "Briefing", href: "/briefing", icon: ClipboardList, words: "report print client" },
+  { label: "Settings", href: "/settings", icon: Settings, words: "notifications email account" },
+  { label: "Data sources", href: "/api-usage", icon: Gauge, words: "api usage quota" },
 ];
 
-// Mounted once in the (app) layout so Cmd/Ctrl+K works from anywhere in the
-// authenticated app - a fast way to jump straight to a page or a tracked
-// bill without clicking through the sidebar and table. Bills are fetched
-// lazily (only once the palette is actually opened), not on every page load.
+const CITATION_RX = /^(h\.?\s?r\.?|s\.?|h\.?\s?j\.?\s?res\.?|s\.?\s?j\.?\s?res\.?|h\.?\s?res\.?|s\.?\s?res\.?|h\.?\s?con\.?\s?res\.?|s\.?\s?con\.?\s?res\.?)\s*0*(\d{1,5})$/i;
+
+function parseCitation(q: string): string | null {
+  const m = q.trim().match(CITATION_RX);
+  if (!m) return null;
+  const type = m[1].toLowerCase().replace(/[.\s]/g, "");
+  return `${type}-${m[2]}-119`;
+}
+
+// ⌘K / Ctrl+K from anywhere: jump to a page or one of your bills, open any
+// bill by number ("hr 1234"), or hand the text to full bill search.
 export default function CommandPalette() {
   const supabase = createClient();
   const router = useRouter();
+  const { userId } = useSession();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [bills, setBills] = useState<BillItem[]>([]);
-  const [billsLoaded, setBillsLoaded] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [bills, setBills] = useState<{ id: string; title: string }[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
+    function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((o) => !o);
       }
       if (e.key === "Escape") setOpen(false);
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const onOpen = () => setOpen(true);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("bt:open-palette", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("bt:open-palette", onOpen);
+    };
   }, []);
 
   useEffect(() => {
-    if (open) {
-      setQuery("");
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 10);
-      if (!billsLoaded) loadBills();
+    if (!open) return;
+    setQuery("");
+    setActive(0);
+    setTimeout(() => inputRef.current?.focus(), 10);
+    if (!loaded && userId) {
+      // RLS returns your own and your team's tracked bills.
+      supabase
+        .from("tracked_bills")
+        .select("bill_id, bills(title)")
+        .limit(300)
+        .then(({ data }) => {
+          const seen = new Set<string>();
+          const list: { id: string; title: string }[] = [];
+          for (const row of (data as any[]) ?? []) {
+            if (seen.has(row.bill_id)) continue;
+            seen.add(row.bill_id);
+            const b = Array.isArray(row.bills) ? row.bills[0] : row.bills;
+            list.push({ id: row.bill_id, title: b?.title ?? row.bill_id });
+          }
+          setBills(list);
+          setLoaded(true);
+        });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  async function loadBills() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase
-      .from("tracked_bills")
-      .select("bill_id, bills(title)")
-      .eq("user_id", user.id)
-      .limit(200);
-    const items: BillItem[] = (data ?? []).map((row: any) => {
-      const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
-      return { type: "bill", label: bill?.title ?? row.bill_id, href: `/bill/${row.bill_id}` };
-    });
-    setBills(items);
-    setBillsLoaded(true);
-  }
+  const items = useMemo<Item[]>(() => {
+    const q = query.trim().toLowerCase();
+    const go = (href: string) => () => { router.push(href); setOpen(false); };
+    const out: Item[] = [];
 
-  const q = query.trim().toLowerCase();
-  const matchedNav = q ? NAV_ITEMS.filter((n) => n.label.toLowerCase().includes(q)) : NAV_ITEMS;
-  const matchedBills = q ? bills.filter((b) => b.label.toLowerCase().includes(q)).slice(0, 8) : bills.slice(0, 5);
-  const results: Item[] = [...matchedNav, ...matchedBills];
-
-  function go(item: Item) {
-    router.push(item.href);
-    setOpen(false);
-  }
-
-  function handleKeyNav(e: React.KeyboardEvent) {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter" && results[activeIndex]) {
-      go(results[activeIndex]);
+    const cite = parseCitation(query);
+    if (cite) {
+      out.push({ id: `open-${cite}`, group: "Bill number", label: `Open ${citationFor(cite)}`, hint: "119th Congress", icon: FileText, run: go(`/bill/${cite}`) });
     }
+
+    const words = q.split(/\s+/).filter(Boolean);
+    const billMatches = (words.length ? bills.filter((b) => words.every((w) => `${b.title} ${citationFor(b.id)} ${citationFor(b.id).replace(/\./g, "")} ${b.id.replace(/-/g, " ")}`.toLowerCase().includes(w.replace(/\./g, "")))) : bills).slice(0, words.length ? 8 : 4);
+    for (const b of billMatches) {
+      out.push({ id: `bill-${b.id}`, group: "Tracked bills", label: b.title, hint: citationFor(b.id), icon: FileText, run: go(`/bill/${b.id}`) });
+    }
+
+    const pageMatches = words.length ? PAGES.filter((p) => words.every((w) => `${p.label} ${p.words}`.toLowerCase().includes(w))) : PAGES;
+    for (const p of pageMatches) out.push({ id: `page-${p.href}`, group: "Go to", label: p.label, icon: p.icon, run: go(p.href) });
+
+    if (q.length >= 2 && !cite) {
+      out.push({
+        id: "search-all",
+        group: "Search Congress",
+        label: `Search all bills for “${query.trim()}”`,
+        icon: Search,
+        run: () => { setOpen(false); window.dispatchEvent(new CustomEvent("bt:find-bill", { detail: { query: query.trim() } })); },
+      });
+    }
+    if (!q) {
+      out.push({ id: "track", group: "Actions", label: "Track a new bill", icon: Plus, run: () => { setOpen(false); window.dispatchEvent(new CustomEvent("bt:find-bill")); } });
+    }
+    return out;
+  }, [query, bills, router]);
+
+  useEffect(() => {
+    listRef.current?.querySelector(`[data-idx="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+
+  function onInputKey(e: React.KeyboardEvent) {
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => Math.min(i + 1, items.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter" && items[active]) { e.preventDefault(); items[active].run(); }
   }
 
   if (!open) return null;
 
+  let lastGroup = "";
   return (
-    <div className="cmdk-overlay" onClick={() => setOpen(false)}>
-      <div className="cmdk-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="cmdk-input-row">
-          <Search size={16} className="muted" />
+    <div className="overlay overlay-top" onMouseDown={() => setOpen(false)}>
+      <div className="dialog palette" role="dialog" aria-modal="true" aria-label="Command menu" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="palette-input">
+          <Search size={17} aria-hidden="true" />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
-            onKeyDown={handleKeyNav}
-            placeholder="Jump to a page or a tracked bill…"
-            className="cmdk-input"
+            onChange={(e) => { setQuery(e.target.value); setActive(0); }}
+            onKeyDown={onInputKey}
+            placeholder="Type a page, a bill you track, or a number like hr 1234"
+            aria-label="Search"
           />
-          <kbd className="cmdk-kbd">Esc</kbd>
+          <kbd className="kbd">Esc</kbd>
         </div>
-        <div className="cmdk-results">
-          {results.length === 0 && <div className="cmdk-empty muted">No matches</div>}
-          {matchedNav.length > 0 && (
-            <div className="cmdk-group-label">Go to</div>
-          )}
-          {matchedNav.map((item, i) => (
-            <button
-              key={item.href}
-              className={`cmdk-item ${results.indexOf(item) === activeIndex ? "cmdk-item-active" : ""}`}
-              onClick={() => go(item)}
-              onMouseEnter={() => setActiveIndex(results.indexOf(item))}
-            >
-              <item.icon size={15} />
-              {item.label}
-            </button>
-          ))}
-          {matchedBills.length > 0 && (
-            <div className="cmdk-group-label">Tracked bills</div>
-          )}
-          {matchedBills.map((item) => (
-            <button
-              key={item.href}
-              className={`cmdk-item ${results.indexOf(item) === activeIndex ? "cmdk-item-active" : ""}`}
-              onClick={() => go(item)}
-              onMouseEnter={() => setActiveIndex(results.indexOf(item))}
-            >
-              <FileText size={15} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
-            </button>
-          ))}
+        <div className="palette-list" ref={listRef} role="listbox">
+          {items.length === 0 && <div className="palette-empty">Nothing matches. Press Enter on “Search all bills” to look across Congress.</div>}
+          {items.map((item, i) => {
+            const header = item.group !== lastGroup ? item.group : null;
+            lastGroup = item.group;
+            return (
+              <div key={item.id}>
+                {header && <div className="palette-group">{header}</div>}
+                <button
+                  data-idx={i}
+                  role="option"
+                  aria-selected={i === active}
+                  className={`palette-item${i === active ? " is-active" : ""}`}
+                  onMouseMove={() => setActive(i)}
+                  onClick={item.run}
+                >
+                  <item.icon size={16} aria-hidden="true" />
+                  <span className="palette-label">{item.label}</span>
+                  {item.hint && <span className="palette-hint">{item.hint}</span>}
+                  {i === active && <ArrowRight size={14} className="palette-enter" aria-hidden="true" />}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

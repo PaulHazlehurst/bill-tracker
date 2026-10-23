@@ -106,13 +106,13 @@ export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }
       {/* Filter chip row. Inline-styled so this component ships without
           adding to globals.css. */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", margin: "10px 0 14px" }}>
-        <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.68rem", color: "var(--text-soft)", letterSpacing: 1, marginRight: 4 }}>WHEN</span>
+        <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.68rem", color: "var(--text-soft)", marginRight: 4 }}>When</span>
         {RANGES.map((r) => (
           <FilterChip key={r.key} active={range === r.key} onClick={() => setRange(r.key)}>{r.label}</FilterChip>
         ))}
         {availableTiers.size > 1 && (
           <>
-            <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.68rem", color: "var(--text-soft)", letterSpacing: 1, margin: "0 4px 0 10px" }}>OUTLET</span>
+            <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.68rem", color: "var(--text-soft)", margin: "0 4px 0 10px" }}>Outlet</span>
             <FilterChip active={tier === "all"} onClick={() => setTier("all")}>All</FilterChip>
             {(["wire", "mainstream", "trade", "local"] as const).map((t) =>
               availableTiers.has(t)
@@ -188,7 +188,7 @@ export default function BillNewsSection({ newsItems }: { newsItems: NewsItem[] }
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, fontSize: "0.7rem", color: "var(--text-soft)" }}>
                     <span style={{ fontWeight: 600 }}>{n.source}</span>
                     {n.tier && n.tier !== "other" && (
-                      <span style={{ padding: "1px 7px", borderRadius: 999, background: "var(--surface-soft)", border: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.62rem", color: "var(--text-soft)" }}>
+                      <span style={{ padding: "1px 7px", borderRadius: 999, background: "var(--surface-soft)", border: "1px solid var(--border)", fontFamily: "var(--font-ui)", fontSize: "0.62rem", color: "var(--text-soft)" }}>
                         {TIER_LABEL[n.tier]}
                       </span>
                     )}

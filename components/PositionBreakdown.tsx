@@ -15,7 +15,7 @@ export default function PositionBreakdown({ counts }: { counts: Record<string, n
 
   return (
     <div className="card">
-      <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 10 }}>Where you stand</h2>
+      <h2 className="card-title">Where you stand</h2>
       <div className="position-bar">
         {SEGMENTS.map((s) => {
           const count = counts[s.key] ?? 0;

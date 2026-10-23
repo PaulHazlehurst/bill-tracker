@@ -28,7 +28,7 @@ export default function DensitySwitcher() {
   }
 
   return (
-    <div className="font-size-switcher" role="group" aria-label="Choose table density">
+    <div className="seg" role="group" aria-label="Choose table density">
       {OPTIONS.map((o) => (
         <button key={o.id} type="button" aria-pressed={density === o.id} onClick={() => choose(o.id)}>
           {o.label}

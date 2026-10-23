@@ -2,42 +2,40 @@
 
 import { useEffect, useState } from "react";
 
-const THEMES = [
-  { id: "light", label: "Light", swatch: "#f4f4f2" },
-  { id: "dark", label: "Dark", swatch: "#0d0d0f" },
+const STORAGE_KEY = "billtracker-theme";
+const OPTIONS = [
+  { id: "system", label: "Match my device" },
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
 ] as const;
 
-const VALID = new Set<string>(THEMES.map((t) => t.id));
-const STORAGE_KEY = "billtracker-theme";
-
+// Light, dark, or follow the operating system's setting (the default).
 export default function ThemeSwitcher() {
-  const [theme, setTheme] = useState<string>("light");
+  const [choice, setChoice] = useState<string>("system");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    // Ignore stale theme names from the old (Capitol/Parchment/Midnight)
-    // palette so the switcher never shows an option that no longer exists.
-    if (saved && VALID.has(saved)) setTheme(saved);
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved === "light" || saved === "dark") setChoice(saved);
+    } catch {}
   }, []);
 
   function choose(id: string) {
-    setTheme(id);
-    document.documentElement.setAttribute("data-theme", id);
-    window.localStorage.setItem(STORAGE_KEY, id);
+    setChoice(id);
+    try {
+      if (id === "system") window.localStorage.removeItem(STORAGE_KEY);
+      else window.localStorage.setItem(STORAGE_KEY, id);
+    } catch {}
+    const dark = id === "dark" || (id === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   }
 
   return (
-    <div className="theme-switcher" role="group" aria-label="Choose a theme">
-      {THEMES.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          title={t.label}
-          aria-label={t.label}
-          aria-pressed={theme === t.id}
-          style={{ background: t.swatch }}
-          onClick={() => choose(t.id)}
-        />
+    <div className="seg" role="group" aria-label="Color theme">
+      {OPTIONS.map((o) => (
+        <button key={o.id} type="button" className={choice === o.id ? "is-on" : ""} aria-pressed={choice === o.id} onClick={() => choose(o.id)}>
+          {o.label}
+        </button>
       ))}
     </div>
   );

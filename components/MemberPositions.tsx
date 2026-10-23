@@ -50,7 +50,7 @@ export default function MemberPositions({ billId }: { billId: string }) {
 
   return (
     <div className="card">
-      <h2 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 4 }}>
+      <h2 className="card-title">
         <Users2 size={15} style={{ marginRight: 8, verticalAlign: -2 }} />
         Members' positions
       </h2>
