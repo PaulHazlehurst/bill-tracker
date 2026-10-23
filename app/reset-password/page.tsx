@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import AuthShell from "@/components/auth/AuthShell";
 
 export default function ResetPasswordPage() {
   const supabase = createClient();
@@ -31,25 +32,25 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 380 }}>
-      <h1 style={{ fontSize: '1.375rem', fontWeight: 500 }}>Reset your password</h1>
+    <AuthShell
+      title="Reset your password"
+      subtitle={sent ? undefined : "We'll email you a link to set a new one."}
+      footer={<Link href="/login">Back to log in</Link>}
+    >
       {sent ? (
-        <div className="card">
-          <p>Check your email for a link to reset your password. It may take a minute to arrive.</p>
-        </div>
+        <p className="notice">Check {email} for a reset link. It can take a minute to arrive, and may land in spam.</p>
       ) : (
-        <form onSubmit={handleSubmit} className="card">
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="field">
             <label htmlFor="email">Email</label>
-            <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           {error && <p className="error-text">{error}</p>}
-          <button className="primary" type="submit" disabled={loading}>
+          <button className="btn btn-primary btn-lg auth-submit" type="submit" disabled={loading}>
             {loading ? "Sending…" : "Send reset link"}
           </button>
         </form>
       )}
-      <p className="muted"><Link href="/login">Back to log in</Link></p>
-    </div>
+    </AuthShell>
   );
 }

@@ -5,172 +5,138 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import Spinner from "@/components/Spinner";
+import PageHeader from "@/components/ui/PageHeader";
 import { useTicker } from "@/lib/useTicker";
 import { timeAgo } from "@/lib/billMeta";
-import { Gauge } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, MinusCircle, RefreshCw } from "lucide-react";
 
 type Snapshot = { service: string; limit_value: number | null; remaining_value: number | null; updated_at: string };
+type Check = { id: string; group: string; name: string; status: "ok" | "warn" | "fail" | "skip"; detail: string; ms?: number; fix?: string };
 
 const SERVICES = [
-  {
-    key: "congress_gov",
-    name: "congress.gov",
-    staticLimit: 5000,
-    staticLimitLabel: "5,000 requests / hour (official)",
-  },
-  {
-    key: "govinfo_gov",
-    name: "GovInfo (Congressional Record)",
-    staticLimit: null,
-    staticLimitLabel: "Shares congress.gov's quota - same api.data.gov key",
-  },
-  {
-    key: "lda_gov",
-    name: "LDA.gov (lobbying data)",
-    staticLimit: null,
-    staticLimitLabel: null, // filled in dynamically below based on whether a key is configured
-  },
-  {
-    key: "rural_care_journey",
-    name: "Rural Care Journey",
-    staticLimit: null,
-    staticLimitLabel: "Free public stats endpoint - no published rate limit",
-  },
-  {
-    key: "hrsa",
-    name: "HRSA (shortage area data)",
-    staticLimit: null,
-    staticLimitLabel: "Free public data - no published rate limit",
-  },
-  {
-    key: "news_feed",
-    name: "Google News RSS",
-    staticLimit: null,
-    staticLimitLabel: "Public feed, not a formal API - no published rate limit",
-  },
+  { key: "congress_gov", name: "congress.gov", limit: "5,000 requests an hour" },
+  { key: "govinfo_gov", name: "GovInfo", limit: "Shares the congress.gov hourly allowance (same api.data.gov key)" },
+  { key: "lda_gov", name: "LDA.gov lobbying data", limit: null },
+  { key: "federal_register", name: "Federal Register", limit: "No published limit" },
+  { key: "news_feed", name: "Google News feed", limit: "Public feed, no published limit" },
+  { key: "rss_feed", name: "Newsroom RSS feeds", limit: "Public feeds, cached for an hour" },
 ];
 
-export default function ApiUsagePage() {
+const ICON = { ok: CheckCircle2, warn: AlertTriangle, fail: XCircle, skip: MinusCircle };
+const GROUP_ORDER = ["Data sources", "Scheduled jobs", "Database", "Alerts", "Settings"];
+
+export default function DataSourcesPage() {
   const supabase = createClient();
   const router = useRouter();
   useTicker(60_000);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [callsLastHour, setCallsLastHour] = useState<Record<string, number>>({});
-  const [callsLast24h, setCallsLast24h] = useState<Record<string, number>>({});
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-  const [ldaKeyConfigured, setLdaKeyConfigured] = useState(false);
+  const [usage, setUsage] = useState<{ hour: Record<string, number>; day: Record<string, number>; snaps: Snapshot[]; lda: boolean } | null>(null);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [health, setHealth] = useState<{ checkedAt: string; summary: { ok: number; warn: number; fail: number }; results: Check[] } | null>(null);
+  const [checking, setChecking] = useState(false);
 
-  async function load() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    const res = await fetch("/api/admin/api-usage");
-    if (!res.ok) {
-      setError("Couldn't load API usage data.");
-      setLoading(false);
-      return;
-    }
-    const body = await res.json();
-    setCallsLastHour(body.callsLastHour ?? {});
-    setCallsLast24h(body.callsLast24h ?? {});
-    setSnapshots(body.officialSnapshots ?? []);
-    setLdaKeyConfigured(!!body.ldaKeyConfigured);
-    setLoading(false);
+  async function loadUsage() {
+    const res = await fetch("/api/admin/api-usage").catch(() => null);
+    if (!res || !res.ok) return setUsageError("Couldn't load usage numbers.");
+    const b = await res.json();
+    setUsage({ hour: b.callsLastHour ?? {}, day: b.callsLast24h ?? {}, snaps: b.officialSnapshots ?? [], lda: !!b.ldaKeyConfigured });
+  }
+
+  async function runHealth() {
+    setChecking(true);
+    const res = await fetch("/api/admin/health").catch(() => null);
+    if (res && res.ok) setHealth(await res.json());
+    setChecking(false);
   }
 
   useEffect(() => {
-    load();
-    // Auto-refresh every 30s so this is actually useful to leave open
-    // while you're working, per the original request.
-    const id = setInterval(load, 30_000);
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) router.push("/login");
+    });
+    loadUsage();
+    runHealth();
+    const id = setInterval(loadUsage, 30_000);
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const groups = GROUP_ORDER.map((g) => ({ g, items: (health?.results ?? []).filter((r) => r.group === g) })).filter((x) => x.items.length);
+
   return (
-    <div className="container-wide">
-      <div className="page-header">
-        <div>
-          <span className="page-eyebrow">System status</span>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>API Usage</h1>
-          <p className="muted" style={{ marginTop: 4 }}>
-            Live view of outbound calls this app has made. Refreshes automatically every 30 seconds.
-          </p>
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="Data sources"
+        description="Everything this app connects to, whether it's working right now, and how much of each service's allowance we're using."
+        actions={<button className="btn btn-secondary" onClick={runHealth} disabled={checking}><RefreshCw size={15} className={checking ? "spin" : ""} /> {checking ? "Testing…" : "Test all connections"}</button>}
+      />
 
-      {loading ? (
-        <Spinner label="Loading usage…" />
-      ) : error ? (
-        <p className="error-text">{error}</p>
-      ) : (
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
-          {SERVICES.map((svc) => {
-            const snapshot = snapshots.find((s) => s.service === svc.key);
-            const hourCount = callsLastHour[svc.key] ?? 0;
-            const dayCount = callsLast24h[svc.key] ?? 0;
-
-            const officialLimit = snapshot?.limit_value ?? null;
-            const officialRemaining = snapshot?.remaining_value ?? null;
-            const hasOfficial = officialLimit !== null && officialRemaining !== null;
-            const usedFraction = hasOfficial ? 1 - officialRemaining! / officialLimit! : null;
-
-            const staticLabel = svc.key === "lda_gov"
-              ? (ldaKeyConfigured ? "120 requests / minute (with key)" : "15 requests / minute (anonymous - no LDA_API_KEY set)")
-              : svc.staticLimitLabel;
-
-            return (
-              <div key={svc.key} className="card usage-card">
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <Gauge size={16} className="muted" />
-                  <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, margin: 0 }}>{svc.name}</h2>
-                </div>
-
-                {hasOfficial ? (
-                  <>
-                    <div className="usage-official-numbers">
-                      <span><strong>{officialRemaining!.toLocaleString()}</strong> remaining</span>
-                      <span className="muted">of {officialLimit!.toLocaleString()}</span>
-                    </div>
-                    <div className="usage-bar">
-                      <div
-                        className={`usage-bar-fill ${usedFraction! > 0.8 ? "usage-bar-danger" : usedFraction! > 0.5 ? "usage-bar-warn" : ""}`}
-                        style={{ width: `${Math.min(usedFraction! * 100, 100)}%` }}
-                      />
-                    </div>
-                    <p className="muted" style={{ fontSize: '0.6875rem', marginTop: 6 }}>
-                      As reported by {svc.name}, {timeAgo(snapshot!.updated_at)}
-                    </p>
-                  </>
-                ) : (
-                  <p className="muted" style={{ fontSize: '0.8125rem' }}>
-                    No official count yet - {svc.name} hasn't been called since this page's tracking was added, or doesn't report a rate-limit header.
-                  </p>
-                )}
-
-                <div className="usage-self-tracked">
-                  <div>
-                    <div className="usage-self-value">{hourCount}</div>
-                    <div className="usage-self-label">calls, last hour</div>
-                  </div>
-                  <div>
-                    <div className="usage-self-value">{dayCount}</div>
-                    <div className="usage-self-label">calls, last 24h</div>
-                  </div>
-                </div>
-
-                {staticLabel && (
-                  <p className="muted" style={{ fontSize: '0.6875rem', marginTop: 10 }}>Known limit: {staticLabel}</p>
-                )}
+      <section className="health">
+        {!health ? (
+          <div className="skel skel-block" />
+        ) : (
+          <>
+            <div className={`health-summary ${health.summary.fail ? "is-fail" : health.summary.warn ? "is-warn" : "is-ok"}`}>
+              <strong>
+                {health.summary.fail
+                  ? `${health.summary.fail} connection${health.summary.fail === 1 ? " needs" : "s need"} attention`
+                  : health.summary.warn
+                    ? `Everything essential works. ${health.summary.warn} thing${health.summary.warn === 1 ? "" : "s"} worth a look.`
+                    : "Everything is connected and working."}
+              </strong>
+              <span>Tested {timeAgo(health.checkedAt)}</span>
+            </div>
+            {groups.map(({ g, items }) => (
+              <div key={g} className="health-group">
+                <h2 className="health-group-title">{g}</h2>
+                <ul>
+                  {items.map((c) => {
+                    const Icon = ICON[c.status];
+                    return (
+                      <li key={c.id} className={`health-item st-${c.status}`}>
+                        <Icon size={17} className="health-icon" aria-label={c.status} />
+                        <div className="health-text">
+                          <span className="health-name">{c.name}</span>
+                          <span className="health-detail">{c.detail}</span>
+                          {c.fix && c.status !== "ok" && <span className="health-fix">{c.fix}</span>}
+                        </div>
+                        {typeof c.ms === "number" && <span className="health-ms">{c.ms < 1000 ? `${c.ms} ms` : `${(c.ms / 1000).toFixed(1)} s`}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </>
+        )}
+      </section>
+
+      <h2 className="section-title" style={{ marginTop: 36 }}>Usage</h2>
+      <p className="card-sub">Calls this app made to each service. Updates every 30 seconds.</p>
+      {usageError && <p className="error-text">{usageError}</p>}
+      <div className="usage-grid">
+        {SERVICES.map((svc) => {
+          const snap = usage?.snaps.find((s) => s.service === svc.key);
+          const hasOfficial = snap && snap.limit_value != null && snap.remaining_value != null;
+          const used = hasOfficial ? 1 - snap!.remaining_value! / snap!.limit_value! : null;
+          const limit = svc.key === "lda_gov" ? (usage?.lda ? "120 requests a minute (with key)" : "15 requests a minute without a key") : svc.limit;
+          return (
+            <div key={svc.key} className="card usage">
+              <h3 className="usage-name">{svc.name}</h3>
+              <div className="usage-nums">
+                <div><span className="usage-n">{usage ? (usage.hour[svc.key] ?? 0).toLocaleString() : "–"}</span><span className="usage-l">last hour</span></div>
+                <div><span className="usage-n">{usage ? (usage.day[svc.key] ?? 0).toLocaleString() : "–"}</span><span className="usage-l">last 24 hours</span></div>
+              </div>
+              {hasOfficial && (
+                <>
+                  <div className="meter"><span className={used! > 0.8 ? "is-hot" : used! > 0.5 ? "is-warm" : ""} style={{ width: `${Math.min(100, used! * 100)}%` }} /></div>
+                  <p className="usage-foot">{snap!.remaining_value!.toLocaleString()} of {snap!.limit_value!.toLocaleString()} left this hour, as reported {timeAgo(snap!.updated_at)}</p>
+                </>
+              )}
+              {limit && <p className="usage-foot">{limit}</p>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

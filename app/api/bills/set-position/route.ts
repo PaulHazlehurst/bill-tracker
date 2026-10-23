@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 const VALID = ["support", "oppose", "watching", "none"];
 
 // POST { billId, position }

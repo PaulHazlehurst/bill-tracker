@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getCommitteeActivity, findMatchingHearingDetails } from "@/lib/congress-api";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 // Longer than the other caches - this one is expensive (multiple requests
 // per lookup) and hearing detail essentially never changes once published,
 // so there's little value in refreshing it often.

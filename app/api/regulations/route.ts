@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 // GET /api/regulations
 // Returns the regulations the daily discovery run has flagged for this
 // account, joined against the cached regulations table. RLS scopes the

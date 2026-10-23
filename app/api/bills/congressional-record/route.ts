@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { searchCongressionalRecord } from "@/lib/govinfo-api";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // GET ?billId=&congress=&billType=&billNumber=

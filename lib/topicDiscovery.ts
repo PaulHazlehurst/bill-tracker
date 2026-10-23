@@ -1,301 +1,278 @@
-// SERVER-ONLY. Automated topic-based bill discovery. For each org (or
-// solo user) with topics configured, searches for new bills matching
-// those topics, excludes anything already tracked, and - importantly -
-// excludes companion/duplicate bills of anything already tracked, using
-// congress.gov's own relatedBills data. Populates the prospective_bills
-// table; never auto-tracks anything, since a suggestion the user reviews
-// is fundamentally different from a bill silently added to their list.
+// SERVER-ONLY. Automated topic-based bill discovery.
+//
+// For each org (or solo user) with topics configured, finds bills matching
+// those topics that aren't already tracked, already suggested, or a
+// companion of something tracked, and files them as suggestions in
+// prospective_bills. Never auto-tracks: a suggestion someone reviews is
+// fundamentally different from a bill silently added to their list.
+//
+// Why it "barely ever found anything" before (Oct 2026 diagnosis):
+//   1. It took the top 15 search hits FIRST and filtered out known bills
+//      SECOND. After the first run, the same top 15 came back every day and
+//      were all "already suggested", so every later run found nothing new -
+//      even when bill #16 onward was a perfect match.
+//   2. Ceremonial resolutions counted against those 15 slots.
+//   3. The search itself was one loosely-ranked full-text query plus a
+//      title scan that needed every word verbatim ("rural hospitals" never
+//      matched a title saying "rural hospital").
+//   4. "Check now" ran with no time allowance, so a few topics could exceed
+//      the platform's default limit and fail as "couldn't check right now".
+// See searchBillsRanked in lib/congress-api.ts for the new search.
 
 import { createAdminClient } from "@/lib/supabase/server";
-import { searchBillsSmart, getBill, getRelatedBills, inferStage, progressForStage } from "@/lib/congress-api";
+import { searchBillsRanked, getRelatedBills, RESOLUTION_TYPES, type SearchResult } from "@/lib/congress-api";
+import { buildNewBillRow } from "@/lib/billRefresh";
 import { mapLimit, deadline, rotateByDay } from "@/lib/batch";
 
 const CURRENT_CONGRESS = 119;
-const MAX_PER_TOPIC = 15; // keep this bounded - a broad topic word could otherwise flood the list
-const CANDIDATE_CONCURRENCY = 6;
-// How many tracked bills may have their related-bills cache warmed per run.
-// Bounded so this stays a background nicety, never the thing that blows the
-// time budget.
+// New suggestions per topic per run. Bounded so a broad topic can't flood
+// the list - the next run picks up the next-best matches.
+const MAX_NEW_PER_TOPIC = 8;
+// A bill must score at least this to be suggested (see searchBillsRanked).
+// Filters out "every word appears somewhere in a 900-page bill" noise.
+const MIN_SCORE = 2.5;
+const CANDIDATE_CONCURRENCY = 5;
+const TOPIC_CONCURRENCY = 2;
 const MAX_RELATED_WARMUPS = 3;
 
-async function ensureBillCached(admin: ReturnType<typeof createAdminClient>, billId: string, congress: number, billType: string, billNumber: string): Promise<{ ok: boolean; error?: string }> {
+export type TopicReport = {
+  topic: string;
+  found: number;
+  alreadyTracked: number;
+  alreadySuggested: number;
+  added: number;
+  failed: boolean;
+};
+
+export type DiscoveryResult = {
+  added: number;
+  failedTopics: string[];
+  topics: TopicReport[];
+  timedOut: boolean;
+  firstError: string | null;
+};
+
+type Admin = ReturnType<typeof createAdminClient>;
+
+async function ensureBillCached(admin: Admin, r: SearchResult): Promise<{ ok: boolean; error?: string }> {
+  const billId = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
   const { data: existing } = await admin.from("bills").select("id").eq("id", billId).maybeSingle();
   if (existing) return { ok: true };
-
   try {
-    const raw = await getBill(congress, billType, billNumber);
-    const b = raw.bill;
-    const latestActionText = b.latestAction?.text ?? "";
-    const stage = inferStage(latestActionText);
-
-    const { error } = await admin.from("bills").insert({
-      id: billId,
-      congress,
-      bill_type: billType.toLowerCase(),
-      // bills.bill_number is an INTEGER column - passing the string form
-      // silently fails the insert, which then breaks the foreign-key on
-      // prospective_bills. Coerce to a real number.
-      bill_number: parseInt(String(billNumber), 10),
-      title: b.title ?? `${billType.toUpperCase()} ${billNumber}`,
-      latest_action: latestActionText || null,
-      latest_action_date: b.latestAction?.actionDate ?? null,
-      status_stage: stage,
-      progress_pct: progressForStage(stage),
-      congress_url: b.url ?? null,
-      raw_snapshot: b,
-      last_polled_at: new Date().toISOString(),
-      next_poll_at: new Date(Date.now() + 30 * 60_000).toISOString(),
-      poll_priority: "normal",
-    });
-    if (error) {
-      console.error(`discovery: bills insert failed for ${billId}`, error);
-      return { ok: false, error: `bills insert: ${error.message}` };
-    }
+    // Untracked suggestion: skip the extra history call; the poller fills
+    // it in if someone tracks the bill.
+    const row = await buildNewBillRow(r.congress, r.type, r.number, { withHistory: false });
+    row.next_poll_at = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    row.poll_priority = "dormant";
+    const { error } = await admin.from("bills").insert(row);
+    if (error && error.code !== "23505") return { ok: false, error: `bills insert: ${error.message}` };
     return { ok: true };
   } catch (err: any) {
-    console.error(`discovery: failed to cache candidate bill ${billId}`, err);
     return { ok: false, error: `getBill: ${String(err?.message ?? err)}` };
   }
 }
 
-// Runs discovery for one owner (an org, or a solo user) against their own
-// topic list and their own already-tracked bills. Returns how many new
-// prospective bills were added, plus which topics failed to search at all
-// (a congress.gov outage/rate-limit/bad-key looks identical to "zero
-// matches" unless the caller can tell the two apart - see discover-now's
-// route, which uses failedTopics to give an honest error instead of a
-// false "no new matches").
-export async function runDiscoveryForOwner(opts: { organizationId?: string; userId?: string; topics: string[] }): Promise<{ added: number; failedTopics: string[]; debug: any }> {
-  const { organizationId, userId, topics } = opts;
-  // Counters so "Check now" can report exactly where candidates go, instead
-  // of silently ending at "no matches."
-  const debug = { candidates: 0, skippedKnown: 0, skippedCompanion: 0, cacheFailed: 0, prospectiveFailed: 0, inserted: 0, firstError: null as string | null };
-  if (topics.length === 0) return { added: 0, failedTopics: [], debug };
-  const admin = createAdminClient();
-
-  // What's already tracked by this owner - both to skip exact matches and
-  // as the basis for the companion-bill check below.
+/** The owner's tracked + already-suggested bills, plus companions of tracked bills. */
+async function loadOwnerContext(admin: Admin, organizationId?: string, userId?: string) {
   let trackedQuery = admin.from("tracked_bills").select("bill_id");
-  trackedQuery = organizationId ? trackedQuery.eq("organization_id", organizationId) : trackedQuery.eq("user_id", userId!);
+  if (organizationId) {
+    // Org-wide: anything any current member tracks.
+    const { data: members } = await admin.from("profiles").select("id").eq("organization_id", organizationId);
+    const ids = (members ?? []).map((m: any) => m.id);
+    trackedQuery = ids.length ? trackedQuery.in("user_id", ids) : trackedQuery.eq("organization_id", organizationId);
+  } else {
+    trackedQuery = trackedQuery.eq("user_id", userId!);
+  }
   const { data: trackedRows } = await trackedQuery;
-  const trackedBillIds = new Set((trackedRows ?? []).map((r) => r.bill_id));
+  const tracked = new Set<string>((trackedRows ?? []).map((r: any) => r.bill_id));
 
-  // Already-suggested bills (dismissed or not) shouldn't be re-inserted -
-  // a dismissed suggestion should stay dismissed, and a pending one
-  // shouldn't get duplicated.
-  let existingProspectiveQuery = admin.from("prospective_bills").select("bill_id");
-  existingProspectiveQuery = organizationId
-    ? existingProspectiveQuery.eq("organization_id", organizationId)
-    : existingProspectiveQuery.eq("user_id", userId!);
-  const { data: existingProspectiveRows } = await existingProspectiveQuery;
-  const alreadySuggested = new Set((existingProspectiveRows ?? []).map((r) => r.bill_id));
+  let prospectiveQuery = admin.from("prospective_bills").select("bill_id");
+  prospectiveQuery = organizationId ? prospectiveQuery.eq("organization_id", organizationId) : prospectiveQuery.eq("user_id", userId!);
+  const { data: prospectiveRows } = await prospectiveQuery;
+  const suggested = new Set<string>((prospectiveRows ?? []).map((r: any) => r.bill_id));
 
-  // ------------------------------------------------------------------
-  // Companion-bill exclusion, done from cached data instead of one API
-  // call per candidate.
-  //
-  // This check exists so a Senate companion of a House bill the owner
-  // already tracks isn't offered as a "new" opportunity - it's the same
-  // policy. It used to call getRelatedBills() for EVERY candidate: up to 15
-  // extra congress.gov round-trips per topic, sequentially. That single line
-  // was the bulk of discovery's runtime and the main reason this job never
-  // finished inside the function's time limit.
-  //
-  // congress.gov's relatedBills data is bidirectional (HR 123 lists S 456
-  // and S 456 lists HR 123), so the same question can be answered from the
-  // TRACKED side, where the answer is already cached in bills.related_bills.
-  // That's a single database read instead of N network calls.
-  //
-  // Caveat, stated honestly: related_bills is populated on demand when
-  // someone opens a bill's detail page, so a tracked bill nobody has opened
-  // yet contributes nothing here. That means an occasional companion slips
-  // through as a suggestion - which is the same trade-off the old code chose
-  // when its API call failed, and far better than the job not running at all.
-  // A few of those gaps are warmed each run (see below).
-  const trackedIdList = Array.from(trackedBillIds);
-  const companionsOfTracked = new Set<string>();
+  // Companion exclusion from CACHED related-bills data on the tracked side
+  // (congress.gov relatedBills is bidirectional), not one API call per
+  // candidate. A tracked bill nobody has opened may not have that cache
+  // yet, so a few are warmed per run.
+  const companions = new Set<string>();
   const needsWarming: { id: string; congress: number; bill_type: string; bill_number: number }[] = [];
-
-  if (trackedIdList.length > 0) {
-    const { data: trackedBillRows } = await admin
-      .from("bills")
-      .select("id, congress, bill_type, bill_number, related_bills")
-      .in("id", trackedIdList);
-
-    for (const row of trackedBillRows ?? []) {
-      const rel = (row as any).related_bills;
-      if (Array.isArray(rel)) {
-        for (const r of rel) {
-          if (!r?.type || !r?.number || !r?.congress) continue;
-          companionsOfTracked.add(`${String(r.type).toLowerCase()}-${r.number}-${r.congress}`);
+  const trackedList = Array.from(tracked);
+  for (let i = 0; i < trackedList.length; i += 100) {
+    const { data } = await admin.from("bills").select("id, congress, bill_type, bill_number, related_bills").in("id", trackedList.slice(i, i + 100));
+    for (const row of (data as any[]) ?? []) {
+      if (Array.isArray(row.related_bills)) {
+        for (const r of row.related_bills) {
+          if (r?.type && r?.number && r?.congress) companions.add(`${String(r.type).toLowerCase()}-${r.number}-${r.congress}`);
         }
-      } else if (rel == null) {
-        needsWarming.push(row as any);
+      } else if (row.related_bills == null) {
+        needsWarming.push(row);
       }
     }
   }
+  return { tracked, suggested, companions, needsWarming };
+}
 
-  let added = 0;
-  const failedTopics: string[] = [];
+async function insertProspective(admin: Admin, rows: any[]) {
+  if (rows.length === 0) return { error: null as string | null };
+  let { error } = await admin.from("prospective_bills").insert(rows);
+  // match_reason / match_score arrive with the Oct 2026 migration; if it
+  // hasn't been run, insert without them rather than losing the suggestions.
+  if (error && /match_reason|match_score|column/i.test(error.message)) {
+    ({ error } = await admin.from("prospective_bills").insert(rows.map(({ match_reason, match_score, ...r }) => r)));
+  }
+  // A unique-constraint clash means a concurrent run already filed one of
+  // these - retry row by row so the rest still land.
+  if (error && error.code === "23505") {
+    let firstErr: string | null = null;
+    for (const row of rows) {
+      const r = await admin.from("prospective_bills").insert(row);
+      if (r.error && r.error.code !== "23505" && !firstErr) firstErr = r.error.message;
+    }
+    return { error: firstErr };
+  }
+  return { error: error?.message ?? null };
+}
 
-  for (const topic of topics) {
-    let results;
-    try {
-      // GovInfo full-text search is the primary source here - it searches
-      // the actual TEXT of every bill in the congress, so a topic keyword
-      // surfaces bills whose titles never mention it (exactly the quiet
-      // bills this feature exists to catch). searchBillsSmart also merges
-      // in a title/recency match (titlePages=3, ~750 recent bills) as a
-      // safety net for brand-new bills GovInfo hasn't indexed yet, and only
-      // throws if BOTH sources are down.
-      results = await searchBillsSmart(topic, CURRENT_CONGRESS, 3);
-    } catch (err) {
-      console.error(`discovery: search failed for topic "${topic}"`, err);
-      failedTopics.push(topic);
-      continue;
+export async function runDiscoveryForOwner(opts: {
+  organizationId?: string;
+  userId?: string;
+  topics: string[];
+  budgetMs?: number;
+}): Promise<DiscoveryResult> {
+  const { organizationId, userId } = opts;
+  const topics = Array.from(new Set(opts.topics.map((t) => t.trim()).filter(Boolean)));
+  const result: DiscoveryResult = { added: 0, failedTopics: [], topics: [], timedOut: false, firstError: null };
+  if (topics.length === 0) return result;
+
+  const clock = deadline(opts.budgetMs ?? 45_000);
+  const admin = createAdminClient();
+  const ctx = await loadOwnerContext(admin, organizationId, userId);
+
+  const reports = await mapLimit(topics, TOPIC_CONCURRENCY, async (topic): Promise<TopicReport> => {
+    const report: TopicReport = { topic, found: 0, alreadyTracked: 0, alreadySuggested: 0, added: 0, failed: false };
+    if (clock.expired()) {
+      result.timedOut = true;
+      return report;
     }
 
-    // Skip ceremonial/procedural resolutions entirely. HRES and SRES are
-    // simple resolutions (one chamber, no force of law - "recognizing
-    // National Rural Health Day" and similar). HCONRES and SCONRES are
-    // concurrent resolutions (both chambers, still no force of law).
-    // HJRES and SJRES are joint resolutions and DO become law when signed
-    // (continuing appropriations, war powers, constitutional amendments) -
-    // those stay in.
-    const RESOLUTION_TYPES = new Set(["hres", "sres", "hconres", "sconres"]);
+    let results: SearchResult[];
+    try {
+      ({ results } = await searchBillsRanked(topic, { congress: CURRENT_CONGRESS, recentPages: 2, limit: 60 }));
+    } catch (err: any) {
+      report.failed = true;
+      if (!result.firstError) result.firstError = String(err?.message ?? err);
+      return report;
+    }
 
-    // Filter down to genuinely new candidates BEFORE doing any network work.
-    // The companion check is now a Set lookup against cached data rather than
-    // an API call, so this whole filter costs nothing.
-    const fresh: typeof results = [];
-    for (const r of results.slice(0, MAX_PER_TOPIC)) {
-      debug.candidates++;
-      const typeKey = r.type.toLowerCase();
-      if (RESOLUTION_TYPES.has(typeKey)) { debug.skippedKnown++; continue; }
-      const billId = `${typeKey}-${r.number}-${r.congress}`;
-      if (trackedBillIds.has(billId) || alreadySuggested.has(billId)) { debug.skippedKnown++; continue; }
-      if (companionsOfTracked.has(billId)) { debug.skippedCompanion++; continue; }
-      alreadySuggested.add(billId); // claim it now so a second topic can't duplicate it
+    // Filter FIRST, then take the best remaining - the old order was the bug.
+    const fresh: SearchResult[] = [];
+    for (const r of results) {
+      const type = r.type.toLowerCase();
+      if (RESOLUTION_TYPES.has(type)) continue;
+      if ((r.score ?? 0) < MIN_SCORE) continue;
+      report.found++;
+      const id = `${type}-${r.number}-${r.congress}`;
+      if (ctx.tracked.has(id)) { report.alreadyTracked++; continue; }
+      if (ctx.suggested.has(id) || ctx.companions.has(id)) { report.alreadySuggested++; continue; }
+      if (fresh.length >= MAX_NEW_PER_TOPIC) continue;
+      ctx.suggested.add(id); // claim it so another topic can't duplicate it
       fresh.push(r);
     }
 
-    // Cache each surviving candidate's bill record (one getBill each, only
-    // for bills we don't already have), several at a time rather than
-    // strictly one after another.
-    const cachedResults = await mapLimit(fresh, CANDIDATE_CONCURRENCY, async (r) => {
-      const billId = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
-      const cached = await ensureBillCached(admin, billId, r.congress, r.type, r.number);
-      return { billId, cached };
-    });
-
-    const toInsert: any[] = [];
-    for (const { billId, cached } of cachedResults) {
-      if (!cached.ok) {
-        debug.cacheFailed++;
-        if (!debug.firstError) debug.firstError = cached.error ?? "cache failed";
-        alreadySuggested.delete(billId); // it didn't land; allow a retry next run
+    const cached = await mapLimit(fresh, CANDIDATE_CONCURRENCY, async (r) => ({ r, res: await ensureBillCached(admin, r) }));
+    const rows: any[] = [];
+    for (const { r, res } of cached) {
+      const id = `${r.type.toLowerCase()}-${r.number}-${r.congress}`;
+      if (!res.ok) {
+        ctx.suggested.delete(id); // didn't land - allow a retry next run
+        if (!result.firstError) result.firstError = res.error ?? "cache failed";
         continue;
       }
-      toInsert.push({
+      rows.push({
         organization_id: organizationId ?? null,
         user_id: organizationId ? null : userId,
-        bill_id: billId,
+        bill_id: id,
         matched_topic: topic,
+        match_reason: (r.reasons ?? []).slice(0, 3).join(" · ") || null,
+        match_score: Math.round((r.score ?? 0) * 10) / 10,
       });
     }
-
-    // One insert for the whole topic instead of one per bill.
-    if (toInsert.length > 0) {
-      const { error: insertError } = await admin.from("prospective_bills").insert(toInsert);
-      if (!insertError) {
-        added += toInsert.length;
-        debug.inserted += toInsert.length;
-      } else {
-        debug.prospectiveFailed += toInsert.length;
-        if (!debug.firstError) debug.firstError = `prospective insert: ${insertError.message}`;
-        for (const row of toInsert) alreadySuggested.delete(row.bill_id);
-      }
+    const { error } = await insertProspective(admin, rows);
+    if (error) {
+      if (!result.firstError) result.firstError = `prospective insert: ${error}`;
+    } else {
+      report.added = rows.length;
     }
-  }
+    return report;
+  });
 
-  // Opportunistically warm a few tracked bills' related-bills cache, so the
-  // companion check above gets more accurate over time without anyone having
-  // to open those bills manually. Strictly bounded, and failures are ignored:
-  // this is a background nicety, not part of the result.
-  if (needsWarming.length > 0) {
-    const warmTargets = needsWarming.slice(0, MAX_RELATED_WARMUPS);
-    await mapLimit(warmTargets, 2, async (row) => {
+  result.topics = reports;
+  result.added = reports.reduce((n, r) => n + r.added, 0);
+  result.failedTopics = reports.filter((r) => r.failed).map((r) => r.topic);
+
+  // Background nicety: warm a few tracked bills' related-bills cache so the
+  // companion check gets more accurate over time. Failures are ignored.
+  if (ctx.needsWarming.length > 0 && clock.remainingMs() > 5_000) {
+    await mapLimit(ctx.needsWarming.slice(0, MAX_RELATED_WARMUPS), 2, async (row) => {
       try {
         const related = await getRelatedBills(row.congress, row.bill_type, row.bill_number);
-        await admin
-          .from("bills")
-          .update({ related_bills: related, related_bills_fetched_at: new Date().toISOString() })
-          .eq("id", row.id);
+        await admin.from("bills").update({ related_bills: related, related_bills_fetched_at: new Date().toISOString() }).eq("id", row.id);
       } catch {
-        /* ignore - we'll try again on a future run */
+        /* try again on a future run */
       }
     });
   }
 
-  return { added, failedTopics, debug };
+  return result;
 }
 
-// Runs discovery across every org and every solo (no-org) user that has
-// topics configured. Called from the notify cron (see the note in
-// app/api/cron/poll about why it moved off the polling job).
-//
-// `budgetMs` is a wall-clock allowance: owners are processed until it's
-// spent, then the run stops cleanly. Because the owner list is rotated by
-// day, a deployment with more owners than fit in one run still covers
-// everyone over successive days rather than always serving the same few and
-// starving the rest.
+// Runs discovery for every org and every solo (no-org) user with topics.
+// Called from the notify cron. Owners are processed until the time budget is
+// spent; the order rotates daily so nobody is starved.
 export async function runDiscoveryForAllOwners(
-  budgetMs = 30_000
-): Promise<{ owners: number; added: number; skipped: number; timedOut: boolean }> {
+  budgetMs = 30_000,
+): Promise<{ owners: number; added: number; skipped: number; timedOut: boolean; failedTopics: number }> {
   const admin = createAdminClient();
   const clock = deadline(budgetMs);
-  let totalAdded = 0;
-  let ownerCount = 0;
-
   type Owner = { kind: "org" | "user"; id: string; topics: string[] };
   const owners: Owner[] = [];
 
-  const { data: orgs } = await admin.from("organizations").select("id, topics").not("topics", "eq", "{}");
-  for (const org of orgs ?? []) {
-    if (!org.topics || org.topics.length === 0) continue;
-    owners.push({ kind: "org", id: org.id, topics: org.topics });
+  const { data: orgs } = await admin.from("organizations").select("id, topics");
+  for (const org of (orgs as any[]) ?? []) {
+    if (Array.isArray(org.topics) && org.topics.length > 0) owners.push({ kind: "org", id: org.id, topics: org.topics });
+  }
+  const { data: solo } = await admin.from("profiles").select("id, topics").is("organization_id", null);
+  for (const p of (solo as any[]) ?? []) {
+    if (Array.isArray(p.topics) && p.topics.length > 0) owners.push({ kind: "user", id: p.id, topics: p.topics });
   }
 
-  const { data: soloProfiles } = await admin
-    .from("profiles")
-    .select("id, topics")
-    .is("organization_id", null)
-    .not("topics", "eq", "{}");
-  for (const profile of soloProfiles ?? []) {
-    if (!profile.topics || profile.topics.length === 0) continue;
-    owners.push({ kind: "user", id: profile.id, topics: profile.topics });
-  }
-
-  const ordered = rotateByDay(owners);
+  let added = 0;
+  let done = 0;
+  let failedTopics = 0;
   let timedOut = false;
-
-  for (const owner of ordered) {
-    if (clock.expired()) {
+  for (const owner of rotateByDay(owners)) {
+    if (clock.remainingMs() < 6_000) {
       timedOut = true;
       break;
     }
     try {
-      const res =
-        owner.kind === "org"
-          ? await runDiscoveryForOwner({ organizationId: owner.id, topics: owner.topics })
-          : await runDiscoveryForOwner({ userId: owner.id, topics: owner.topics });
-      totalAdded += res.added;
-      ownerCount++;
+      const res = await runDiscoveryForOwner({
+        organizationId: owner.kind === "org" ? owner.id : undefined,
+        userId: owner.kind === "user" ? owner.id : undefined,
+        topics: owner.topics,
+        budgetMs: clock.remainingMs() - 2_000,
+      });
+      added += res.added;
+      failedTopics += res.failedTopics.length;
+      done++;
+      if (res.timedOut) {
+        timedOut = true;
+        break;
+      }
     } catch (err) {
-      // One owner's bad topic or upstream hiccup must not abort everyone else.
       console.error(`discovery failed for ${owner.kind} ${owner.id}`, err);
     }
   }
-
-  return { owners: ownerCount, added: totalAdded, skipped: ordered.length - ownerCount, timedOut };
+  return { owners: done, added, skipped: owners.length - done, timedOut, failedTopics };
 }

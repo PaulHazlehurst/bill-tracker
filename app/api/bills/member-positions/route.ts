@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 // GET ?billId=... - every member position recorded for one specific bill.
 // RLS on member_positions already scopes this to the signed-in user's own
 // org's members (see schema.sql), so no org_id filter is needed here.

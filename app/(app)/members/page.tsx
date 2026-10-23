@@ -35,7 +35,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Legislator: "var(--accent)",
   Staffer: "var(--party-ind)",
   "Coalition partner": "var(--pos-support)",
-  Client: "var(--accent-gold)",
+  Client: "var(--amber)",
   Agency: "var(--party-dem)",
   Other: "var(--text-soft)",
 };
@@ -172,13 +172,12 @@ export default function MembersPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
-          <span className="page-eyebrow">Stakeholders</span>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 500, margin: 0 }}>Members</h1>
+          <h1>Contacts</h1>
           <p className="muted" style={{ marginTop: 4 }}>The people you work with - category, contact, notes, and where each one stands on every bill.</p>
         </div>
         {hasTeam && !loading && (
           <button className="primary" onClick={() => setShowAdd((v) => !v)}>
-            <Plus size={14} /> Add member
+            <Plus size={14} /> Add contact
           </button>
         )}
       </div>
@@ -208,7 +207,7 @@ export default function MembersPage() {
               <textarea placeholder="Notes — who owns the relationship, meeting history, outstanding asks…" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} className="toolbar-input member-notes-input" rows={2} />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button type="button" className="ghost" onClick={() => { setShowAdd(false); setDraft(EMPTY_DRAFT); setName(""); }}>Cancel</button>
-                <button className="primary" disabled={adding || !name.trim()}><Plus size={14} /> Add member</button>
+                <button className="primary" disabled={adding || !name.trim()}><Plus size={14} /> Add contact</button>
               </div>
             </form>
           )}

@@ -43,7 +43,7 @@ type Alignment = { aligned: number; atOdds: number; watching: number; label: str
 const ALIGN_COLORS: Record<string, string> = {
   "Aligned with you": "var(--pos-support)",
   "At odds with you": "var(--pos-oppose)",
-  "Mixed record": "var(--accent-gold)",
+  "Mixed record": "var(--amber)",
   "No overlap yet": "var(--text-soft)",
 };
 
@@ -79,11 +79,11 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
       .catch(() => { setError("Couldn't load this legislator."); setLoading(false); });
   }, [bioguideId]);
 
-  if (loading) return <div className="container-wide"><Spinner label="Loading profile…" large /></div>;
+  if (loading) return <div className="page"><Spinner label="Loading profile…" large /></div>;
   if (error || !member) return (
-    <div className="container" style={{ padding: 40 }}>
-      <p className="error-text">{error ?? "Legislator not found."}</p>
-      <Link href="/legislators"><button className="ghost"><ArrowLeft size={14} /> Back to directory</button></Link>
+    <div className="page">
+      <p className="error-text">{error ?? "We couldn't find that member of Congress."}</p>
+      <Link href="/legislators" className="btn btn-secondary"><ArrowLeft size={14} /> Back to Congress</Link>
     </div>
   );
 
@@ -92,9 +92,9 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
   const otherInList = activeBills.filter((b) => !b.isTracked);
 
   return (
-    <div className="container-wide">
-      <Link href="/legislators" className="briefing-back" style={{ marginBottom: 20, display: "inline-flex" }}>
-        <ArrowLeft size={14} /> All legislators
+    <div className="page">
+      <Link href="/legislators" className="backlink">
+        <ArrowLeft size={15} /> Congress
       </Link>
 
       <div className="legislator-profile-header">
@@ -107,7 +107,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
           )}
         </div>
         <div className="legislator-profile-info">
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 500, margin: 0 }}>{member.name}</h1>
+          <h1 className="page-title">{member.name}</h1>
           <div className="legislator-profile-meta">
             <span className="legislator-party-badge-lg" style={{ background: PARTY_COLORS[member.party] ?? "var(--text-soft)", color: "#fff" }}>
               {PARTY_NAMES[member.party] ?? member.party}
@@ -173,7 +173,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
           <div className="legislator-stat-label">Bills cosponsored</div>
         </div>
         <div className="legislator-stat-card">
-          <div className="legislator-stat-value" style={{ color: "var(--accent-gold)" }}>
+          <div className="legislator-stat-value" style={{ color: "var(--blue)" }}>
             {sponsored.filter((b) => b.isTracked).length + cosponsored.filter((b) => b.isTracked).length}
           </div>
           <div className="legislator-stat-label">In your portfolio</div>
@@ -197,7 +197,7 @@ export default function LegislatorProfilePage({ params }: { params: { bioguideId
 
       {trackedInList.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <h3 className="legislator-section-label"><Star size={13} style={{ color: "var(--accent-gold)" }} /> In your portfolio</h3>
+          <h3 className="legislator-section-label"><Star size={13} style={{ color: "var(--blue)" }} /> In your portfolio</h3>
           {trackedInList.map((b) => (
             <Link key={b.billId} href={`/bill/${b.billId}`} className="legislator-bill-row legislator-bill-tracked">
               <FileText size={14} />

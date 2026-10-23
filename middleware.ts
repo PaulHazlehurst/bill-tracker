@@ -57,7 +57,9 @@ export async function middleware(request: NextRequest) {
     authKnown = false;
   }
 
-  const protectedPaths = ["/dashboard", "/team", "/bill", "/activity", "/settings", "/api-usage", "/compare", "/statistics", "/rural-health", "/members"];
+  // Every signed-in area of the app. (Several were missing before - they
+  // still guarded themselves client-side, but now they're consistent.)
+  const protectedPaths = PROTECTED;
   const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p));
 
   // Redirect only when we KNOW the visitor is signed out. A timed-out check
@@ -70,6 +72,14 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+const PROTECTED = ["/dashboard", "/team", "/bill", "/activity", "/settings", "/api-usage", "/compare", "/statistics", "/members", "/regulations", "/impact", "/briefing", "/legislators", "/legislator"];
+
+// Next.js requires this to be a static literal, so it's spelled out rather
+// than built from PROTECTED.
 export const config = {
-  matcher: ["/dashboard/:path*", "/team/:path*", "/bill/:path*", "/activity/:path*", "/settings/:path*", "/api-usage/:path*", "/compare/:path*", "/statistics/:path*", "/rural-health/:path*", "/members/:path*"],
+  matcher: [
+    "/dashboard/:path*", "/team/:path*", "/bill/:path*", "/activity/:path*", "/settings/:path*",
+    "/api-usage/:path*", "/compare/:path*", "/statistics/:path*", "/members/:path*", "/regulations/:path*",
+    "/impact/:path*", "/briefing/:path*", "/legislators/:path*", "/legislator/:path*",
+  ],
 };

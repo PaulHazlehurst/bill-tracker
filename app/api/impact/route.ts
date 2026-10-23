@@ -1,5 +1,9 @@
+import { ADVANCED_STAGES, QUIET_DAYS } from "@/lib/billStage";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
 
 // GET /api/impact — cross-bill impact dashboard data
 // Groups tracked bills by policy area, computes portfolio health metrics,
@@ -60,8 +64,10 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.count - a.count);
 
   // Portfolio health scoring
-  const ADVANCING_STAGES = new Set(["passed_house", "passed_senate", "to_president", "enacted"]);
-  const STALLED_THRESHOLD = 30; // days without action = stalled
+  // Shared with the rest of the app (lib/billStage.ts) so "stalled" means
+  // the same thing here as the dashboard's "Gone quiet" filter.
+  const ADVANCING_STAGES = ADVANCED_STAGES;
+  const STALLED_THRESHOLD = QUIET_DAYS;
 
   const now = Date.now();
   let advancingCount = 0;

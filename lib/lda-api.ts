@@ -19,9 +19,23 @@ import { trackedFetch } from "@/lib/apiUsageTracker";
 
 const BASE_URL = "https://lda.gov/api/v1";
 
+// The LDA API has documented its key header as both "Token <key>" (the
+// original lda.senate.gov API) and "ApiKey <key>". Rather than guess, try
+// one, fall back to the other on a 401, and remember whichever works.
+let authScheme: "ApiKey" | "Token" = "ApiKey";
+
 function headers(): Record<string, string> {
   const key = process.env.LDA_API_KEY;
-  return key ? { Authorization: `ApiKey ${key}` } : {};
+  return key ? { Authorization: `${authScheme} ${key}` } : {};
+}
+
+export async function ldaFetch(url: string): Promise<Response> {
+  let res = await trackedFetch(url, { headers: headers(), cache: "no-store" }, "lda_gov");
+  if (res.status === 401 && process.env.LDA_API_KEY) {
+    authScheme = authScheme === "ApiKey" ? "Token" : "ApiKey";
+    res = await trackedFetch(url, { headers: headers(), cache: "no-store" }, "lda_gov");
+  }
+  return res;
 }
 
 export type LobbyingFiling = {
@@ -64,7 +78,7 @@ export async function searchFilingsForBill(billCitation: string, congress: numbe
     url.searchParams.set("ordering", "-dt_posted");
     url.searchParams.set("page_size", "25");
 
-    const res = await trackedFetch(url.toString(), { headers: headers(), cache: "no-store" }, "lda_gov");
+    const res = await ldaFetch(url.toString());
     if (!res.ok) {
       console.error(`LDA.gov filings fetch failed for year ${year}: ${res.status}`);
       continue;

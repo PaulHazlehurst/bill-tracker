@@ -15,21 +15,27 @@ import PositionBreakdown from "@/components/PositionBreakdown";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
 import Reveal from "@/components/Reveal";
 import { STAGE_LABELS, extractMeta } from "@/lib/billMeta";
+import { STAGE_ORDER as BASE_STAGE_ORDER } from "@/lib/billStage";
 import { BarChart3 } from "lucide-react";
 
 // Matches the exact stage-pill color language from the bill detail page,
 // so a color here means the same thing it means everywhere else in the
 // app - real visual recognition, not a second, uncoordinated palette.
-const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
-// Tokens, not hex - so these adapt to dark mode and stay identical to the
-// StageFlow ribbon. See "Legislative stage colors" in globals.css.
+// Every stage, in order, colored exactly like the route line and stage
+// pills elsewhere (lib/billStage.ts is the single list of stages).
+const STAGE_ORDER = [...BASE_STAGE_ORDER, "agreed", "vetoed", "failed"];
 const STAGE_COLORS: Record<string, string> = {
-  introduced: "var(--stage-introduced)",
-  committee: "var(--stage-committee)",
-  passed_house: "var(--stage-passed)",
-  passed_senate: "var(--stage-passed)",
-  to_president: "var(--stage-enacted)",
-  enacted: "var(--stage-enacted)",
+  introduced: "var(--grey-dot)",
+  committee: "var(--amber-dot)",
+  reported: "var(--amber)",
+  passed_house: "var(--blue)",
+  passed_senate: "var(--blue)",
+  passed_both: "var(--blue-ink)",
+  to_president: "var(--violet)",
+  enacted: "var(--mint)",
+  agreed: "var(--mint)",
+  vetoed: "var(--red)",
+  failed: "var(--red)",
 };
 
 type Row = {
@@ -123,7 +129,7 @@ export default function StatisticsPage() {
   const avgCosponsors = billsWithCosponsorData > 0 ? Math.round(totalCosponsors / billsWithCosponsorData) : 0;
   const activeCount = totalBills - enactedCount;
 
-  const donutData = STAGE_ORDER.map((stage) => ({
+  const donutData = STAGE_ORDER.filter((stage) => (stageCounts[stage] ?? 0) > 0 || BASE_STAGE_ORDER.includes(stage as any)).map((stage) => ({
     label: STAGE_LABELS[stage] ?? stage,
     value: stageCounts[stage] ?? 0,
     color: STAGE_COLORS[stage],
@@ -133,13 +139,13 @@ export default function StatisticsPage() {
     .slice(0, 8)
     .map(([label, value]) => ({ label, value }));
   const topPolicyArea = policyAreaData[0];
+  const scatterStages = STAGE_ORDER.filter((stage) => BASE_STAGE_ORDER.includes(stage as any) || (stageCounts[stage] ?? 0) > 0);
 
   return (
     <div className="container-wide">
       <div className="page-header">
         <div>
-          <span className="page-eyebrow">Portfolio</span>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Statistics</h1>
+          <h1>Statistics</h1>
           <p className="muted" style={{ marginTop: 4 }}>A portfolio view across everything tracked.</p>
         </div>
         {hasTeam && (
@@ -159,7 +165,7 @@ export default function StatisticsPage() {
           <div className="empty-cta-icon"><BarChart3 size={22} strokeWidth={1.5} /></div>
           <h2 className="section-title" style={{ marginBottom: 6 }}>Nothing to summarise yet</h2>
           <p className="muted" style={{ margin: "0 0 16px" }}>Statistics fill in automatically as your team tracks bills — sponsor party, stage progress, contested positions.</p>
-          <Link href="/dashboard"><button className="primary">Track your first bill →</button></Link>
+          <Link href="/dashboard" className="btn btn-primary">Track your first bill</Link>
         </div>
       ) : (
         <>
@@ -215,12 +221,12 @@ export default function StatisticsPage() {
               early, spread across the pipeline, or piled up near law. */}
           <Reveal delay={70}>
             <div className="card" style={{ marginTop: 16 }}>
-              <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Where your bills stand</h2>
+              <h2 className="card-title">Where your bills stand</h2>
               <p className="settings-desc">Every tracked bill, plotted along its legislative journey.</p>
               <div className="portfolio-scatter">
                 <div className="portfolio-scatter-line" />
                 <div className="portfolio-scatter-stages">
-                  {STAGE_ORDER.map((stage) => (
+                  {scatterStages.map((stage) => (
                     <div key={stage} className="portfolio-scatter-stage">
                       <div className="portfolio-scatter-dots">
                         {(stageBills[stage] ?? []).map((b) => (
@@ -238,7 +244,7 @@ export default function StatisticsPage() {
           <Reveal delay={100}>
             <div className="stats-bento">
               <div className="stats-bento-cell stats-bento-donut">
-                <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 12 }}>Bills by stage</h2>
+                <h2 className="card-title">Bills by stage</h2>
                 <DonutChart data={donutData} />
               </div>
               <div className="stats-bento-cell stats-bento-position">

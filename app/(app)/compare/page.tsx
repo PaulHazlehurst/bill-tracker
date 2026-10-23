@@ -8,7 +8,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Spinner from "@/components/Spinner";
 import PartyBreakdownChart from "@/components/PartyBreakdownChart";
-import { STAGE_LABELS, extractMeta } from "@/lib/billMeta";
+import { STAGE_LABELS, extractMeta, citationFor, publicBillUrl, formatDate } from "@/lib/billMeta";
+import RouteLine, { StagePill } from "@/components/ui/RouteLine";
 
 type CompareBill = {
   id: string;
@@ -78,11 +79,10 @@ export default function ComparePage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
-          <span className="page-eyebrow">Side by side</span>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Compare bills</h1>
-          <p className="muted" style={{ marginTop: 4 }}>Side by side, at a glance.</p>
+          <h1>Compare bills</h1>
+          <p>Two to four bills side by side: where each stands, who sponsors it, and where you stand.</p>
         </div>
-        <Link href="/dashboard"><button className="ghost">← Back to your bills</button></Link>
+        <Link href="/dashboard" className="btn btn-ghost">Back to my bills</Link>
       </div>
 
       {loading ? (
@@ -94,9 +94,9 @@ export default function ComparePage() {
         <div className="empty-cta">
           <h2 className="section-title" style={{ marginBottom: 8 }}>Pick bills to compare</h2>
           <p className="muted" style={{ margin: "0 0 16px" }}>
-            Open your dashboard, tick 2–4 bills, and choose <strong style={{ color: "var(--text)" }}>Compare selected</strong>. This page then shows them side by side — sponsor, stage, cosponsors, your team's positions.
+            On My bills, tick the boxes next to 2 to 4 bills and choose <strong>Compare</strong> in the bar that appears.
           </p>
-          <Link href="/dashboard"><button className="primary">Go to your bills →</button></Link>
+          <Link href="/dashboard" className="btn btn-primary">Go to your bills</Link>
         </div>
       ) : (
         <div className="compare-grid">
@@ -108,44 +108,26 @@ export default function ComparePage() {
 
             return (
               <div key={bill.id} className="card compare-column">
+                <div className="compare-top">
+                  <span className="cite">{citationFor(bill.id)}</span>
+                  <StagePill stage={bill.status_stage} />
+                </div>
                 <Link href={`/bill/${bill.id}`} className="compare-title">{bill.title}</Link>
+                <div className="compare-route"><RouteLine stage={bill.status_stage} billType={bill.id.split("-")[0]} /></div>
 
-                <div className="compare-row">
-                  <span className="muted">Stage</span>
-                  <span className={`pill pill-${bill.status_stage}`}>{STAGE_LABELS[bill.status_stage] ?? bill.status_stage}</span>
-                </div>
-                <div className="progress-track" style={{ margin: "6px 0 10px" }}>
-                  <div className="progress-fill" style={{ width: `${bill.progress_pct}%` }} />
-                </div>
+                <dl className="compare-rows">
+                  <div className="compare-row"><dt>Your position</dt><dd><span className={`pos-tag pos-${position}`}>{POSITION_LABELS[position]}</span></dd></div>
+                  <div className="compare-row"><dt>Sponsor</dt><dd>{meta?.sponsorName ?? partyLabel}</dd></div>
+                  {meta?.introducedDate && <div className="compare-row"><dt>Introduced</dt><dd>{meta.introducedDate}</dd></div>}
+                  {meta && typeof meta.cosponsorCount === "number" && <div className="compare-row"><dt>Cosponsors</dt><dd>{meta.cosponsorCount}</dd></div>}
+                  {meta?.policyArea && <div className="compare-row"><dt>Policy area</dt><dd>{meta.policyArea}</dd></div>}
+                  {bill.raw_snapshot?.latestAction?.text && (
+                    <div className="compare-row compare-row-stack"><dt>Latest action{bill.raw_snapshot.latestAction.actionDate ? `, ${formatDate(bill.raw_snapshot.latestAction.actionDate)}` : ""}</dt><dd>{bill.raw_snapshot.latestAction.text}</dd></div>
+                  )}
+                  {meta && meta.cboCostEstimates.length > 0 && <div className="compare-row"><dt>CBO estimate</dt><dd>Published</dd></div>}
+                </dl>
 
-                <div className="compare-row">
-                  <span className="muted">Your position</span>
-                  <span className={`position-select position-${position}`} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 6, fontSize: '0.75rem', cursor: "default" }}>
-                    {POSITION_LABELS[position]}
-                  </span>
-                </div>
-                <div className="compare-row">
-                  <span className="muted">Sponsor party</span>
-                  <span>{partyLabel}</span>
-                </div>
-                {meta && typeof meta.cosponsorCount === "number" && (
-                  <div className="compare-row">
-                    <span className="muted">Cosponsors</span>
-                    <span>{meta.cosponsorCount}</span>
-                  </div>
-                )}
-                {meta?.policyArea && (
-                  <div className="compare-row">
-                    <span className="muted">Policy area</span>
-                    <span>{meta.policyArea}</span>
-                  </div>
-                )}
-
-                {bill.congress_url && (
-                  <a href={bill.congress_url} target="_blank" rel="noreferrer" className="external-link-btn" style={{ marginTop: 12 }}>
-                    View on congress.gov
-                  </a>
-                )}
+                <a href={publicBillUrl(bill.id)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm compare-link">View on congress.gov</a>
               </div>
             );
           })}

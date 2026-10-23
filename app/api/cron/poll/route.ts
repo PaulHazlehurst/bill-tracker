@@ -1,219 +1,117 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getBill, inferStage, progressForStage } from "@/lib/congress-api";
 import { mapLimit, deadline, chunk } from "@/lib/batch";
+import { computeRefresh, insertEventsSafe, writeBillRows, nextPollAt, REFRESH_COLUMNS, type StoredBill, type NewEvent } from "@/lib/billRefresh";
 
-// Give this function room to work. Without an explicit value Vercel applies
-// its short default (10s), which this job blew through every single run -
-// meaning it was being killed partway through, and anything scheduled after
-// the polling loop never executed at all. 60s is the Hobby-plan ceiling.
+// 60s is the Hobby-plan ceiling. Without an explicit value Vercel applies a
+// short default and kills the job partway through.
 export const maxDuration = 60;
 
-// Stop cleanly a little before the platform's limit, so the run always ends
-// on a clean write rather than being cut off mid-request.
-const BUDGET_MS = 45_000;
-
-// How many bills to fetch from congress.gov at once. The whole job used to
-// be strictly sequential - one bill, wait, next bill - so 200 bills meant
-// 200 round-trips back to back. Eight at a time turns ~80s of waiting into
-// ~8s while staying far below congress.gov's 5,000/hr allowance.
+// Stop a little before the platform limit so a run always ends on a clean write.
+const BUDGET_MS = 48_000;
 const CONCURRENCY = 8;
-
-// How many bills to fetch before pausing to write results to the database.
-// Results are written in bulk per chunk instead of one UPDATE per bill.
 const WRITE_CHUNK = 40;
-
-// Poll interval per priority tier, in minutes.
-const TIER_INTERVAL_MIN: Record<string, number> = {
-  hot: 30,
-  normal: 120,
-  dormant: 1440, // once a day
-};
-
-const TERMINAL_STAGES = new Set(["enacted", "vetoed", "failed"]);
-
-type DueBill = {
-  id: string;
-  congress: number;
-  bill_type: string;
-  bill_number: number;
-  title: string;
-  latest_action: string | null;
-  status_stage: string;
-  poll_priority: string | null;
-  raw_snapshot: any;
-};
+// Tracked bills are checked every run. Bills nobody tracks (discovery
+// suggestions, bills someone only opened) are refreshed weekly at most and
+// capped per run, so they can never crowd out the bills people care about -
+// previously every suggestion ever made was polled alongside tracked bills
+// in the same 200-bill window.
+const MAX_UNTRACKED_PER_RUN = 30;
+const TRACKED_RECHECK_HOURS = 18;
 
 export async function GET(req: NextRequest) {
-  // Reject anyone who isn't Vercel Cron. Without this, hitting this URL
-  // directly would let a stranger trigger congress.gov calls on your key.
-  // Vercel's own Cron scheduler sends this header automatically - that's
-  // the normal path. The ?secret= query param is only here so you can also
-  // trigger this by pasting a URL into your browser's address bar, for
-  // manual testing without a terminal.
+  // Vercel Cron sends the Authorization header. ?secret= exists so the job
+  // can also be triggered by pasting a URL into a browser for testing.
   const auth = req.headers.get("authorization");
   const querySecret = req.nextUrl.searchParams.get("secret");
-  const authorized =
-    auth === `Bearer ${process.env.CRON_SECRET}` || querySecret === process.env.CRON_SECRET;
-  if (!authorized) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const authorized = !!process.env.CRON_SECRET && (auth === `Bearer ${process.env.CRON_SECRET}` || querySecret === process.env.CRON_SECRET);
+  if (!authorized) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const clock = deadline(BUDGET_MS);
-  const supabase = createAdminClient();
+  const admin = createAdminClient();
 
-  // Only the columns this job actually reads. It used to select("*"), which
-  // dragged every large cached JSONB column (summaries, hearing details,
-  // news, text versions…) across the wire for 200 bills on every run, none
-  // of which polling looks at. raw_snapshot IS needed - the cosponsor count
-  // is compared against it.
-  const { data: dueBills, error } = await supabase
-    .from("bills")
-    .select("id, congress, bill_type, bill_number, title, latest_action, status_stage, poll_priority, raw_snapshot")
-    .lte("next_poll_at", new Date().toISOString())
-    .order("next_poll_at", { ascending: true }) // oldest-due first, so nothing starves
-    .limit(200);
-
-  if (error) {
-    console.error("failed to load due bills", error);
-    return NextResponse.json({ error: "db error" }, { status: 500 });
+  // 1. Which bills does anyone actually track?
+  const { data: trackedRows, error: trackedError } = await admin.from("tracked_bills").select("bill_id");
+  if (trackedError) {
+    console.error("poll: failed to load tracked bills", trackedError);
+    return NextResponse.json({ error: "db error", detail: trackedError.message }, { status: 500 });
   }
+  const trackedIds = Array.from(new Set((trackedRows ?? []).map((r: any) => r.bill_id as string)));
+  const trackedSet = new Set(trackedIds);
 
-  const bills = (dueBills as DueBill[]) ?? [];
+  // 2. Tracked bills not checked in the last ~day, least-recently-checked first.
+  const cutoff = new Date(Date.now() - TRACKED_RECHECK_HOURS * 3_600_000).toISOString();
+  const trackedDue: (StoredBill & { last_polled_at: string | null })[] = [];
+  for (const ids of chunk(trackedIds, 100)) {
+    const { data, error } = await admin
+      .from("bills")
+      .select(`${REFRESH_COLUMNS}, last_polled_at`)
+      .in("id", ids)
+      .or(`last_polled_at.is.null,last_polled_at.lt."${cutoff}"`);
+    if (error) console.error("poll: tracked bill load failed", error);
+    trackedDue.push(...((data as any[]) ?? []));
+  }
+  trackedDue.sort((a, b) => String(a.last_polled_at ?? "").localeCompare(String(b.last_polled_at ?? "")));
+
+  // 3. A few untracked bills whose weekly refresh is due.
+  const { data: untrackedData } = await admin
+    .from("bills")
+    .select(REFRESH_COLUMNS)
+    .lte("next_poll_at", new Date().toISOString())
+    .order("next_poll_at", { ascending: true })
+    .limit(MAX_UNTRACKED_PER_RUN * 3);
+  const untrackedDue = ((untrackedData as StoredBill[]) ?? []).filter((b) => !trackedSet.has(b.id)).slice(0, MAX_UNTRACKED_PER_RUN);
+
+  const queue: StoredBill[] = [...trackedDue, ...untrackedDue];
   let polled = 0;
   let changed = 0;
   let failed = 0;
+  let eventsWritten = 0;
   let timedOut = false;
+  const errors: string[] = [];
 
-  for (const group of chunk(bills, WRITE_CHUNK)) {
+  for (const group of chunk(queue, WRITE_CHUNK)) {
     if (clock.expired()) {
       timedOut = true;
       break;
     }
+    const outcomes = await mapLimit(group, CONCURRENCY, (bill) => computeRefresh(bill));
 
-    // ---- Phase 1: fetch this chunk from congress.gov, concurrently ----
-    const fetched = await mapLimit(group, CONCURRENCY, async (bill) => {
-      try {
-        const raw = await getBill(bill.congress, bill.bill_type, bill.bill_number);
-        return { bill, b: raw.bill as any, ok: true as const };
-      } catch (err) {
-        console.error(`poll failed for ${bill.id}`, err);
-        return { bill, b: null, ok: false as const };
-      }
-    });
-
-    // ---- Phase 2: turn those into rows, then write them in bulk ----
-    const now = new Date().toISOString();
-    const billRows: any[] = [];
-    const events: any[] = [];
-
-    for (const r of fetched) {
-      if (!r.ok || !r.b) {
+    const rows: Record<string, unknown>[] = [];
+    const events: NewEvent[] = [];
+    for (const o of outcomes) {
+      if (!o.ok || !o.row) {
         failed++;
+        if (errors.length < 5 && o.error) errors.push(`${o.id}: ${o.error}`);
         continue;
       }
       polled++;
-      const { bill, b } = r;
-
-      const latestActionText = b.latestAction?.text ?? "";
-      const stage = inferStage(latestActionText);
-      const progress = progressForStage(stage);
-      const isDifferent = latestActionText !== bill.latest_action || stage !== bill.status_stage;
-
-      // Cosponsor count is already sitting in this same response - we don't
-      // need a second API call to compare it against last time.
-      const oldCosponsors = bill.raw_snapshot?.cosponsors?.count ?? null;
-      const newCosponsors = b.cosponsors?.count ?? null;
-      const cosponsorsChanged =
-        oldCosponsors !== null && newCosponsors !== null && newCosponsors !== oldCosponsors;
-
-      const nextTier = TERMINAL_STAGES.has(stage) ? "dormant" : bill.poll_priority || "normal";
-      const nextPollAt = new Date(Date.now() + TIER_INTERVAL_MIN[nextTier] * 60_000).toISOString();
-
-      // Upsert rather than update, so the whole chunk is one statement.
-      // The NOT NULL columns (congress, bill_type, bill_number, title) are
-      // included deliberately: the row always already exists so this takes
-      // the ON CONFLICT UPDATE path, but including them keeps the statement
-      // valid either way.
-      billRows.push({
-        id: bill.id,
-        congress: bill.congress,
-        bill_type: bill.bill_type,
-        bill_number: bill.bill_number,
-        title: b.title ?? bill.title,
-        latest_action: latestActionText,
-        latest_action_date: b.latestAction?.actionDate ?? null,
-        status_stage: stage,
-        progress_pct: progress,
-        raw_snapshot: b,
-        last_polled_at: now,
-        next_poll_at: nextPollAt,
-        poll_priority: nextTier,
-      });
-
-      if (isDifferent) {
-        changed++;
-        events.push({
-          bill_id: bill.id,
-          event_type: stage !== bill.status_stage ? "status_change" : "new_action",
-          summary: latestActionText || "Status updated",
-        });
-      }
-
-      if (cosponsorsChanged) {
-        changed++;
-        const delta = newCosponsors - oldCosponsors;
-        events.push({
-          bill_id: bill.id,
-          event_type: "cosponsor_change",
-          summary: `Cosponsor count ${delta > 0 ? "increased" : "decreased"} from ${oldCosponsors} to ${newCosponsors}`,
-          cosponsor_delta: delta,
-        });
-      }
+      if (o.changed) changed++;
+      const tracked = trackedSet.has(o.id);
+      rows.push({ ...o.row, next_poll_at: nextPollAt(String(o.row.status_stage), tracked), poll_priority: tracked ? "normal" : "dormant" });
+      // Events for bills nobody tracks aren't news to anyone - skip them.
+      if (tracked) events.push(...o.events);
     }
 
-    if (billRows.length > 0) {
-      const { error: upsertError } = await supabase
-        .from("bills")
-        .upsert(billRows, { onConflict: "id" });
-
-      if (upsertError) {
-        // Safety net. Polling is the single most important thing this app
-        // does, so if the bulk write fails for any reason (an unexpected
-        // constraint, a column added later that this payload doesn't know
-        // about), fall back to writing the rows one at a time rather than
-        // silently losing a whole chunk of updates. Slower, but correct.
-        console.error("bulk bill upsert failed, falling back to per-row updates", upsertError);
-        await mapLimit(billRows, 4, async (row) => {
-          const { id, ...fields } = row;
-          const { error: rowError } = await supabase.from("bills").update(fields).eq("id", id);
-          if (rowError) console.error(`row update failed for ${id}`, rowError);
-        });
-      }
-    }
-    if (events.length > 0) {
-      const { error: eventError } = await supabase.from("bill_events").insert(events);
-      if (eventError) console.error("bulk event insert failed", eventError);
-    }
+    await writeBillRows(admin, rows);
+    const { error: eventError } = await insertEventsSafe(admin, events);
+    if (eventError) console.error("poll: event insert failed", eventError);
+    else eventsWritten += events.length;
   }
 
-  // NOTE: topic discovery used to run here, at the end of this same
-  // function. That was the bug - polling consumed the entire time budget
-  // first, so discovery was reached late or not at all, which is why
-  // suggestions only ever appeared when someone pressed "Check now"
-  // manually. It now runs in the notify cron (see app/api/cron/notify),
-  // which is cheap since its queries were batched, and it gets its own
-  // time budget there instead of competing with polling for this one.
-
+  // Topic discovery runs in the notify cron, which has its own time budget.
   return NextResponse.json({
+    tracked: trackedIds.length,
+    trackedDue: trackedDue.length,
+    untrackedDue: untrackedDue.length,
     polled,
     changed,
+    eventsWritten,
     failed,
-    due: bills.length,
-    // Bills that were due but didn't fit in this run stay due and are picked
-    // up by the next one - nothing is lost, it just takes another cycle.
-    deferred: timedOut ? bills.length - polled - failed : 0,
+    // Anything that didn't fit stays due and is picked up first next run.
+    deferred: queue.length - polled - failed,
     timedOut,
+    errors,
     ms: clock.elapsedMs(),
   });
 }

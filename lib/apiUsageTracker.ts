@@ -26,8 +26,13 @@ export async function trackedFetch(url: string, options: RequestInit, service: s
     // page only ever needs the last 24 hours, so nothing older than 48 is
     // worth keeping. Cheap enough to run on every call given the modest
     // volume this app generates.
-    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-    await admin.from("api_call_log").delete().lt("called_at", cutoff);
+    // Only ~1 call in 25 runs the cleanup: it used to run on EVERY call,
+    // adding a table-wide delete to each of the hundreds of requests a
+    // single poll makes.
+    if (Math.random() < 0.04) {
+      const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      await admin.from("api_call_log").delete().lt("called_at", cutoff);
+    }
 
     const limit = res.headers.get("x-ratelimit-limit");
     const remaining = res.headers.get("x-ratelimit-remaining");

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { searchNews } from "@/lib/newsFeed-api";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000; // 6 hours - news moves faster than legislative data
 
 // GET ?billId=&title=

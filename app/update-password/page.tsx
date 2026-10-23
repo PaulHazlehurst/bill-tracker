@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AuthShell from "@/components/auth/AuthShell";
 
 // Reached by clicking the link in a password-reset email. Supabase's
 // browser client automatically picks up the recovery session from the URL
@@ -45,28 +46,26 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 380 }}>
-      <h1 style={{ fontSize: '1.375rem', fontWeight: 500 }}>Set a new password</h1>
+    <AuthShell title="Set a new password">
       {done ? (
-        <div className="card">
-          <p>Password updated. Taking you to your dashboard…</p>
-        </div>
+        <p className="notice">Password updated. Taking you to your bills…</p>
       ) : (
-        <form onSubmit={handleSubmit} className="card">
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="field">
             <label htmlFor="password">New password</label>
-            <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input id="password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <span className="field-hint">At least 8 characters.</span>
           </div>
           <div className="field">
-            <label htmlFor="confirm">Confirm new password</label>
-            <input id="confirm" type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            <label htmlFor="confirm">Type it again</label>
+            <input id="confirm" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
           </div>
           {error && <p className="error-text">{error}</p>}
-          <button className="primary" type="submit" disabled={loading}>
+          <button className="btn btn-primary btn-lg auth-submit" type="submit" disabled={loading}>
             {loading ? "Saving…" : "Save new password"}
           </button>
         </form>
       )}
-    </div>
+    </AuthShell>
   );
 }

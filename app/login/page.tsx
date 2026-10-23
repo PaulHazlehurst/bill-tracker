@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, setRememberMe } from "@/lib/supabase/client";
+import AuthShell from "@/components/auth/AuthShell";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,35 +33,39 @@ export default function LoginPage() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
-      setError(signInError.message);
+      setError(signInError.message === "Invalid login credentials" ? "That email and password don't match. Check them and try again." : signInError.message);
       return;
     }
     router.push("/dashboard");
   }
 
   return (
-    <div className="container" style={{ maxWidth: 380 }}>
-      <h1 style={{ fontSize: '1.375rem', fontWeight: 500 }}>Log in</h1>
-      <form onSubmit={handleSubmit} className="card">
+    <AuthShell
+      title="Log in"
+      subtitle="Welcome back. Your bills were checked this morning."
+      footer={<>New here? <Link href="/signup">Create an account</Link></>}
+    >
+      <form onSubmit={handleSubmit} className="auth-form">
         <div className="field">
           <label htmlFor="email">Email</label>
-          <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="password">Password</label>
-          <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div className="field-row">
+            <label htmlFor="password">Password</label>
+            <Link href="/reset-password" className="field-link">Forgot it?</Link>
+          </div>
+          <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: '0.8125rem', marginBottom: 16 }}>
+        <label className="check-row">
           <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           Keep me logged in on this device
         </label>
         {error && <p className="error-text">{error}</p>}
-        <button className="primary" type="submit" disabled={loading}>
+        <button className="btn btn-primary btn-lg auth-submit" type="submit" disabled={loading}>
           {loading ? "Logging in…" : "Log in"}
         </button>
       </form>
-      <p className="muted">Need an account? <Link href="/signup">Sign up</Link></p>
-      <p className="muted"><Link href="/reset-password">Forgot your password?</Link></p>
-    </div>
+    </AuthShell>
   );
 }

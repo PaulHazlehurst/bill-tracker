@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { STAGE_LABELS, formatDate, parseVoteInfo } from "@/lib/billMeta";
+import { formatDate, parseVoteInfo, citationFor, publicBillUrl, explainAction } from "@/lib/billMeta";
+import RouteLine, { StagePill } from "@/components/ui/RouteLine";
+import { BrandMark } from "@/components/Sidebar";
 import ExpandableText from "@/components/ExpandableText";
-import { Check, Landmark } from "lucide-react";
 
-const STAGE_ORDER = ["introduced", "committee", "passed_house", "passed_senate", "to_president", "enacted"];
 
 type PublicBill = {
   id: string;
@@ -47,100 +47,69 @@ export default function PublicBillSharePage() {
       .finally(() => setLoading(false));
   }, [billId]);
 
-  const stageIndex = bill ? STAGE_ORDER.indexOf(bill.status_stage) : -1;
   const vote = bill?.latest_action ? parseVoteInfo(bill.latest_action) : null;
   const sponsor = bill?.raw_snapshot?.sponsors?.[0];
+  const plain = bill ? explainAction(bill.latest_action, bill.bill_type) : null;
 
   return (
-    <div>
-      <nav className="nav">
-        <Link href="/" className="brand" style={{ textDecoration: "none" }}>Bill Tracker</Link>
-        <div className="nav-right">
-          <Link href="/signup"><button className="primary">Track bills like this</button></Link>
-        </div>
+    <div className="share">
+      <nav className="lnav">
+        <Link href="/" className="auth-brand"><BrandMark size={28} /><span>Bill Tracker</span></Link>
+        <Link href="/signup" className="btn btn-primary">Track bills like this</Link>
       </nav>
 
-      <div className="container" style={{ maxWidth: 640, paddingTop: 40 }}>
+      <main className="page share-page">
         {loading ? (
-          <p className="muted">Loading…</p>
+          <div className="skel skel-title" />
         ) : error || !bill ? (
-          <p className="error-text">{error}</p>
+          <div className="empty"><p className="empty-title">This bill couldn't be found</p><p className="empty-body">The link may be incomplete.</p></div>
         ) : (
           <>
-            <p className="muted" style={{ fontSize: '0.8125rem', marginBottom: 4 }}>
-              Shared bill profile · {bill.bill_type.toUpperCase()} {bill.bill_number} · {bill.congress}th Congress
-            </p>
-            <h1 style={{ fontSize: '1.625rem', fontWeight: 500, lineHeight: 1.3, marginBottom: 16 }}>{bill.title}</h1>
-
-            <div className="card">
-              <div className="journey-track">
-                <div className="journey-line">
-                  <div
-                    className="journey-line-fill"
-                    style={{ width: `${(Math.max(stageIndex, 0) / (STAGE_ORDER.length - 1)) * 100}%` }}
-                  />
-                </div>
-                <div className="journey-steps">
-                  {STAGE_ORDER.map((s, i) => {
-                    const done = i < stageIndex;
-                    const current = i === stageIndex;
-                    return (
-                      <div key={s} className="journey-step">
-                        <div className={`journey-circle ${done ? "journey-done" : current ? "journey-current" : "journey-future"}`}>
-                          {done ? <Check size={12} /> : i + 1}
-                        </div>
-                        <div className={`journey-label ${i <= stageIndex ? "journey-label-active" : ""}`}>{STAGE_LABELS[s]}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="bill-hero-meta">
+              <span className="cite cite-lg">{citationFor(bill.bill_type, bill.bill_number)}</span>
+              <StagePill stage={bill.status_stage} />
+              <span className="meta-item">{bill.congress}th Congress</span>
             </div>
+            <h1 className="bill-title">{bill.title}</h1>
+            {sponsor?.fullName && <p className="bill-sponsor">Sponsored by <strong>{sponsor.fullName}</strong></p>}
+
+            <section className="journey" style={{ marginTop: 24 }}>
+              <RouteLine stage={bill.status_stage} billType={bill.bill_type} size="lg" animate />
+            </section>
 
             {bill.latest_action && (
-              <div className="card">
-                <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Latest action</h2>
-                <p style={{ fontSize: '0.875rem' }}>{bill.latest_action}</p>
-                {bill.latest_action_date && <p className="muted" style={{ fontSize: '0.75rem' }}>{formatDate(bill.latest_action_date)}</p>}
-                {vote && (
-                  <div className="vote-badge" style={{ marginTop: 8 }}>
-                    <span className="yea">{vote.yea} Yea</span><span>·</span><span className="nay">{vote.nay} Nay</span>
-                  </div>
-                )}
-              </div>
+              <section className="latest">
+                <div className="latest-head">
+                  <h2 className="latest-label">Latest action</h2>
+                  {bill.latest_action_date && <time className="latest-date">{formatDate(bill.latest_action_date)}</time>}
+                </div>
+                <p className="latest-text">{bill.latest_action}</p>
+                {vote && <p className="vote"><span className="vote-yea">{vote.yea} yea</span><span className="vote-nay">{vote.nay} nay</span></p>}
+                {plain && <p className="explain"><span><strong>What this means:</strong> {plain}</span></p>}
+              </section>
             )}
 
             {bill.summaries?.[0]?.text && (
-              <div className="card">
-                <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Summary</h2>
-                <p className="settings-desc">{bill.summaries[0].actionDesc} · official, from the Congressional Research Service</p>
-                <ExpandableText text={bill.summaries[0].text} className="official-text" />
-              </div>
+              <section className="card summary">
+                <div className="card-head">
+                  <h2 className="card-title">What the bill does</h2>
+                  <span className="source-tag">Official CRS summary</span>
+                </div>
+                <p className="card-sub">{bill.summaries[0].actionDesc}</p>
+                <ExpandableText text={bill.summaries[0].text} className="official-text" limit={900} />
+              </section>
             )}
 
-            {sponsor?.fullName && (
-              <div className="card">
-                <h2 style={{ fontSize: '0.9375rem', fontWeight: 500, marginBottom: 4 }}>Sponsor</h2>
-                <p style={{ fontSize: '0.875rem' }}>{sponsor.fullName}{sponsor.party ? ` (${sponsor.party}-${sponsor.state ?? ""})` : ""}</p>
-              </div>
-            )}
+            <a href={publicBillUrl(bill.id)} target="_blank" rel="noreferrer" className="btn btn-secondary">Read the full bill on congress.gov</a>
 
-            {bill.congress_url && (
-              <a href={bill.congress_url} target="_blank" rel="noreferrer" className="external-link-btn">
-                View full text on congress.gov
-              </a>
-            )}
-
-            <div className="card" style={{ marginTop: 24, textAlign: "center" }}>
-              <Landmark size={20} style={{ color: "var(--accent)", marginBottom: 8 }} />
-              <p className="muted" style={{ fontSize: '0.8125rem', margin: 0 }}>
-                Want to track this bill yourself, get notified of changes, and see votes, hearings, and lobbying activity?
-              </p>
-              <Link href="/signup"><button className="primary" style={{ marginTop: 10 }}>Sign up free</button></Link>
-            </div>
+            <section className="share-cta">
+              <h2>Follow bills like this one</h2>
+              <p>Bill Tracker checks congress.gov every morning and tells you, in plain English, when the bills you care about move.</p>
+              <Link href="/signup" className="btn btn-primary">Create a free account</Link>
+            </section>
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,63 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { citationFor, publicBillUrl } from "@/lib/billMeta";
+import { STAGE_LABELS } from "@/lib/billStage";
 
-// GET /api/export?scope=personal|team
+// GET ?scope=personal|team - CSV of tracked bills. RLS decides what "team"
+// can include (your bills plus your current teammates').
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const scope = req.nextUrl.searchParams.get("scope") ?? "personal";
+  const scope = req.nextUrl.searchParams.get("scope") === "team" ? "team" : "personal";
 
   let query = supabase
     .from("tracked_bills")
-    .select("bill_id, notify_email, notify_sms, position, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url)");
-
-  if (scope === "team") {
-    // No explicit filter needed - Row Level Security already restricts this
-    // to "my own rows, plus anyone whose CURRENT organization matches mine"
-    // (see schema.sql), which is exactly what a team export should include.
-  } else {
-    query = query.eq("user_id", user.id);
-  }
+    .select("bill_id, user_id, position, notify_email, notify_sms, bills(title, status_stage, latest_action, latest_action_date)")
+    .order("created_at", { ascending: false });
+  if (scope === "personal") query = query.eq("user_id", user.id);
 
   const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: "export failed" }, { status: 500 });
+  if (error) return NextResponse.json({ error: "export failed" }, { status: 500 });
+
+  const emails = new Map<string, string>();
+  if (scope === "team") {
+    const ids = Array.from(new Set((data ?? []).map((r: any) => r.user_id)));
+    if (ids.length) {
+      const { data: profiles } = await supabase.from("profiles").select("id, email").in("id", ids);
+      for (const p of profiles ?? []) emails.set(p.id, p.email);
+    }
   }
 
-  const rows = [
-    ["Bill ID", "Title", "Position", "Stage", "Progress %", "Latest Action", "Date", "Link"],
-    ...(data ?? []).map((row) => {
-      const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
-      return [
-        row.bill_id,
-        bill?.title ?? "",
-        (row as any).position ?? "none",
-        bill?.status_stage ?? "",
-        String(bill?.progress_pct ?? ""),
-        bill?.latest_action ?? "",
-        bill?.latest_action_date ?? "",
-        bill?.congress_url ?? "",
-      ];
-    }),
-  ];
+  const header = ["Citation", "Title", "Stage", "Position", "Latest action", "Latest action date", ...(scope === "team" ? ["Tracked by"] : []), "Link"];
+  const rows = (data ?? []).map((row: any) => {
+    const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
+    return [
+      citationFor(row.bill_id),
+      bill?.title ?? "",
+      STAGE_LABELS[bill?.status_stage] ?? bill?.status_stage ?? "",
+      row.position ?? "none",
+      bill?.latest_action ?? "",
+      bill?.latest_action_date ?? "",
+      ...(scope === "team" ? [emails.get(row.user_id) ?? ""] : []),
+      publicBillUrl(row.bill_id),
+    ];
+  });
 
-  const csv = rows.map((r) => r.map(escapeCsv).join(",")).join("\n");
-
-  return new NextResponse(csv, {
+  const csv = [header, ...rows].map((r) => r.map(escapeCsv).join(",")).join("\r\n");
+  const date = new Date().toISOString().slice(0, 10);
+  return new NextResponse("﻿" + csv, {
     headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="tracked-bills-${scope}.csv"`,
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="bills-${scope}-${date}.csv"`,
     },
   });
 }
 
-function escapeCsv(value: string) {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
+function escapeCsv(raw: string) {
+  // A cell starting with = + - or @ is treated as a formula by Excel and
+  // Sheets; prefix it so text from congress.gov can never execute.
+  const value = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }

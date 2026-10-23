@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, TrendingUp, TrendingDown, Activity, Zap, AlertTriangle, ChevronDown, ChevronRight, FileText, Star, GitBranch } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
+import { ADVANCED_STAGES, QUIET_DAYS } from "@/lib/billStage";
 import Spinner from "@/components/Spinner";
 
 type ImpactBill = {
@@ -47,7 +48,7 @@ const POSITION_LABELS: Record<string, string> = {
 
 function healthGrade(score: number): { label: string; color: string } {
   if (score >= 70) return { label: "Strong", color: "var(--pos-support)" };
-  if (score >= 40) return { label: "Moderate", color: "var(--accent-gold)" };
+  if (score >= 40) return { label: "Moderate", color: "var(--amber)" };
   return { label: "Needs Attention", color: "var(--pos-oppose)" };
 }
 
@@ -104,7 +105,7 @@ export default function ImpactDashboardPage() {
         <div className="empty-cta-icon"><GitBranch size={22} strokeWidth={1.5} /></div>
         <h2 className="section-title" style={{ marginBottom: 6 }}>No portfolio to analyse yet</h2>
         <p className="muted" style={{ margin: "0 0 16px" }}>Impact shows momentum, stalls, and policy overlap across everything you track. Start tracking a few bills and it fills in on its own.</p>
-        <Link href="/dashboard"><button className="primary">Go to your bills →</button></Link>
+        <Link href="/dashboard" className="btn btn-primary">Go to my bills</Link>
       </div>
     </div>
   );
@@ -113,28 +114,27 @@ export default function ImpactDashboardPage() {
 
   // Split bills by momentum
   const advancing = allBills.filter((b) =>
-    ["passed_house", "passed_senate", "to_president", "enacted"].includes(b.statusStage)
+    ADVANCED_STAGES.has(b.statusStage)
   );
   const stalled = allBills.filter((b) => {
-    if (["passed_house", "passed_senate", "to_president", "enacted"].includes(b.statusStage)) return false;
+    if (ADVANCED_STAGES.has(b.statusStage)) return false;
     const days = daysSince(b.latestActionDate);
-    return days === null || days > 30;
+    return days === null || days > QUIET_DAYS;
   });
   const active = allBills.filter((b) => {
-    if (["passed_house", "passed_senate", "to_president", "enacted"].includes(b.statusStage)) return false;
+    if (ADVANCED_STAGES.has(b.statusStage)) return false;
     const days = daysSince(b.latestActionDate);
-    return days !== null && days <= 30;
+    return days !== null && days <= QUIET_DAYS;
   });
 
   return (
     <div className="container-wide">
-      <Link href="/dashboard" className="briefing-back" style={{ marginBottom: 20, display: "inline-flex" }}>
-        <ArrowLeft size={14} /> Dashboard
-      </Link>
-
-      <span className="page-eyebrow">Portfolio Intelligence</span>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 500, marginBottom: 4 }}>Cross-Bill Impact</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>How your legislative portfolio is performing across policy areas.</p>
+      <div className="page-header">
+        <div>
+          <h1>Impact</h1>
+          <p>How your bills are moving, grouped by policy area, and which ones have stalled.</p>
+        </div>
+      </div>
 
       {/* Health score hero */}
       <div className="impact-health-hero">
@@ -156,7 +156,7 @@ export default function ImpactDashboardPage() {
             </div>
           </div>
           <div className="impact-health-metric">
-            <Activity size={16} style={{ color: "var(--accent-gold)" }} />
+            <Activity size={16} style={{ color: "var(--amber)" }} />
             <div>
               <div className="impact-metric-value">{health.active}</div>
               <div className="impact-metric-label">Active</div>
@@ -272,7 +272,7 @@ export default function ImpactDashboardPage() {
           {active.length > 0 && (
             <div className="impact-momentum-section">
               <h3 className="impact-momentum-title">
-                <Activity size={15} style={{ color: "var(--accent-gold)" }} /> Active ({active.length})
+                <Activity size={15} style={{ color: "var(--amber)" }} /> Active ({active.length})
               </h3>
               {active.map((b) => {
                 const days = daysSince(b.latestActionDate);

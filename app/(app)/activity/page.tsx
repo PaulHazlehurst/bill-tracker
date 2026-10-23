@@ -3,121 +3,191 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import Spinner from "@/components/Spinner";
+import { useSession } from "@/components/SessionProvider";
+import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/EmptyState";
-import { Activity as ActivityIcon, TrendingUp, FileText, Users, Circle } from "lucide-react";
-import { formatDate, timeAgo, EVENT_TYPE_ICONS, parseVoteInfo } from "@/lib/billMeta";
-import { useTicker } from "@/lib/useTicker";
+import { citationFor, formatDate, explainAction, parseVoteInfo, EVENT_TYPE_LABELS } from "@/lib/billMeta";
+import { fetchEvents, eventDate, type BillEventRow } from "@/lib/events";
+import { Activity as ActivityIcon, TrendingUp, FileText, Users, ScrollText, Calculator, BookOpen, Search } from "lucide-react";
 
-const ICONS: Record<string, any> = { "trending-up": TrendingUp, "file-text": FileText, "users": Users };
-
-type ActivityRow = {
-  id: string;
-  bill_id: string;
-  event_type: string;
-  summary: string;
-  occurred_at: string;
-  bills: { title: string } | { title: string }[] | null;
+const ICONS: Record<string, any> = {
+  status_change: TrendingUp, new_action: FileText, cosponsor_change: Users, text_published: ScrollText, cbo_published: Calculator, summary_published: BookOpen,
 };
 
+const FILTERS = [
+  { id: "all", label: "Everything", types: null },
+  { id: "moves", label: "Moved forward", types: ["status_change"] },
+  { id: "actions", label: "Actions", types: ["new_action"] },
+  { id: "docs", label: "Text, CBO & summaries", types: ["text_published", "cbo_published", "summary_published"] },
+  { id: "people", label: "Cosponsors", types: ["cosponsor_change"] },
+] as const;
+
+function dayHeading(iso: string) {
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  const today = new Date();
+  const diff = Math.round((new Date(today.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined });
+}
+
+// Every recorded change to bills you or your team follow, grouped by the day
+// it happened in Congress (not the day our check noticed it).
 export default function ActivityPage() {
   const supabase = createClient();
   const router = useRouter();
-  useTicker();
-  const [rows, setRows] = useState<ActivityRow[]>([]);
+  const { userId, profile, loading: sessionLoading } = useSession();
+  const [rows, setRows] = useState<BillEventRow[]>([]);
+  const [mine, setMine] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [scope, setScope] = useState<"all" | "mine">("all");
+  const [q, setQ] = useState("");
+  const [limit, setLimit] = useState(150);
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!userId) {
+      router.push("/login");
+      return;
+    }
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      // No filter needed here - RLS on tracked_bills already returns exactly
-      // "my own rows, plus anyone whose CURRENT org matches mine" (see
-      // schema.sql). Same fix as the team page: don't re-derive that scoping
-      // with a stale organization_id column, just let RLS do it live.
-      const { data: allTracked } = await supabase.from("tracked_bills").select("bill_id");
-      const billIds = Array.from(new Set((allTracked ?? []).map((r) => r.bill_id)));
-
-      if (billIds.length === 0) {
+      // RLS returns your own tracked bills plus your current team's.
+      const { data: tracked } = await supabase.from("tracked_bills").select("bill_id, user_id");
+      const all = Array.from(new Set((tracked ?? []).map((r) => r.bill_id)));
+      setMine(new Set((tracked ?? []).filter((r) => r.user_id === userId).map((r) => r.bill_id)));
+      if (all.length === 0) {
+        setRows([]);
         setLoading(false);
         return;
       }
-
-      const { data, error: queryError } = await supabase
-        .from("bill_events")
-        .select("id, bill_id, event_type, summary, occurred_at, bills(title)")
-        .in("bill_id", billIds)
-        .order("occurred_at", { ascending: false })
-        .limit(50);
-
-      if (queryError) {
-        console.error("failed to load activity", queryError);
-        setError(queryError.message);
-        setLoading(false);
-        return;
-      }
-
-      setRows((data as any) ?? []);
+      const res = await fetchEvents(supabase, { billIds: all, limit, withTitles: true });
+      setRows(res.rows);
+      setError(res.error);
       setLoading(false);
     })();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionLoading, userId, limit]);
+
+  const visible = useMemo(() => {
+    const types = FILTERS.find((f) => f.id === filter)?.types as readonly string[] | null;
+    const needle = q.trim().toLowerCase();
+    return rows
+      .filter((r) => !types || types.includes(r.event_type))
+      .filter((r) => scope === "all" || mine.has(r.bill_id))
+      .filter((r) => {
+        if (!needle) return true;
+        const b = Array.isArray(r.bills) ? r.bills[0] : r.bills;
+        return `${b?.title ?? ""} ${citationFor(r.bill_id)} ${r.summary}`.toLowerCase().includes(needle);
+      })
+      .sort((a, b) => eventDate(b).localeCompare(eventDate(a)) || b.occurred_at.localeCompare(a.occurred_at));
+  }, [rows, filter, scope, mine, q]);
+
+  const groups = useMemo(() => {
+    const out: { day: string; items: BillEventRow[] }[] = [];
+    for (const r of visible) {
+      const day = eventDate(r).slice(0, 10);
+      const last = out[out.length - 1];
+      if (last && last.day === day) last.items.push(r);
+      else out.push({ day, items: [r] });
+    }
+    return out;
+  }, [visible]);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const f of FILTERS) c[f.id] = f.types ? rows.filter((r) => (f.types as readonly string[]).includes(r.event_type)).length : rows.length;
+    return c;
+  }, [rows]);
 
   return (
-    <div className="container-wide">
-      <div className="page-header">
-        <div>
-          <span className="page-eyebrow">Live feed</span>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 500, margin: 0 }}>Activity</h1>
-          <p className="muted" style={{ marginTop: 4 }}>Every recorded change to a bill you or your team tracks, most recent first.</p>
+    <div className="page">
+      <PageHeader
+        title="Activity"
+        description={`Every change to bills ${profile?.organization_id ? "you and your team follow" : "you follow"}, by the date it happened in Congress.`}
+      />
+
+      <div className="toolbar">
+        <div className="chips" role="group" aria-label="Kind of change">
+          {FILTERS.map((f) => (
+            <button key={f.id} className={`chip${filter === f.id ? " is-on" : ""}`} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id}>
+              {f.label} {counts[f.id] > 0 && <span className="chip-count">{counts[f.id]}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="toolbar-right">
+          {profile?.organization_id && (
+            <div className="seg" role="group" aria-label="Whose bills">
+              <button className={scope === "all" ? "is-on" : ""} onClick={() => setScope("all")}>Team</button>
+              <button className={scope === "mine" ? "is-on" : ""} onClick={() => setScope("mine")}>Mine</button>
+            </div>
+          )}
+          <label className="search-field">
+            <Search size={15} aria-hidden="true" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter activity" aria-label="Filter activity" />
+          </label>
         </div>
       </div>
 
       {loading ? (
-        <Spinner label="Loading activity…" />
+        <div className="list-skel">{[0, 1, 2, 3].map((i) => <div key={i} className="skel skel-billrow" />)}</div>
       ) : error ? (
         <p className="error-text">Couldn't load activity: {error}</p>
       ) : rows.length === 0 ? (
-        <EmptyState icon={ActivityIcon}>
-          No activity yet. This fills in automatically as the daily check detects changes to bills you're tracking.
+        <EmptyState icon={ActivityIcon} title="No changes recorded yet">
+          This fills in as our morning check of congress.gov picks up changes to the bills you track.
         </EmptyState>
+      ) : visible.length === 0 ? (
+        <div className="nomatch">
+          <p>Nothing matches those filters.</p>
+          <button className="btn btn-secondary btn-sm" onClick={() => { setFilter("all"); setScope("all"); setQ(""); }}>Show everything</button>
+        </div>
       ) : (
-        <div className="member-list">
-          {rows.map((row) => {
-            const bill = Array.isArray(row.bills) ? row.bills[0] : row.bills;
-            const Icon = ICONS[EVENT_TYPE_ICONS[row.event_type]] ?? Circle;
-            const vote = parseVoteInfo(row.summary);
-            return (
-              <div key={row.id} className="member-row" style={{ alignItems: "flex-start", padding: "14px 0" }}>
-                <Icon size={15} className="muted" style={{ marginTop: 3, flexShrink: 0 }} />
-                <div style={{ minWidth: 0 }}>
-                  {bill?.title && (
-                    <Link href={`/bill/${row.bill_id}`} style={{ fontSize: '0.875rem', fontWeight: 500, textDecoration: "none" }}>
-                      {bill.title}
-                    </Link>
-                  )}
-                  <div style={{ fontSize: '0.8125rem', marginTop: 2 }}>{row.summary}</div>
-                  <div className="muted" style={{ fontSize: '0.6875rem', marginTop: 2 }}>
-                    {timeAgo(row.occurred_at)} · {formatDate(row.occurred_at)}
-                  </div>
-                  {vote && (
-                    <div className="vote-badge" style={{ marginTop: 6 }}>
-                      <span className="yea">{vote.yea} Yea</span>
-                      <span>·</span>
-                      <span className="nay">{vote.nay} Nay</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="feed">
+          {groups.map((g) => (
+            <section key={g.day} className="feed-day">
+              <h2 className="feed-date">{dayHeading(g.day)}</h2>
+              <ul className="feed-list">
+                {g.items.map((r) => {
+                  const bill = Array.isArray(r.bills) ? r.bills[0] : r.bills;
+                  const Icon = ICONS[r.event_type] ?? FileText;
+                  const vote = parseVoteInfo(r.summary);
+                  const plain = r.event_type === "new_action" || r.event_type === "status_change" ? explainAction(r.event_type === "status_change" ? r.summary.replace(/^[^:]+:\s/, "") : r.summary, r.bill_id.split("-")[0]) : null;
+                  return (
+                    <li key={r.id} className={`feed-item ev-${r.event_type}`}>
+                      <span className="feed-icon"><Icon size={15} /></span>
+                      <div className="feed-body">
+                        <div className="feed-meta">
+                          <span className="cite">{citationFor(r.bill_id)}</span>
+                          <span className="feed-type">{EVENT_TYPE_LABELS[r.event_type] ?? "Update"}</span>
+                          {r.action_date && r.occurred_at.slice(0, 10) !== r.action_date && (
+                            <span className="feed-seen">noticed {formatDate(r.occurred_at)}</span>
+                          )}
+                        </div>
+                        {bill?.title && <Link href={`/bill/${r.bill_id}`} className="feed-bill">{bill.title}</Link>}
+                        <p className="feed-summary">{r.summary}</p>
+                        {vote && (
+                          <span className="vote">
+                            <span className="vote-bar" aria-hidden="true"><span style={{ width: `${(vote.yea / Math.max(1, vote.yea + vote.nay)) * 100}%` }} /></span>
+                            <span className="vote-yea">{vote.yea} yea</span>
+                            <span className="vote-nay">{vote.nay} nay</span>
+                          </span>
+                        )}
+                        {plain && <p className="feed-plain">{plain}</p>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+          {rows.length >= limit && (
+            <button className="btn btn-secondary feed-more" onClick={() => setLimit((l) => l + 150)}>Load older activity</button>
+          )}
         </div>
       )}
     </div>

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { searchMembers } from "@/lib/congress-api";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 // GET /api/legislators?q=texas
 export async function GET(req: NextRequest) {
   const supabase = await createClient();

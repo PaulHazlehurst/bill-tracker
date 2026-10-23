@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 // POST { memberId, position? } - adds this member to every bill the org
 // currently tracks, with a starting position (defaults to "watching" -
 // a real signal to go set their actual stance, not silently "none").

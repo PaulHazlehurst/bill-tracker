@@ -1,13 +1,20 @@
 // Shared between BillCard and the bill detail page, so both read the
 // congress.gov snapshot the same way instead of duplicating this parsing.
 
+// congress.gov gives many dates as a bare day ("2026-10-14"). JavaScript
+// reads those as midnight UTC, which is the previous evening anywhere in the
+// US - so every such date used to display one day early. Bare days are now
+// read as local calendar dates.
+export function parseDay(d: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12) : new Date(d);
+}
+
 export function formatDate(d: string | null | undefined) {
   if (!d) return null;
-  try {
-    return new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-  } catch {
-    return d;
-  }
+  const date = parseDay(d);
+  if (Number.isNaN(date.getTime())) return d;
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function timeAgo(d: string | null | undefined) {
@@ -26,18 +33,113 @@ export const EVENT_TYPE_ICONS: Record<string, string> = {
   status_change: "trending-up",
   new_action: "file-text",
   cosponsor_change: "users",
+  text_published: "scroll",
+  cbo_published: "calculator",
+  summary_published: "book",
 };
 
-export const STAGE_LABELS: Record<string, string> = {
-  introduced: "Introduced",
-  committee: "In committee",
-  passed_house: "Passed House",
-  passed_senate: "Passed Senate",
-  to_president: "Sent to President",
-  enacted: "Enacted",
-  vetoed: "Vetoed",
-  failed: "Failed",
+export const EVENT_TYPE_LABELS: Record<string, string> = {
+  status_change: "Moved forward",
+  new_action: "New action",
+  cosponsor_change: "Cosponsors",
+  text_published: "New text",
+  cbo_published: "CBO estimate",
+  summary_published: "CRS summary",
 };
+
+// Stage labels/order live in lib/billStage.ts; re-exported here so existing
+// imports keep working.
+export { STAGE_LABELS, STAGE_ORDER, STAGE_SHORT } from "@/lib/billStage";
+
+const CITATION_PREFIX: Record<string, string> = {
+  hr: "H.R.", s: "S.", hjres: "H.J.Res.", sjres: "S.J.Res.", hconres: "H.Con.Res.", sconres: "S.Con.Res.", hres: "H.Res.", sres: "S.Res.",
+};
+
+/** "hr-1234-119" -> "H.R. 1234". Also accepts (type, number). */
+export function citationFor(billIdOrType: string, number?: string | number): string {
+  if (number !== undefined) return `${CITATION_PREFIX[billIdOrType.toLowerCase()] ?? billIdOrType.toUpperCase()} ${number}`;
+  const [type, num] = billIdOrType.split("-");
+  return `${CITATION_PREFIX[type] ?? (type ?? "").toUpperCase()} ${num ?? ""}`.trim();
+}
+
+/** Public congress.gov page for a bill id like "hr-1234-119". */
+export function publicBillUrl(billId: string): string {
+  const [type, num, cong] = billId.split("-");
+  const slug: Record<string, string> = {
+    hr: "house-bill", s: "senate-bill", hjres: "house-joint-resolution", sjres: "senate-joint-resolution",
+    hconres: "house-concurrent-resolution", sconres: "senate-concurrent-resolution", hres: "house-resolution", sres: "senate-resolution",
+  };
+  const n = Number(cong);
+  const ord = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `https://www.congress.gov/bill/${n}${ord}-congress/${slug[type] ?? "house-bill"}/${num}`;
+}
+
+// ── Plain-English action explainer ───────────────────────────────────
+// Congressional action text is written for clerks ("Placed on the Union
+// Calendar, Calendar No. 412."). This maps the common procedural phrases to
+// one plain sentence about what happened and what it means. Rule-based on
+// purpose - deterministic, the same answer for the same text, no AI.
+// Returns null for anything it doesn't recognise, so nothing is guessed.
+const EXPLAINERS: [RegExp, string][] = [
+  [/became (public|private) law/i, "It's law. The bill has been signed and assigned a public law number."],
+  [/signed by (the )?president/i, "The President signed it, so it becomes law."],
+  [/vetoed by (the )?president|pocket veto/i, "The President rejected it. Congress can override a veto with a two-thirds vote in both chambers."],
+  [/presented to (the )?president/i, "Sent to the President, who has 10 days (Sundays excepted) to sign or veto it."],
+  [/cloture/i, "A Senate vote to end debate. It needs 60 votes and is often the real hurdle before final passage."],
+  [/resolving differences|conference (report|committee)|agree to the (house|senate) amendment/i, "The House and Senate are reconciling the differences between their versions of the bill."],
+  [/motion to suspend the rules/i, "A fast-track House vote: limited debate, no amendments, and two-thirds needed to pass. Usually used for less controversial bills."],
+  [/passed\/agreed to in house|^passed house|on passage passed/i, "The full House voted to approve the bill."],
+  [/passed\/agreed to in senate|^passed senate/i, "The full Senate voted to approve the bill."],
+  [/failed of passage|not agreed to/i, "The vote failed, so the bill did not pass at this step."],
+  [/unanimous consent/i, "Approved without objection, so there was no recorded vote."],
+  [/motion to reconsider laid on the table/i, "Routine procedure that makes the previous vote final."],
+  [/received in the senate/i, "The bill arrived in the Senate after passing the House. It now starts the Senate process, usually in committee."],
+  [/received in the house|held at the desk/i, "The bill is being held for possible floor action instead of going to committee, which can speed things up."],
+  [/message on (house|senate) action sent/i, "One chamber formally notified the other of its action."],
+  [/rules committee resolution|rule h\. ?res|providing for consideration/i, "The House Rules Committee set the terms for debate. This usually means a floor vote is coming soon."],
+  [/placed on (the )?union calendar/i, "Now eligible for a House floor vote. (The Union Calendar is for bills that spend or raise money.) House leadership decides when, or whether, it comes up."],
+  [/placed on (the )?house calendar/i, "Now eligible for a House floor vote. House leadership decides when, or whether, it comes up."],
+  [/placed on senate legislative calendar/i, "Now eligible for Senate floor consideration. Senate leadership decides when it comes up."],
+  [/ordered to be reported/i, "The committee voted to advance the bill to the full chamber. A meaningful step: most bills never get a committee vote."],
+  [/reported by|reported \((amended|without amendment|with an amendment)\)|reported (to|in) (the )?(house|senate)|reported with(out)? amendment|committee report/i, "The committee formally sent the bill to the full chamber, usually with a written report explaining it."],
+  [/mark-?up/i, "The committee debated and amended the bill line by line."],
+  [/hearings? held|hearings? by/i, "The committee held a hearing where witnesses testified about the issue."],
+  [/discharged/i, "The bill was pulled out of committee without a committee vote."],
+  [/referred to (the )?subcommittee/i, "Passed to a subcommittee for closer review."],
+  [/referred to/i, "Sent to committee for review. This is where most bills stop: committees choose which few to act on."],
+  [/introduced in/i, "The bill was formally filed in Congress."],
+  [/sponsor introductory remarks/i, "The sponsor spoke about the bill on the floor."],
+  [/star print/i, "A corrected reprint of the bill text was ordered."],
+];
+
+export function explainAction(text: string | null | undefined, billType?: string): string | null {
+  if (!text) return null;
+  for (const [rx, plain] of EXPLAINERS) {
+    if (!rx.test(text)) continue;
+    // Passage means different things depending on which chamber the bill
+    // started in, so say what comes next only when we know.
+    if (billType && !/res$/i.test(billType)) {
+      const senateBill = billType.toLowerCase().startsWith("s");
+      const house = /passed\/agreed to in house|^passed house|on passage passed/i.test(text);
+      const senate = /passed\/agreed to in senate|^passed senate/i.test(text);
+      if (house) return `${plain} ${senateBill ? "With the Senate already on board, the next step is the President (once both chambers agree on the same text)." : "Next it needs to pass the Senate."}`;
+      if (senate) return `${plain} ${senateBill ? "Next it needs to pass the House." : "With the House already on board, the next step is the President (once both chambers agree on the same text)."}`;
+    }
+    return plain;
+  }
+  return null;
+}
+
+/** Whole days since a date, or null. */
+export function daysSince(d: string | null | undefined): number | null {
+  if (!d) return null;
+  const date = parseDay(d);
+  if (Number.isNaN(date.getTime())) return null;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return Math.max(0, Math.round((today.getTime() - date.getTime()) / 86_400_000));
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+}
 
 // congress.gov embeds vote tallies directly in an action's text, e.g.
 // "Passed Senate without amendment by Yea-Nay Vote. 79 - 19. Record Vote
@@ -50,13 +152,14 @@ export function parseVoteInfo(text: string | null | undefined): VoteInfo | null 
   if (!text) return null;
   const tally = text.match(/(\d+)\s*[-–]\s*(\d+)/);
   if (!tally) return null;
-  // Only treat this as a vote if the surrounding text actually mentions one -
-  // otherwise something like a bare "H.R. 1234" could false-positive.
-  if (!/vote/i.test(text)) return null;
+  // Only treat this as a vote if the surrounding text actually describes
+  // one - "Record Vote", "Yea-Nay Vote", House style "the Yeas and Nays ...
+  // (Roll no. 288)" - otherwise something like "H.R. 1234" could match.
+  if (!/vote|yeas and nays|roll no\.?|yea-nay/i.test(text)) return null;
 
   const yea = parseInt(tally[1], 10);
   const nay = parseInt(tally[2], 10);
-  const rollMatch = text.match(/(?:Record Vote|Roll(?:call)? Vote|Vote) Number:?\s*(\d+)/i);
+  const rollMatch = text.match(/(?:Record Vote|Roll(?:call)? Vote|Vote) Number:?\s*(\d+)/i) ?? text.match(/Roll no\.?\s*(\d+)/i);
 
   return {
     yea,
@@ -87,7 +190,9 @@ export function extractMeta(raw: any) {
     // out - confirmed directly from congress.gov's own API docs that this
     // rides along on the same bill response already being fetched and
     // cached, so displaying it costs nothing extra.
-    cboCostEstimates: (raw.cboCostEstimates?.item ?? []).map((c: any) => ({
+    // congress.gov's JSON returns this as a plain array (its XML wraps it
+    // in <item>); handle both so the CBO section actually shows up.
+    cboCostEstimates: (Array.isArray(raw.cboCostEstimates) ? raw.cboCostEstimates : raw.cboCostEstimates?.item ?? []).map((c: any) => ({
       title: c.title ?? null,
       description: c.description ?? null,
       url: c.url ?? null,

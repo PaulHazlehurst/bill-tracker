@@ -1,37 +1,43 @@
 import "./globals.css";
+import "./styles/shell.css";
+import "./styles/bills.css";
+import "./styles/pages.css";
 
-// Every page in this app depends on checking a signed-in user's session,
-// which only exists at request time - none of it should be pre-built as
-// static HTML. Setting this here, once, at the root layout guarantees it
-// applies to every page underneath, so no individual page can accidentally
-// skip it.
+// Every page depends on a signed-in session that only exists at request
+// time, so nothing is pre-built as static HTML.
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Bill Tracker",
-  description: "Track federal bills, get notified when they move.",
+  description: "Follow federal bills through Congress, see what changed overnight, and get alerted when they move.",
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f6fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0f22" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Geist+Mono:wght@400..600&display=swap"
           rel="stylesheet"
         />
-        {/* Runs before paint so the saved theme and font size apply
-            immediately - without this, the page would flash the defaults
-            for a moment before React hydrates and the settings page's
-            controls read localStorage. */}
+        {/* Runs before paint so the saved theme, text size, and density apply
+            immediately instead of flashing the defaults. With no saved
+            theme, the operating system's light/dark setting is used. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `try {
-              var valid = { light: 1, dark: 1 };
               var t = localStorage.getItem("billtracker-theme");
-              if (t && valid[t]) document.documentElement.setAttribute("data-theme", t);
+              if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+              else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.setAttribute("data-theme", "dark");
               var f = localStorage.getItem("billtracker-font-size");
               if (f) document.documentElement.setAttribute("data-font-size", f);
               var d = localStorage.getItem("billtracker-density");

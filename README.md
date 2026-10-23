@@ -27,6 +27,7 @@ skip at first and add later.
 1. In the Supabase dashboard, open **SQL Editor** in the left sidebar → **New query**.
 2. Open `supabase/schema.sql` from this project, copy the whole file, paste it into the editor.
 3. Click **Run**. You should see "Success" and new tables appear under **Table Editor**.
+4. Repeat for each of these files, in this order: `add-topics-columns.sql`, `add-member-crm-columns.sql`, `add-bill-workspace-table.sql`, `add-regulations-tables.sql`, `2026-10-activity-and-discovery.sql`. Every file is safe to run more than once.
 
 ### 3. Get your Supabase keys
 
@@ -61,6 +62,7 @@ here needs a terminal - just type the name, paste the value.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role key |
 | `CONGRESS_API_KEY` | Your congress.gov API key |
+| `NEXT_PUBLIC_APP_URL` | Your site's address, e.g. `https://your-app.vercel.app`. Links inside alert emails use it. |
 | `CRON_SECRET` | Make this up yourself - any long random string, e.g. mash your keyboard for 40+ characters. It's just a password nothing else needs to guess. |
 | `RESEND_API_KEY` | Optional for now - leave blank, see "Adding email" below |
 | `RESEND_FROM_EMAIL` | Optional for now |
@@ -136,9 +138,18 @@ Go to Vercel → your project → **Deployments** → click the failed one →
 **Build Logs**, scroll to the error text near the bottom, and share that
 exact text. That's almost always enough to pin down the fix.
 
-## Not yet built
+## Checking that everything works
 
-- No profile-editing UI (phone/org changes need a manual database edit for now)
-- No individual bill detail page yet - dashboard and team page link out to congress.gov directly
-- Bill search does a best-effort title match rather than true keyword search, since congress.gov's API doesn't expose full-text search on the bill list endpoint
-- No password reset page yet (Supabase Auth supports it, just needs a page built)
+Open **Data sources** in the app's sidebar and click **Test all connections**. It checks every
+outside service (congress.gov, GovInfo, LDA.gov, the Federal Register, Google News, Resend,
+Twilio), confirms the database updates have been run, and flags it if the morning check has
+stopped running. Anything that needs attention comes with the fix.
+
+## Known limits
+
+- Bill search covers the 119th Congress: the full text of every published bill (GovInfo) plus
+  the ~500 most recently updated bills on congress.gov. Brand-new bills can take a few days to
+  appear in GovInfo's full-text index; until then they're found by title.
+- The morning check runs once a day (Vercel's free plan allows daily scheduled jobs). Any bill
+  page has a **Check now** button for an immediate re-check.
+- No self-service way to transfer team ownership yet.

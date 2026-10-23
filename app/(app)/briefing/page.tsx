@@ -4,7 +4,9 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { extractMeta, STAGE_LABELS, formatDate } from "@/lib/billMeta";
+import { extractMeta, STAGE_LABELS, formatDate, citationFor } from "@/lib/billMeta";
+import RouteLine, { StagePill } from "@/components/ui/RouteLine";
+import { BrandMark } from "@/components/Sidebar";
 import { Printer, Download, ArrowLeft, ClipboardList } from "lucide-react";
 import Spinner from "@/components/Spinner";
 
@@ -67,7 +69,7 @@ export default function BriefingPage() {
         <div className="empty-cta-icon"><ClipboardList size={22} strokeWidth={1.5} /></div>
         <h2 className="section-title" style={{ marginBottom: 6 }}>Nothing to brief on yet</h2>
         <p className="muted" style={{ margin: "0 0 16px" }}>Briefings pull from your tracked bills — sponsor, stage, positions, recent activity — into a print-ready PDF you can hand a client.</p>
-        <Link href="/dashboard"><button className="primary">Go to your bills →</button></Link>
+        <Link href="/dashboard" className="btn btn-primary">Go to your bills</Link>
       </div>
     </div>
   );
@@ -93,10 +95,10 @@ export default function BriefingPage() {
     <div className="briefing-page">
       {/* Print controls — hidden in print output */}
       <div className="briefing-controls no-print">
-        <Link href="/dashboard" className="briefing-back"><ArrowLeft size={14} /> Dashboard</Link>
+        <Link href="/dashboard" className="backlink"><ArrowLeft size={15} /> My bills</Link>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="primary" onClick={() => window.print()}>
-            <Printer size={14} /> Save as PDF
+          <button className="btn btn-primary" onClick={() => window.print()}>
+            <Printer size={15} /> Print or save as PDF
           </button>
         </div>
       </div>
@@ -104,11 +106,11 @@ export default function BriefingPage() {
       {/* Report header */}
       <header className="briefing-header">
         <div className="briefing-header-brand">
-          <div className="briefing-logo">B</div>
+          <BrandMark size={40} />
           <div>
-            <h1 className="briefing-title">Legislative Portfolio Briefing</h1>
+            <h1 className="briefing-title">Legislative briefing</h1>
             <p className="briefing-subtitle">
-              {data.orgName ?? "Personal Portfolio"} · {dateStr}
+              {data.orgName ?? "Personal portfolio"}, {dateStr}
             </p>
           </div>
         </div>
@@ -120,7 +122,7 @@ export default function BriefingPage() {
 
       {/* Executive summary */}
       <section className="briefing-section">
-        <h2 className="briefing-section-title">Executive Summary</h2>
+        <h2 className="briefing-section-title">Summary</h2>
         <div className="briefing-summary-grid">
           <div className="briefing-summary-card">
             <div className="briefing-summary-number">{bills.length}</div>
@@ -155,7 +157,7 @@ export default function BriefingPage() {
 
       {/* Bill-by-bill detail */}
       <section className="briefing-section">
-        <h2 className="briefing-section-title">Bill Details</h2>
+        <h2 className="briefing-section-title">Bill by bill</h2>
         {bills.map((r, i) => {
           const meta = extractMeta(r.bill.raw_snapshot);
           const billEvents = data.recentEvents.filter((e) => e.bill_id === r.bill_id);
@@ -165,13 +167,11 @@ export default function BriefingPage() {
             <div key={r.bill_id} className="briefing-bill-card">
               <div className="briefing-bill-header">
                 <div>
-                  <span className="briefing-bill-id">{r.bill_id.replace(/-/g, " ").toUpperCase()}</span>
+                  <span className="cite">{citationFor(r.bill_id)}</span>
                   <h3 className="briefing-bill-title">{r.bill.title}</h3>
                 </div>
                 <div className="briefing-bill-status">
-                  <span className={`briefing-stage briefing-stage-${r.bill.status_stage}`}>
-                    {STAGE_LABELS[r.bill.status_stage] ?? r.bill.status_stage}
-                  </span>
+                  <StagePill stage={r.bill.status_stage} />
                   <span className={`briefing-position briefing-position-${r.position}`}>
                     {POSITION_LABELS[r.position]}
                   </span>
@@ -179,17 +179,14 @@ export default function BriefingPage() {
               </div>
 
               <div className="briefing-bill-progress">
-                <div className="briefing-progress-track">
-                  <div className="briefing-progress-fill" style={{ width: `${r.bill.progress_pct}%` }} />
-                </div>
-                <span className="briefing-progress-label">{r.bill.progress_pct}%</span>
+                <RouteLine stage={r.bill.status_stage} billType={r.bill_id.split("-")[0]} size="lg" />
               </div>
 
               <div className="briefing-bill-details">
                 {meta?.sponsorName && (
                   <div className="briefing-detail-row">
                     <span className="briefing-detail-label">Sponsor</span>
-                    <span>{meta.sponsorName} ({meta.sponsorParty}-{meta.sponsorState})</span>
+                    <span>{meta.sponsorName}{meta.sponsorParty && !/\[/.test(meta.sponsorName) ? ` (${meta.sponsorParty}-${meta.sponsorState})` : ""}</span>
                   </div>
                 )}
                 {meta?.cosponsorCount != null && (
@@ -220,7 +217,7 @@ export default function BriefingPage() {
 
               {cboEstimates.length > 0 && (
                 <div className="briefing-cbo">
-                  <span className="briefing-detail-label">CBO Cost Estimate</span>
+                  <span className="briefing-detail-label">CBO cost estimate</span>
                   {cboEstimates.map((c: any, ci: number) => (
                     <p key={ci} className="briefing-cbo-text">{c.description || c.title}</p>
                   ))}
@@ -232,7 +229,7 @@ export default function BriefingPage() {
                   <span className="briefing-detail-label">Recent activity (30 days)</span>
                   {billEvents.slice(0, 5).map((e, ei) => (
                     <div key={ei} className="briefing-event-row">
-                      <span className="briefing-event-date">{formatDate(e.occurred_at)}</span>
+                      <span className="briefing-event-date">{formatDate((e as any).action_date ?? e.occurred_at)}</span>
                       <span>{e.summary}</span>
                     </div>
                   ))}

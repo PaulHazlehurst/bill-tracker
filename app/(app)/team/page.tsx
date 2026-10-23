@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import BillTable, { TableRow } from "@/components/BillTable";
-import TableSkeleton from "@/components/TableSkeleton";
+import BillList, { TableRow } from "@/components/BillList";
+import PageHeader from "@/components/ui/PageHeader";
 import OrgLogoUploader from "@/components/OrgLogoUploader";
 import TeamNextActions from "@/components/TeamNextActions";
 import { useUI } from "@/components/UIProvider";
@@ -90,7 +90,7 @@ export default function TeamPage() {
     // teammates. This just fetches everything RLS is willing to return.
     const { data, error: queryError } = await supabase
       .from("tracked_bills")
-      .select("id, bill_id, user_id, notify_email, notify_sms, position, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot, last_polled_at)")
+      .select("id, bill_id, user_id, notify_email, notify_sms, position, created_at, bills(title, status_stage, progress_pct, latest_action, latest_action_date, congress_url, raw_snapshot, last_polled_at)")
       .order("created_at", { ascending: false });
 
     if (queryError) {
@@ -157,23 +157,19 @@ export default function TeamPage() {
   });
 
   return (
-    <div className="container-wide">
-      <div className="page-header">
-        <div>
-          <span className="page-eyebrow">Organization</span>
-          <h1>{orgName ?? "Your team"}</h1>
-          <p className="muted" style={{ marginTop: 4 }}>
-            What the team is working on, and everything it's tracking.
-          </p>
-        </div>
-      </div>
+    <div className="page page-wide">
+      <PageHeader
+        title={orgName ?? "Your team"}
+        description="What the team is working on, and every bill it follows."
+        actions={!noOrg && <a href="/api/export?scope=team" className="btn btn-secondary">Export CSV</a>}
+      />
 
       {error && !noOrg ? (
         <p className="error-text">Couldn't load your team: {error}</p>
       ) : noOrg ? (
-        <p className="muted">
-          You're not part of a team yet. Create or join one from <Link href="/settings">Settings</Link>.
-        </p>
+        <EmptyState icon={Users2} title="You're not on a team yet" action={<Link href="/settings" className="btn btn-primary">Create or join a team</Link>}>
+          A team shares one list of topics, sees each other's tracked bills, and works from a shared task board.
+        </EmptyState>
       ) : (
         /* Two columns: the work on the left, the people and admin tucked into
            a narrow rail on the right. The old stat grid and chart widgets are
@@ -199,19 +195,18 @@ export default function TeamPage() {
               </div>
             )}
 
-            <div className="table-toolbar" style={{ marginBottom: 12, marginTop: 26 }}>
-              <h2 className="section-title">Tracked bills ({rows.length})</h2>
-              <a href="/api/export?scope=team"><button className="ghost">Export CSV</button></a>
+            <div className="section-head">
+              <h2 className="section-title">Bills the team follows <span className="count">{rows.length}</span></h2>
             </div>
 
             {loading ? (
-              <TableSkeleton />
+              <div className="list-skel">{[0, 1, 2].map((i) => <div key={i} className="skel skel-billrow" />)}</div>
             ) : error ? (
               <p className="error-text">Couldn't load your team's tracked bills: {error}</p>
             ) : rows.length === 0 ? (
               <EmptyState icon={Users2}>No one on your team is tracking any bills yet.</EmptyState>
             ) : (
-              <BillTable rows={rows} editable={false} trackerEmails={trackerEmails} selfId={selfId} />
+              <BillList rows={rows} editable={false} trackerEmails={trackerEmails} selfId={selfId} />
             )}
           </div>
 
@@ -253,7 +248,7 @@ export default function TeamPage() {
                   <span className="team-rail-invite-label">Invite code</span>
                   <div className="team-rail-invite-row">
                     <code className="invite-code">{inviteCode}</code>
-                    <button className="ghost" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
+                    <button className="btn btn-ghost btn-sm" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
                   </div>
                 </div>
               )}

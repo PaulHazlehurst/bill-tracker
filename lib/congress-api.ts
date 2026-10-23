@@ -3,6 +3,7 @@
 // to do by accident without Next.js throwing at build time.
 
 import { trackedFetch } from "@/lib/apiUsageTracker";
+import { inferStageFromText, progressForStage as stageProgress } from "@/lib/billStage";
 
 const BASE_URL = "https://api.congress.gov/v3";
 
@@ -27,192 +28,278 @@ export type SearchResult = {
   type: string;
   number: string;
   title: string;
+  /** Plain-English reasons this bill matched, e.g. 'Title mentions "telehealth"'. */
+  reasons?: string[];
+  /** Higher = stronger match. Only meaningful for ranking within one search. */
+  score?: number;
+  /** Latest action / publish date when the source provided one (YYYY-MM-DD). */
+  date?: string | null;
 };
 
-// NOTE: congress.gov's public API doesn't offer true full-text keyword search
-// on the bill list endpoint the way a search engine would. This does a
-// best-effort listing filtered client-side by title match, which is fine for
-// an MVP but worth revisiting against the latest API docs before you scale
-// search usage - see https://api.congress.gov/ for current endpoints.
-// NOTE: congress.gov's public API does NOT offer full-text/keyword search -
-// there's no `q` parameter on the bill list endpoint. This does the best
-// available approximation: pull a large batch of the most recently updated
-// bills and match titles against the query words. That means very old or
-// long-dormant bills that haven't been touched recently may not show up
-// even if their title matches - a fundamental limitation of the public API,
-// not a bug in this code. See https://api.congress.gov/ for the source of
-// truth if this ever changes.
-// `pages` controls how far back into the "most recently updated" list this
-// scans - each page is congress.gov's max page size (250 bills), fetched
-// oldest-update-last via `offset`. The manual search bar calls this with
-// the default (1 page = the most recent 250) since a person typing a query
-// wants a fast answer. Topic discovery (lib/topicDiscovery.ts) calls it
-// with more pages, since the whole point there is surfacing bills a person
-// doesn't know to look for yet, and a topic that hasn't had a recent flurry
-// of activity can easily fall outside the most-recent-250 window. Each
-// extra page is one more API call - bounded well under the 5,000/hr shared
-// limit even at pages=4 run across several topics.
-export async function searchBills(query: string, congress = 119, pages = 1): Promise<SearchResult[]> {
-  // Shortcut: if the query looks like a bill citation ("hr 1234", "s1234",
-  // "HJRES 45"), fetch that exact bill directly. This is 100% reliable
-  // regardless of the "recently updated" window limitation above, since it's
-  // a direct lookup rather than a filtered list scan.
-  const citation = query.trim().toLowerCase().match(
-    /^(hr|s|hjres|sjres|hconres|sconres|hres|sres)\s*0*(\d+)$/
-  );
-  if (citation) {
-    const [, type, number] = citation;
-    try {
-      const raw = await getBill(congress, type, number);
-      if (raw?.bill) {
-        return [{
-          congress: raw.bill.congress,
-          type: raw.bill.type,
-          number: String(raw.bill.number),
-          title: raw.bill.title,
-        }];
-      }
-    } catch {
-      // Fall through to the keyword search below - the citation might just
-      // not exist in this congress, or might be a genuine keyword like "sres".
-    }
-  }
+const BILL_TYPES = ["hr", "s", "hjres", "sjres", "hconres", "sconres", "hres", "sres"];
+// Ceremonial/procedural resolutions - kept out of discovery, ranked last in search.
+export const RESOLUTION_TYPES = new Set(["hres", "sres", "hconres", "sconres"]);
 
-  // Match if every word in the query appears somewhere in the title, OR
-  // in the plain text of the bill's latest action - a bill referred to a
-  // relevant committee or subject often names the topic there even when
-  // the title itself is generic ("A bill to amend title 42...").
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const matches: SearchResult[] = [];
-
-  for (let page = 0; page < Math.max(1, pages); page++) {
-    const url = new URL(`${BASE_URL}/bill/${congress}`);
-    url.searchParams.set("api_key", apiKey());
-    url.searchParams.set("format", "json");
-    url.searchParams.set("limit", "250"); // congress.gov's max page size
-    url.searchParams.set("offset", String(page * 250));
-    url.searchParams.set("sort", "updateDate+desc");
-
-    const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
-    if (!res.ok) throw new Error(`congress.gov search failed: ${res.status}`);
-    const data = await res.json();
-    const pageBills = data.bills ?? [];
-
-    for (const b of pageBills) {
-      const title = (b.title ?? "").toLowerCase();
-      const actionText = (b.latestAction?.text ?? "").toLowerCase();
-      if (words.every((w: string) => title.includes(w) || actionText.includes(w))) {
-        matches.push({
-          congress: b.congress,
-          type: b.type,
-          number: String(b.number),
-          title: b.title,
-        });
-      }
-    }
-
-    // Stop early once the page comes back short - that's the last page
-    // congress.gov has for this congress, no point requesting an empty one.
-    if (pageBills.length < 250) break;
-  }
-
-  return matches.slice(0, 20);
+function billKey(r: { type: string; number: string | number; congress: number }) {
+  return `${String(r.type).toLowerCase()}-${r.number}-${r.congress}`;
 }
 
-// GovInfo runs on the same api.data.gov platform as congress.gov, so a
-// congress.gov key usually works here too. Prefer an explicit GovInfo key
-// if one is set; fall back to the congress key, then DEMO_KEY (heavily
-// rate-limited but enough to prove the feature) so a missing key never
-// hard-crashes topic discovery.
+// ── Query parsing ────────────────────────────────────────────────────
+// Turns whatever someone typed into something every source can use. Strips
+// characters that are syntax in GovInfo's query language (quotes, colons,
+// parentheses) so a topic like `"340B" drug pricing` can't break the query.
+export function normalizeQuery(q: string) {
+  const cleaned = q.replace(/[“”"():\[\]{}\\]/g, " ").replace(/\s+/g, " ").trim();
+  const words = cleaned
+    .toLowerCase()
+    .split(" ")
+    .filter((w) => w.length > 0 && !STOP_WORDS.has(w));
+  return { cleaned, words };
+}
+
+const STOP_WORDS = new Set(["a", "an", "the", "of", "and", "or", "for", "to", "in", "on", "act", "bill"]);
+
+// Light stemming so "hospitals" matches "hospital" and "prescriptions"
+// matches "prescription" in title scans. Deliberately conservative - it
+// only trims common English plural/-ing endings.
+function stem(w: string) {
+  if (w.length > 5 && w.endsWith("ies")) return w.slice(0, -3) + "y";
+  if (w.length > 4 && w.endsWith("es") && /(ss|sh|ch|x|z)es$/.test(w)) return w.slice(0, -2);
+  if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) return w.slice(0, -1);
+  if (w.length > 6 && w.endsWith("ing")) return w.slice(0, -3);
+  return w;
+}
+
+function textMatchesAll(text: string, words: string[]) {
+  const t = text.toLowerCase();
+  return words.every((w) => t.includes(stem(w)));
+}
+
+/** Recognises "HR 1234", "H.R. 1234", "S.123", "hjres 45" and so on. */
+export function parseCitation(q: string): { type: string; number: string } | null {
+  const compact = q.trim().toLowerCase().replace(/\./g, "").replace(/\s+/g, " ");
+  const m = compact.match(/^(h ?r|s|h ?j ?res|s ?j ?res|h ?con ?res|s ?con ?res|h ?res|s ?res)\s*0*(\d{1,5})$/);
+  if (!m) return null;
+  const type = m[1].replace(/\s/g, "");
+  return BILL_TYPES.includes(type) ? { type, number: m[2] } : null;
+}
+
+// ── Source 1: congress.gov "recently updated" list, scanned by title ─────
+// congress.gov's API has no keyword search. The best it offers is the list
+// of bills sorted by most recent update, which we scan by title. Its value
+// is recency: brand-new bills show up here days before GovInfo publishes
+// their text. The list is fetched ONCE and shared by every topic in a run
+// (it used to be re-downloaded for every single topic).
+type RecentBill = { congress: number; type: string; number: string; title: string; actionText: string; actionDate: string | null };
+const recentCache = new Map<string, { at: number; bills: RecentBill[] }>();
+const RECENT_TTL_MS = 10 * 60_000;
+
+export async function getRecentlyUpdatedBills(congress = 119, pages = 2): Promise<RecentBill[]> {
+  const cacheKey = `${congress}:${pages}`;
+  const hit = recentCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < RECENT_TTL_MS) return hit.bills;
+
+  const pageNums = Array.from({ length: Math.max(1, pages) }, (_, i) => i);
+  const results = await Promise.all(
+    pageNums.map(async (page) => {
+      const url = new URL(`${BASE_URL}/bill/${congress}`);
+      url.searchParams.set("api_key", apiKey());
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "250"); // congress.gov's max page size
+      url.searchParams.set("offset", String(page * 250));
+      url.searchParams.set("sort", "updateDate+desc");
+      const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+      if (!res.ok) throw new Error(`congress.gov bill list failed: ${res.status}`);
+      const data = await res.json();
+      return (data.bills ?? []) as any[];
+    }),
+  );
+  // Pages can overlap if bills update mid-fetch, so de-duplicate.
+  const seenRecent = new Set<string>();
+  const unique = results.flat().filter((b: any) => {
+    const k = `${b.type}-${b.number}`;
+    if (seenRecent.has(k)) return false;
+    seenRecent.add(k);
+    return true;
+  });
+  const bills: RecentBill[] = unique.map((b: any) => ({
+    congress: b.congress,
+    type: String(b.type ?? "").toUpperCase(),
+    number: String(b.number),
+    title: b.title ?? "",
+    actionText: b.latestAction?.text ?? "",
+    actionDate: b.latestAction?.actionDate ?? null,
+  }));
+  recentCache.set(cacheKey, { at: Date.now(), bills });
+  return bills;
+}
+
+// ── Source 2: GovInfo, which indexes the real text of every bill ──────
+// GovInfo's query language (confirmed against govinfo.gov/features/
+// search-service-overview and /help/finding-info): terms are AND-ed by
+// default, `title:` restricts to the title field, `publishdate:range(a,)`
+// filters by date, and `resultLevel: "package"` returns one row per bill
+// version rather than a mix of granules. One bill has several versions
+// (ih, rh, eh, enr...), so rows are de-duplicated by bill.
 function govinfoKey() {
   return process.env.GOVINFO_API_KEY || process.env.CONGRESS_API_KEY || "DEMO_KEY";
 }
 
-// TRUE full-text search - the thing congress.gov's own API can't do. GovInfo
-// (the Government Publishing Office's system) indexes the actual text of every
-// bill, so a keyword like "critical access hospital" or "340B" finds bills
-// even when those words never appear in the title. This is what makes topic
-// discovery surface bills a person doesn't already know to look for. Returns
-// the same shape as searchBills so it's a drop-in. Throws on API failure so
-// callers can fall back to the title match.
-export async function searchBillsFullText(query: string, congress = 119, limit = 20): Promise<SearchResult[]> {
-  const url = new URL("https://api.govinfo.gov/search");
-  url.searchParams.set("api_key", govinfoKey());
+type GovInfoOpts = { congress: number; pageSize?: number; sort?: "score" | "publishdate"; sinceDays?: number };
 
-  // GovInfo uses field operators inline in the query string. Restrict to the
-  // BILLS collection and the target congress, and full-text search the rest.
-  // pageSize is inflated because GovInfo returns one row per bill VERSION
-  // (ih, rh, enr...), so the same bill appears several times before dedupe.
-  const q = `${query.trim()} collection:BILLS congress:${congress}`;
-  const body = JSON.stringify({
+async function govinfoBillSearch(query: string, opts: GovInfoOpts): Promise<(SearchResult & { date: string | null })[]> {
+  let q = `${query} collection:BILLS congress:${opts.congress}`;
+  if (opts.sinceDays) {
+    const since = new Date(Date.now() - opts.sinceDays * 86_400_000).toISOString().slice(0, 10);
+    q += ` publishdate:range(${since},)`;
+  }
+  const body = {
     query: q,
-    pageSize: Math.min(100, Math.max(20, limit * 4)),
+    pageSize: String(Math.min(100, opts.pageSize ?? 60)),
     offsetMark: "*",
-  });
-
+    resultLevel: "package",
+    sorts: [{ field: opts.sort ?? "score", sortOrder: "DESC" }],
+  };
   const res = await trackedFetch(
-    url.toString(),
-    { method: "POST", headers: { "Content-Type": "application/json" }, body, cache: "no-store" },
-    "govinfo",
+    `https://api.govinfo.gov/search?api_key=${govinfoKey()}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" },
+    "govinfo_gov",
   );
   if (!res.ok) throw new Error(`govinfo search failed: ${res.status}`);
   const data = await res.json();
-  const rows = data.results ?? [];
 
   const seen = new Set<string>();
-  const out: SearchResult[] = [];
-  for (const row of rows) {
+  const out: (SearchResult & { date: string | null })[] = [];
+  for (const row of data.results ?? []) {
     // packageId like "BILLS-119hr1247ih" -> congress 119, type HR, number 1247
-    const m = String(row.packageId ?? "").match(/^BILLS-(\d+)([a-z]+)(\d+)[a-z]*$/i);
+    const m = String(row.packageId ?? "").match(/^BILLS-(\d+)([a-z]+?)(\d+)([a-z]*)$/i);
     if (!m) continue;
     const [, cong, type, number] = m;
-    const key = `${type.toLowerCase()}-${number}-${cong}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({
-      congress: Number(cong),
-      type: type.toUpperCase(),
-      number: String(number),
-      title: row.title ?? `${type.toUpperCase()} ${number}`,
-    });
-    if (out.length >= limit) break;
+    if (!BILL_TYPES.includes(type.toLowerCase())) continue;
+    const r = { congress: Number(cong), type: type.toUpperCase(), number: String(Number(number)), title: row.title ?? `${type.toUpperCase()} ${number}`, date: row.dateIssued ?? null };
+    const k = billKey(r);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
   }
   return out;
 }
 
-// The unified search used by both the manual "add a bill" bar and topic
-// discovery. Tries GovInfo full-text first (searches real bill text), then
-// merges in the title/citation match (which reliably catches exact bill
-// citations and brand-new bills GovInfo may not have indexed yet). Only
-// throws if BOTH sources fail, so callers can tell a genuine outage apart
-// from an honest "no matches."
-export async function searchBillsSmart(query: string, congress = 119, titlePages = 1): Promise<SearchResult[]> {
-  let results: SearchResult[] = [];
-  let govinfoOk = false;
-  try {
-    results = await searchBillsFullText(query, congress, 25);
-    govinfoOk = true;
-  } catch (err) {
-    console.error("govinfo full-text search failed; falling back to title match", err);
-  }
+// ── The unified, ranked search ───────────────────────────────────────
+// Runs several complementary passes in parallel and merges them with a
+// score, so the bills most clearly ABOUT the topic come first:
+//   title match in GovInfo      +6   (high precision)
+//   title match on congress.gov +6   (and catches brand-new bills)
+//   exact phrase in bill text   +3
+//   all words in bill text      +1   (broad safety net)
+//   published in last 120 days  +2   (fresh activity)
+//   earlier position in a relevance-sorted list adds a small bonus
+// Real laws-to-be (HR, S, joint resolutions) outrank ceremonial resolutions.
+//
+// `failed` lists the passes that errored, so callers can tell "nothing
+// matched" apart from "the source was down". Only throws if EVERY pass fails.
+export type RankedSearch = { results: SearchResult[]; failed: string[]; passes: number };
 
-  try {
-    const titleMatches = await searchBills(query, congress, titlePages);
-    const seen = new Set(results.map((r) => `${r.type.toLowerCase()}-${r.number}-${r.congress}`));
-    for (const t of titleMatches) {
-      const k = `${t.type.toLowerCase()}-${t.number}-${t.congress}`;
-      if (!seen.has(k)) {
-        seen.add(k);
-        results.push(t);
-      }
+export async function searchBillsRanked(
+  query: string,
+  opts: { congress?: number; recentPages?: number; limit?: number } = {},
+): Promise<RankedSearch> {
+  const congress = opts.congress ?? 119;
+  const limit = opts.limit ?? 40;
+  const { cleaned, words } = normalizeQuery(query);
+  if (!cleaned) return { results: [], failed: [], passes: 0 };
+
+  const merged = new Map<string, SearchResult & { score: number; reasons: string[] }>();
+  const add = (r: SearchResult & { date?: string | null }, points: number, reason: string) => {
+    const k = billKey(r);
+    const cur = merged.get(k);
+    if (cur) {
+      cur.score += points;
+      if (!cur.reasons.includes(reason)) cur.reasons.push(reason);
+      if (!cur.date && r.date) cur.date = r.date;
+      // Prefer congress.gov's display title over GovInfo's long official one.
+      if (reason.startsWith("Recently active") && r.title) cur.title = r.title;
+    } else {
+      merged.set(k, { ...r, score: points, reasons: [reason], date: r.date ?? null });
     }
-  } catch (err) {
-    // If GovInfo also failed, we truly have nothing - surface the error so
-    // the caller reports "search unavailable" instead of "no matches."
-    if (!govinfoOk) throw err;
+  };
+
+  // A citation is a direct lookup - always exact, never depends on search.
+  const citation = parseCitation(cleaned);
+  if (citation) {
+    try {
+      const raw = await getBill(congress, citation.type, citation.number);
+      if (raw?.bill) {
+        return {
+          results: [{
+            congress: raw.bill.congress,
+            type: raw.bill.type,
+            number: String(raw.bill.number),
+            title: raw.bill.title,
+            reasons: ["Exact bill number"],
+            score: 100,
+            date: raw.bill.latestAction?.actionDate ?? null,
+          }],
+          failed: [],
+          passes: 1,
+        };
+      }
+    } catch {
+      // Not a bill in this Congress - fall through to keyword search.
+    }
   }
 
-  return results.slice(0, 30);
+  const label = `"${cleaned}"`;
+  const titleTerms = words.length ? words.join(" AND ") : cleaned;
+  const phrase = words.length > 1 ? `"${cleaned}"` : cleaned;
+  const failed: string[] = [];
+
+  const passes: [string, Promise<void>][] = [
+    ["govinfo-title", govinfoBillSearch(`title:(${titleTerms})`, { congress, pageSize: 60 }).then((rows) =>
+      rows.forEach((r, i) => add(r, 6 + Math.max(0, 2 - i / 15), `Title mentions ${label}`)))],
+    ["govinfo-phrase", govinfoBillSearch(phrase, { congress, pageSize: 60 }).then((rows) =>
+      rows.forEach((r, i) => add(r, (words.length > 1 ? 3 : 2) + Math.max(0, 1.5 - i / 20), `Bill text mentions ${label}`)))],
+    ["govinfo-recent", govinfoBillSearch(phrase, { congress, pageSize: 40, sort: "publishdate", sinceDays: 120 }).then((rows) =>
+      rows.forEach((r) => add(r, 2, "Published in the last 4 months")))],
+    ["congress-recent", getRecentlyUpdatedBills(congress, opts.recentPages ?? 2).then((bills) => {
+      for (const b of bills) {
+        if (words.length && textMatchesAll(b.title, words)) {
+          add({ congress: b.congress, type: b.type, number: b.number, title: b.title, date: b.actionDate }, 6, `Title mentions ${label}`);
+          add({ congress: b.congress, type: b.type, number: b.number, title: b.title, date: b.actionDate }, 1, "Recently active in Congress");
+        } else if (words.length && textMatchesAll(b.actionText, words)) {
+          add({ congress: b.congress, type: b.type, number: b.number, title: b.title, date: b.actionDate }, 2, "Latest action mentions it");
+        }
+      }
+    })],
+  ];
+
+  if (words.length > 1) {
+    // Broad net: every word anywhere in the text, not necessarily together.
+    passes.push(["govinfo-allwords", govinfoBillSearch(words.join(" AND "), { congress, pageSize: 40 }).then((rows) =>
+      rows.forEach((r) => add(r, 1, "Bill text mentions every word")))]);
+  }
+
+  const settled = await Promise.allSettled(passes.map(([, p]) => p));
+  settled.forEach((s, i) => {
+    if (s.status === "rejected") {
+      failed.push(passes[i][0]);
+      console.error(`search pass ${passes[i][0]} failed for "${cleaned}"`, s.reason);
+    }
+  });
+  if (failed.length === passes.length) throw new Error("all search sources failed");
+
+  const results = Array.from(merged.values())
+    .map((r) => ({ ...r, score: RESOLUTION_TYPES.has(r.type.toLowerCase()) ? r.score - 4 : r.score }))
+    .sort((a, b) => b.score - a.score || String(b.date ?? "").localeCompare(String(a.date ?? "")))
+    .slice(0, limit);
+
+  return { results, failed, passes: passes.length };
+}
+
+/** Back-compat wrapper: same shape older callers expect. */
+export async function searchBillsSmart(query: string, congress = 119, recentPages = 1): Promise<SearchResult[]> {
+  const { results } = await searchBillsRanked(query, { congress, recentPages, limit: 30 });
+  return results;
 }
 
 export type RelatedBill = {
@@ -252,7 +339,10 @@ export type BillAction = {
   actionDate: string;
   text: string;
   type: string | null;
+  actionCode: string | null;
+  chamber: string | null;
   hasRecordedVote: boolean;
+  voteUrl: string | null;
 };
 
 // Fetches the FULL action history for a bill - not just the latest action
@@ -276,7 +366,10 @@ export async function getBillActions(congress: number, billType: string, billNum
     actionDate: a.actionDate,
     text: a.text,
     type: a.type ?? null,
+    actionCode: a.actionCode != null ? String(a.actionCode) : null,
+    chamber: a.sourceSystem?.name ?? null,
     hasRecordedVote: Array.isArray(a.recordedVotes) && a.recordedVotes.length > 0,
+    voteUrl: Array.isArray(a.recordedVotes) && a.recordedVotes[0]?.url ? a.recordedVotes[0].url : null,
   }));
 }
 
@@ -534,44 +627,73 @@ export type MemberSummary = {
   url: string | null;
 };
 
-// Search members of congress. congress.gov's member endpoint supports
-// currentMember filtering so we default to current members only.
-export async function searchMembers(query?: string, congress = 119, limit = 50): Promise<MemberSummary[]> {
-  const url = new URL(`${BASE_URL}/member`);
-  url.searchParams.set("api_key", apiKey());
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("currentMember", "true");
+// The full roster of current members of Congress (~540). congress.gov caps
+// a page at 250, so this fetches three pages in parallel. It used to ask for
+// just 50, which meant the directory and its search could only ever find
+// about a tenth of Congress. Cached for 12 hours - the roster rarely changes.
+let rosterCache: { at: number; members: MemberSummary[] } | null = null;
+const ROSTER_TTL_MS = 12 * 3_600_000;
 
-  const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
-  if (!res.ok) throw new Error(`congress.gov members fetch failed: ${res.status}`);
-  const data = await res.json();
+const STATE_ABBR: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+  DC: "District of Columbia", PR: "Puerto Rico", GU: "Guam", VI: "Virgin Islands", AS: "American Samoa", MP: "Northern Mariana Islands",
+};
 
-  let members = (data.members ?? []).map((m: any) => {
-    const term = (m.terms?.item ?? m.terms ?? []).sort((a: any, b: any) =>
-      (b.startYear ?? 0) - (a.startYear ?? 0)
-    )[0];
-    return {
-      bioguideId: m.bioguideId,
-      name: m.name ?? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim(),
-      party: (m.partyName ?? m.party ?? term?.party ?? "").charAt(0).toUpperCase() || "?",
-      state: m.state ?? term?.state ?? "",
-      district: term?.district ? String(term.district) : null,
-      chamber: (term?.chamber ?? m.terms?.item?.[0]?.chamber ?? "").replace("Senate", "Senate").replace("House of Representatives", "House"),
-      imageUrl: m.depiction?.imageUrl ?? null,
-      url: m.url ?? null,
-    } as MemberSummary;
-  });
+function parseMember(m: any): MemberSummary {
+  const terms = m.terms?.item ?? m.terms ?? [];
+  const term = [...(Array.isArray(terms) ? terms : [])].sort((a: any, b: any) => (b.startYear ?? 0) - (a.startYear ?? 0))[0];
+  return {
+    bioguideId: m.bioguideId,
+    name: m.name ?? `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim(),
+    party: (m.partyName ?? m.party ?? term?.party ?? "").charAt(0).toUpperCase() || "?",
+    state: m.state ?? term?.state ?? "",
+    district: m.district != null ? String(m.district) : term?.district ? String(term.district) : null,
+    chamber: String(term?.chamber ?? "").replace("House of Representatives", "House"),
+    imageUrl: m.depiction?.imageUrl ?? null,
+    url: m.url ?? null,
+  };
+}
 
-  if (query) {
-    const q = query.toLowerCase();
-    members = members.filter((m: MemberSummary) =>
-      m.name.toLowerCase().includes(q) ||
-      m.state.toLowerCase().includes(q)
+export async function searchMembers(query?: string, _congress = 119, _limit = 0): Promise<MemberSummary[]> {
+  if (!rosterCache || Date.now() - rosterCache.at > ROSTER_TTL_MS) {
+    const pages = await Promise.all(
+      [0, 250, 500].map(async (offset) => {
+        const url = new URL(`${BASE_URL}/member`);
+        url.searchParams.set("api_key", apiKey());
+        url.searchParams.set("format", "json");
+        url.searchParams.set("limit", "250");
+        url.searchParams.set("offset", String(offset));
+        url.searchParams.set("currentMember", "true");
+        const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
+        if (!res.ok) throw new Error(`congress.gov members fetch failed: ${res.status}`);
+        const data = await res.json();
+        return (data.members ?? []) as any[];
+      }),
     );
+    const seen = new Set<string>();
+    const members = pages.flat().map(parseMember).filter((m) => m.bioguideId && !seen.has(m.bioguideId) && seen.add(m.bioguideId));
+    members.sort((a, b) => a.state.localeCompare(b.state) || a.chamber.localeCompare(b.chamber) || a.name.localeCompare(b.name));
+    rosterCache = { at: Date.now(), members };
   }
 
+  let members = rosterCache.members;
+  if (query) {
+    const q = query.trim().toLowerCase();
+    const stateFromAbbr = STATE_ABBR[query.trim().toUpperCase()]?.toLowerCase();
+    members = members.filter((m) =>
+      m.name.toLowerCase().includes(q) || m.state.toLowerCase().includes(q) || (stateFromAbbr && m.state.toLowerCase() === stateFromAbbr),
+    );
+  }
   return members;
+}
+
+export function stateAbbreviation(stateName: string): string | null {
+  const hit = Object.entries(STATE_ABBR).find(([, name]) => name.toLowerCase() === stateName.toLowerCase());
+  return hit ? hit[0] : null;
 }
 
 export type MemberDetail = MemberSummary & {
@@ -655,13 +777,20 @@ export async function getMemberBills(bioguideId: string, type: "sponsored" | "co
   const url = new URL(`${BASE_URL}/member/${bioguideId}/${endpoint}`);
   url.searchParams.set("api_key", apiKey());
   url.searchParams.set("format", "json");
-  url.searchParams.set("limit", String(limit));
+  // Over-fetch, since amendments in the list are dropped below.
+  url.searchParams.set("limit", String(Math.min(250, limit * 3)));
 
   const res = await trackedFetch(url.toString(), { cache: "no-store" }, "congress_gov");
   if (!res.ok) return [];
   const data = await res.json();
 
-  return (data.sponsoredLegislation ?? data.cosponsoredLegislation ?? []).map((b: any) => ({
+  // These lists mix bills with AMENDMENTS, which have no bill type or bill
+  // number. Unfiltered, they crashed the member profile page (any code
+  // calling b.type.toLowerCase()) for nearly every senator.
+  return (data.sponsoredLegislation ?? data.cosponsoredLegislation ?? [])
+    .filter((b: any) => b && b.type && b.number != null)
+    .slice(0, limit)
+    .map((b: any) => ({
     congress: b.congress,
     type: b.type,
     number: String(b.number),
@@ -671,27 +800,13 @@ export async function getMemberBills(bioguideId: string, type: "sponsored" | "co
   }));
 }
 
-export function inferStage(latestActionText: string): string {
-  const text = (latestActionText ?? "").toLowerCase();
-  if (text.includes("became public law") || text.includes("signed by president")) return "enacted";
-  if (text.includes("vetoed")) return "vetoed";
-  if (text.includes("presented to president")) return "to_president";
-  if (text.includes("passed senate")) return "passed_senate";
-  if (text.includes("passed house") || text.includes("passed/agreed to in house")) return "passed_house";
-  if (text.includes("committee")) return "committee";
-  return "introduced";
+// Stage logic lives in lib/billStage.ts (shared with the client). These
+// wrappers keep older imports working.
+
+export function inferStage(latestActionText: string, billType = "hr"): string {
+  return inferStageFromText(latestActionText, billType);
 }
 
 export function progressForStage(stage: string): number {
-  const map: Record<string, number> = {
-    introduced: 10,
-    committee: 30,
-    passed_house: 55,
-    passed_senate: 70,
-    to_president: 85,
-    enacted: 100,
-    vetoed: 100,
-    failed: 100,
-  };
-  return map[stage] ?? 10;
+  return stageProgress(stage);
 }

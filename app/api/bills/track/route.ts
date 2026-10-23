@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getBill, inferStage, progressForStage } from "@/lib/congress-api";
+import { buildNewBillRow } from "@/lib/billRefresh";
+
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
 
 // POST { congress, billType, billNumber }
 // Tracks a bill for the signed-in user. If they belong to an organization,
@@ -17,45 +20,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing bill identifier" }, { status: 400 });
   }
 
-  const id = `${String(billType).toLowerCase()}-${billNumber}-${congress}`;
+  const type = String(billType).toLowerCase();
+  const number = parseInt(String(billNumber), 10);
+  const congressNum = Number(congress);
+  if (!Number.isFinite(number) || !Number.isFinite(congressNum)) {
+    return NextResponse.json({ error: "That doesn't look like a valid bill number." }, { status: 400 });
+  }
+  const id = `${type}-${number}-${congressNum}`;
 
   // Only fetch from congress.gov if we don't already have this bill cached -
-  // this is what keeps request volume tied to unique bills, not to trackers.
+  // this keeps request volume tied to unique bills, not to trackers.
   const { data: existing } = await supabase.from("bills").select("id").eq("id", id).maybeSingle();
 
   if (!existing) {
-    let b: any;
+    let row: Record<string, unknown>;
     try {
-      const raw = await getBill(congress, billType, billNumber);
-      b = raw.bill;
+      row = await buildNewBillRow(congressNum, type, number);
     } catch (err) {
       console.error("congress.gov fetch failed", err);
-      return NextResponse.json({ error: "Could not fetch that bill from congress.gov - check the bill number and try again." }, { status: 502 });
+      return NextResponse.json({ error: "Couldn't find that bill on congress.gov. Check the bill number and try again." }, { status: 502 });
     }
 
-    const latestActionText = b.latestAction?.text ?? "";
-    const stage = inferStage(latestActionText);
-
-    const { error: insertError } = await supabase.from("bills").insert({
-      id,
-      congress,
-      bill_type: String(billType).toLowerCase(),
-      bill_number: billNumber,
-      title: b.title ?? `${String(billType).toUpperCase()} ${billNumber}`,
-      latest_action: latestActionText || null,
-      latest_action_date: b.latestAction?.actionDate ?? null,
-      status_stage: stage,
-      progress_pct: progressForStage(stage),
-      congress_url: b.url ?? null,
-      raw_snapshot: b,
-      last_polled_at: new Date().toISOString(),
-      next_poll_at: new Date(Date.now() + 30 * 60_000).toISOString(),
-      poll_priority: "normal",
-    });
-
-    if (insertError) {
+    // actions_cache / actions_fetched_at are optional extras - if an older
+    // schema rejects them, save the bill without them.
+    let { error: insertError } = await supabase.from("bills").insert(row);
+    if (insertError && /actions_/.test(insertError.message)) {
+      const { actions_cache, actions_fetched_at, ...rest } = row as any;
+      ({ error: insertError } = await supabase.from("bills").insert(rest));
+    }
+    if (insertError && insertError.code !== "23505") {
       console.error("failed to save new bill", insertError);
-      return NextResponse.json({ error: "Fetched the bill, but couldn't save it: " + insertError.message }, { status: 500 });
+      return NextResponse.json({ error: "Found the bill, but couldn't save it: " + insertError.message }, { status: 500 });
     }
   }
 
@@ -73,7 +68,14 @@ export async function POST(req: NextRequest) {
     notify_sms: profile?.default_notify_sms ?? false,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    if (error.code === "23505") return NextResponse.json({ ok: true, billId: id, alreadyTracked: true });
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // If this bill had been a topic suggestion, it isn't one any more.
+  await supabase.from("prospective_bills").update({ dismissed: true }).eq("bill_id", id);
+
   return NextResponse.json({ ok: true, billId: id });
 }
 

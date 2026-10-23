@@ -11,12 +11,32 @@ import FontSizeSwitcher from "@/components/FontSizeSwitcher";
 import DensitySwitcher from "@/components/DensitySwitcher";
 import Spinner from "@/components/Spinner";
 import { useUI } from "@/components/UIProvider";
+import { useSession } from "@/components/SessionProvider";
+import PageHeader from "@/components/ui/PageHeader";
+import Link from "next/link";
 
 type TeamMode = "none" | "create" | "join";
+
+// Defined outside the page component on purpose: a component declared
+// inside another is recreated every render, which remounts its inputs and
+// drops focus after each keystroke.
+function Row({ title, desc, children }: { title: string; desc?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="set-row">
+      <div className="set-row-text">
+        <h3>{title}</h3>
+        {desc && <p>{desc}</p>}
+      </div>
+      <div className="set-row-control">{children}</div>
+    </div>
+  );
+}
+
 
 export default function SettingsPage() {
   const supabase = createClient();
   const { toast, confirm } = useUI();
+  const { refresh: refreshSession } = useSession();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -141,6 +161,7 @@ export default function SettingsPage() {
     }
     setTopicsSaved(true);
     setTimeout(() => setTopicsSaved(false), 2500);
+    refreshSession();
 
     // Best-effort - if this is the first time topics are set, don't make
     // someone wait until tomorrow's cron to see anything.
@@ -173,10 +194,15 @@ export default function SettingsPage() {
       setTeamBusy(false);
       return;
     }
-    await supabase.from("profiles").update({ organization_id: newOrg.id }).eq("id", userId);
+    const { error: linkErr } = await supabase.from("profiles").update({ organization_id: newOrg.id }).eq("id", userId);
     setTeamBusy(false);
+    if (linkErr) {
+      setTeamError("The team was created, but we couldn't add you to it: " + linkErr.message);
+      return;
+    }
     setTeamMode("none");
     load();
+    refreshSession();
   }
 
   async function handleJoinTeam(e: React.FormEvent) {
@@ -207,6 +233,7 @@ export default function SettingsPage() {
     }
     setTeamMode("none");
     load();
+    refreshSession();
   }
 
   async function handleLeaveTeam() {
@@ -222,6 +249,7 @@ export default function SettingsPage() {
     setTeamBusy(false);
     toast("Left the team", "info");
     load();
+    refreshSession();
   }
 
   async function handleRenameTeam(e: React.FormEvent) {
@@ -236,6 +264,7 @@ export default function SettingsPage() {
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+    refreshSession();
   }
 
   async function handleRegenerateCode() {
@@ -262,179 +291,122 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container-wide" style={{ maxWidth: 640 }}>
-      <span className="page-eyebrow">Preferences</span>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 500, marginBottom: 24 }}>Settings</h1>
+    <div className="page settings">
+      <PageHeader title="Settings" description="Alerts, your team, and how the app looks on this device." />
 
       {loading ? (
         <Spinner label="Loading settings…" />
-      ) : error ? (
+      ) : error && !email ? (
         <p className="error-text">Couldn't load settings: {error}</p>
       ) : (
         <>
-          <div className="settings-section">
-            <h2>Appearance</h2>
-            <p className="settings-desc">Choose a color theme. Applies immediately and is remembered on this device.</p>
-            <ThemeSwitcher />
-          </div>
-
-          <div className="settings-section">
-            <h2>Text size</h2>
-            <p className="settings-desc">Adjust the size of text throughout the app.</p>
-            <FontSizeSwitcher />
-          </div>
-
-          <div className="settings-section">
-            <h2>Table density</h2>
-            <p className="settings-desc">Compact fits more rows on screen at once.</p>
-            <DensitySwitcher />
-          </div>
-
-          <div className="settings-section">
-            <h2>Account</h2>
-            <div className="card">
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label>Email</label>
-                <div>{email}</div>
-                <p className="muted" style={{ margin: "2px 0 0" }}>Contact support to change your email for now.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <h2>Notifications</h2>
-            <p className="settings-desc">Off by default - nothing gets emailed or texted to you until you turn it on here.</p>
-            <form onSubmit={handleSaveAccount} className="card">
-              <label className="notif-master-toggle">
-                <input type="checkbox" checked={emailNotificationsEnabled} onChange={(e) => setEmailNotificationsEnabled(e.target.checked)} />
-                <div>
-                  <div style={{ fontWeight: 500 }}>Enable email notifications</div>
-                  <div className="muted" style={{ fontSize: '0.75rem' }}>Required before any bill-update email can be sent to you.</div>
+          <section className="set-section">
+            <h2 className="set-title">Alerts</h2>
+            <form onSubmit={handleSaveAccount}>
+              <Row title="Email alerts" desc="One summary email on mornings when bills you follow change. Off until you turn it on.">
+                <label className="switch-row">
+                  <input type="checkbox" className="switch" checked={emailNotificationsEnabled} onChange={(e) => setEmailNotificationsEnabled(e.target.checked)} />
+                  <span>{emailNotificationsEnabled ? "On" : "Off"}</span>
+                </label>
+              </Row>
+              <Row title="Mobile number" desc="Needed for text alerts. Texts only go out for bills where you've turned text alerts on.">
+                <input id="phone" type="tel" className="input" placeholder="+1 410 555 0123" value={phone} onChange={(e) => setPhone(e.target.value)} aria-label="Mobile number" />
+              </Row>
+              <Row title="For bills you track from now on" desc="You can change alerts for any single bill from its menu.">
+                <div className="stack-sm">
+                  <label className="check-row"><input type="checkbox" checked={defaultNotifyEmail} onChange={(e) => setDefaultNotifyEmail(e.target.checked)} /> Email me</label>
+                  <label className="check-row"><input type="checkbox" checked={defaultNotifySms} onChange={(e) => setDefaultNotifySms(e.target.checked)} /> Text me</label>
                 </div>
-              </label>
-
-              <div className="field" style={{ marginTop: 16 }}>
-                <label htmlFor="phone">Phone number (for text alerts)</label>
-                <input id="phone" type="tel" placeholder="+1 410 555 1234" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <p className="muted" style={{ margin: "2px 0 0" }}>Adding a number and turning on "Text me" per bill is what enables texts - no separate master switch needed since it's already opt-in by requiring both.</p>
-              </div>
-
-              <div className="field" style={{ marginTop: 12, marginBottom: 8 }}>
-                <label>Default notifications for newly tracked bills</label>
-              </div>
-              <div style={{ display: "flex", gap: 16, marginBottom: 16, fontSize: '0.8125rem' }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="checkbox" checked={defaultNotifyEmail} onChange={(e) => setDefaultNotifyEmail(e.target.checked)} />
-                  Email me by default
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="checkbox" checked={defaultNotifySms} onChange={(e) => setDefaultNotifySms(e.target.checked)} />
-                  Text me by default
-                </label>
-              </div>
-
-              {error && <p className="error-text">{error}</p>}
-              {saved && <p className="muted" style={{ color: "var(--accent)" }}>Saved.</p>}
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="primary" type="submit" disabled={saving}>
-                  {saving ? "Saving…" : "Save changes"}
-                </button>
-                <button className="ghost" type="button" onClick={handleSendTestEmail} disabled={sendingTest}>
-                  {sendingTest ? "Sending…" : "Send test email"}
-                </button>
+              </Row>
+              <div className="set-actions">
+                {error && <p className="error-text">{error}</p>}
+                {saved && <p className="saved-text">Saved</p>}
+                <button className="btn btn-ghost" type="button" onClick={handleSendTestEmail} disabled={sendingTest}>{sendingTest ? "Sending…" : "Send me a test email"}</button>
+                <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Saving…" : "Save alert settings"}</button>
               </div>
             </form>
-          </div>
+          </section>
 
-          <div className="settings-section">
-            <h2>Topics you follow</h2>
-            <p className="settings-desc">
-              {orgId
-                ? "Shared with your whole team - a new bill matching any of these shows up as a suggestion for everyone."
-                : "Personal, since you're not on a team yet - a new bill matching these shows up as a suggestion for you."}
-              {" "}Checked automatically once a day.
-            </p>
-            <form onSubmit={handleSaveTopics} className="card">
-              <div className="field">
-                <label htmlFor="topics">Topics, separated by commas</label>
-                <input
-                  id="topics"
-                  value={topics}
-                  onChange={(e) => setTopics(e.target.value)}
-                  placeholder="diabetes, rural hospitals, insulin pricing"
-                />
+          <section className="set-section">
+            <h2 className="set-title">Topics</h2>
+            <form onSubmit={handleSaveTopics}>
+              <Row
+                title={orgId ? "Your team's topics" : "Your topics"}
+                desc={<>{orgId ? "Shared with everyone on your team." : "Just for you until you join a team."} Each morning we suggest new bills that match. You can also manage these, and preview what a topic finds, in <Link href="/dashboard">Discover</Link>.</>}
+              >
+                <textarea id="topics" className="input" rows={3} value={topics} onChange={(e) => setTopics(e.target.value)} placeholder="telehealth, critical access hospital, 340B" aria-label="Topics, separated by commas" />
+                <span className="field-hint">Separate topics with commas.</span>
+              </Row>
+              <div className="set-actions">
+                {topicsError && <p className="error-text">{topicsError}</p>}
+                {topicsSaved && <p className="saved-text">Saved. Checking for matching bills now.</p>}
+                <button className="btn btn-primary" type="submit" disabled={savingTopics}>{savingTopics ? "Saving…" : "Save topics"}</button>
               </div>
-              {topicsError && <p className="error-text">{topicsError}</p>}
-              {topicsSaved && <p className="muted" style={{ color: "var(--accent)" }}>Saved - checking for matching bills now.</p>}
-              <button className="primary" type="submit" disabled={savingTopics}>
-                {savingTopics ? "Saving…" : "Save topics"}
-              </button>
             </form>
-          </div>
+          </section>
 
-          <div className="settings-section">
-            <h2>Team</h2>
-
+          <section className="set-section">
+            <h2 className="set-title">Team</h2>
             {orgId ? (
-              <div className="card">
-                {isOwner ? (
-                  <form onSubmit={handleRenameTeam} className="field" style={{ marginBottom: 16 }}>
-                    <label htmlFor="orgName">Team name <span className="muted">(you're the owner)</span></label>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} style={{ flex: 1 }} />
-                      <button className="ghost" type="submit" disabled={teamBusy}>Rename</button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="field" style={{ marginBottom: 16 }}>
-                    <label>Team name</label>
-                    <div>{orgName}</div>
-                  </div>
-                )}
-
-                <div className="field" style={{ marginBottom: 16 }}>
-                  <label>Invite code</label>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <>
+                <Row title="Team name" desc={isOwner ? "You created this team, so you can rename it." : "Only the person who created the team can rename it."}>
+                  {isOwner ? (
+                    <form onSubmit={handleRenameTeam} className="inline-form">
+                      <input id="orgName" className="input" value={orgName} onChange={(e) => setOrgName(e.target.value)} aria-label="Team name" />
+                      <button className="btn btn-secondary" type="submit" disabled={teamBusy}>Rename</button>
+                    </form>
+                  ) : (
+                    <strong>{orgName}</strong>
+                  )}
+                </Row>
+                <Row title="Invite code" desc="Anyone with this code can join your team at sign up or from their settings.">
+                  <div className="inline-form">
                     <code className="invite-code">{inviteCode}</code>
-                    <button className="ghost" type="button" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
-                    {isOwner && <button className="ghost" type="button" onClick={handleRegenerateCode} disabled={teamBusy}>Regenerate</button>}
+                    <button className="btn btn-secondary btn-sm" type="button" onClick={copyCode}>{codeCopied ? "Copied" : "Copy"}</button>
+                    {isOwner && <button className="btn btn-ghost btn-sm" type="button" onClick={handleRegenerateCode} disabled={teamBusy}>New code</button>}
                   </div>
-                  <p className="muted" style={{ margin: "2px 0 0" }}>Share this with anyone you want to join your team.</p>
-                </div>
-
+                </Row>
+                <Row title="Leave this team" desc="Your tracked bills stay with you. You'll stop seeing your teammates' bills.">
+                  <button className="btn btn-secondary btn-danger-text" onClick={handleLeaveTeam} disabled={teamBusy}>Leave team</button>
+                </Row>
                 {teamError && <p className="error-text">{teamError}</p>}
-                <button className="ghost" onClick={handleLeaveTeam} disabled={teamBusy}>Leave team</button>
-              </div>
+              </>
             ) : (
-              <div className="card">
-                <div className="segmented" style={{ marginBottom: 16 }}>
-                  <button type="button" className={teamMode === "none" ? "segmented-active" : ""} onClick={() => setTeamMode("none")}>Not now</button>
-                  <button type="button" className={teamMode === "create" ? "segmented-active" : ""} onClick={() => setTeamMode("create")}>Create a team</button>
-                  <button type="button" className={teamMode === "join" ? "segmented-active" : ""} onClick={() => setTeamMode("join")}>Join a team</button>
+              <Row title="Work with a team" desc="Teammates share topics, see each other's bills and positions, and get a shared task board.">
+                <div className="seg" role="group" aria-label="Team">
+                  <button type="button" className={teamMode === "create" ? "is-on" : ""} onClick={() => setTeamMode("create")}>Start a team</button>
+                  <button type="button" className={teamMode === "join" ? "is-on" : ""} onClick={() => setTeamMode("join")}>Join with a code</button>
                 </div>
-
                 {teamMode === "create" && (
-                  <form onSubmit={handleCreateTeam} className="field">
-                    <label htmlFor="newTeam">Team name</label>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input id="newTeam" required value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)} style={{ flex: 1 }} />
-                      <button className="primary" type="submit" disabled={teamBusy}>Create</button>
-                    </div>
+                  <form onSubmit={handleCreateTeam} className="inline-form">
+                    <input id="newTeam" className="input" required placeholder="Team name" value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)} aria-label="Team name" />
+                    <button className="btn btn-primary" type="submit" disabled={teamBusy}>Create</button>
                   </form>
                 )}
                 {teamMode === "join" && (
-                  <form onSubmit={handleJoinTeam} className="field">
-                    <label htmlFor="joinCode">Invite code</label>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input id="joinCode" required value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} style={{ flex: 1, textTransform: "uppercase" }} />
-                      <button className="primary" type="submit" disabled={teamBusy}>Join</button>
-                    </div>
+                  <form onSubmit={handleJoinTeam} className="inline-form">
+                    <input id="joinCode" className="input input-code" required placeholder="Invite code" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} aria-label="Invite code" />
+                    <button className="btn btn-primary" type="submit" disabled={teamBusy}>Join</button>
                   </form>
                 )}
                 {teamError && <p className="error-text">{teamError}</p>}
-              </div>
+              </Row>
             )}
-          </div>
+          </section>
+
+          <section className="set-section">
+            <h2 className="set-title">Appearance</h2>
+            <Row title="Theme" desc="Remembered on this device."><ThemeSwitcher /></Row>
+            <Row title="Text size"><FontSizeSwitcher /></Row>
+            <Row title="List density" desc="Compact fits more bills on screen."><DensitySwitcher /></Row>
+          </section>
+
+          <section className="set-section">
+            <h2 className="set-title">Account</h2>
+            <Row title="Email" desc="Contact your administrator to change the email on your account.">
+              <strong>{email}</strong>
+            </Row>
+          </section>
         </>
       )}
     </div>

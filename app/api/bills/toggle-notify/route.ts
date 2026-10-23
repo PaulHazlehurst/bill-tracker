@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Calls outside services; Vercel's short default limit can cut it off.
+export const maxDuration = 30;
+
 // POST { billId, notifyEmail, notifySms }
 // Updates the signed-in user's own tracked_bills row for this bill.
 // RLS (auth.uid() = user_id) means this can never touch another user's row.
