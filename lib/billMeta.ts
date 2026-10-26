@@ -62,6 +62,22 @@ export function citationFor(billIdOrType: string, number?: string | number): str
   return `${CITATION_PREFIX[type] ?? (type ?? "").toUpperCase()} ${num ?? ""}`.trim();
 }
 
+/** "H.R. 1234" / "S.283" / "H.Con.Res. 12" -> "hr-1234-119" (null if it isn't a bill citation). */
+export function billIdFromCitation(citation: string, congress: number): string | null {
+  const compact = citation.toLowerCase().replace(/[.\s]/g, "");
+  const m = compact.match(/^(hr|s|hjres|sjres|hconres|sconres|hres|sres)0*(\d{1,5})$/);
+  return m ? `${m[1]}-${m[2]}-${congress}` : null;
+}
+
+/** The Congress in session on a date (the 119th runs Jan 2025 to Jan 2027). */
+export function congressForDate(d: Date = new Date()): number {
+  const y = d.getUTCFullYear();
+  // A new Congress starts January 3 of odd years.
+  const startedThisYear = y % 2 === 1 && (d.getUTCMonth() > 0 || d.getUTCDate() >= 3);
+  const firstYear = y % 2 === 1 ? (startedThisYear ? y : y - 2) : y - 1;
+  return (firstYear - 1789) / 2 + 1;
+}
+
 /** Public congress.gov page for a bill id like "hr-1234-119". */
 export function publicBillUrl(billId: string): string {
   const [type, num, cong] = billId.split("-");

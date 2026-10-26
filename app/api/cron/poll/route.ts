@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { mapLimit, deadline, chunk } from "@/lib/batch";
 import { computeRefresh, insertEventsSafe, writeBillRows, nextPollAt, REFRESH_COLUMNS, type StoredBill, type NewEvent } from "@/lib/billRefresh";
+import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
+import { syncWeekAhead } from "@/lib/meetings";
 
 // 60s is the Hobby-plan ceiling. Without an explicit value Vercel applies a
 // short default and kills the job partway through.
@@ -29,13 +31,24 @@ export async function GET(req: NextRequest) {
 
   const clock = deadline(BUDGET_MS);
   const admin = createAdminClient();
+  const runId = await startJobRun(admin, "poll");
 
+  try {
+    const summary = await runPoll(admin, clock);
+    await finishJobRun(admin, runId, { ok: true, summary });
+    return NextResponse.json(summary);
+  } catch (err: any) {
+    const message = String(err?.message ?? err);
+    console.error("poll: run failed", err);
+    await finishJobRun(admin, runId, { ok: false, error: message });
+    return NextResponse.json({ error: "poll failed", detail: message }, { status: 500 });
+  }
+}
+
+async function runPoll(admin: ReturnType<typeof createAdminClient>, clock: ReturnType<typeof deadline>) {
   // 1. Which bills does anyone actually track?
   const { data: trackedRows, error: trackedError } = await admin.from("tracked_bills").select("bill_id");
-  if (trackedError) {
-    console.error("poll: failed to load tracked bills", trackedError);
-    return NextResponse.json({ error: "db error", detail: trackedError.message }, { status: 500 });
-  }
+  if (trackedError) throw new Error(`couldn't load tracked bills: ${trackedError.message}`);
   const trackedIds = Array.from(new Set((trackedRows ?? []).map((r: any) => r.bill_id as string)));
   const trackedSet = new Set(trackedIds);
 
@@ -99,8 +112,23 @@ export async function GET(req: NextRequest) {
     else eventsWritten += events.length;
   }
 
+  // Committee meetings and the House floor schedule for Week ahead get
+  // whatever time is left. The page also refreshes them when opened, so a
+  // busy morning that leaves no time here costs nothing.
+  let weekAhead: Awaited<ReturnType<typeof syncWeekAhead>> | null = null;
+  if (clock.remainingMs() > 8_000) {
+    try {
+      weekAhead = await syncWeekAhead(admin, clock.remainingMs() - 2_000);
+    } catch (err) {
+      console.error("poll: week-ahead sync failed", err);
+    }
+  }
+
+  // Did yesterday's alert run go through? (It checks on this run in turn.)
+  const watchdog = await checkAndAlert(admin, "notify").catch(() => null);
+
   // Topic discovery runs in the notify cron, which has its own time budget.
-  return NextResponse.json({
+  return {
     tracked: trackedIds.length,
     trackedDue: trackedDue.length,
     untrackedDue: untrackedDue.length,
@@ -112,6 +140,8 @@ export async function GET(req: NextRequest) {
     deferred: queue.length - polled - failed,
     timedOut,
     errors,
+    weekAhead,
+    watchdog,
     ms: clock.elapsedMs(),
-  });
+  };
 }

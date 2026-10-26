@@ -2,6 +2,7 @@ import "./globals.css";
 import "./styles/shell.css";
 import "./styles/bills.css";
 import "./styles/pages.css";
+import "./styles/features.css";
 
 // Every page depends on a signed-in session that only exists at request
 // time, so nothing is pre-built as static HTML.

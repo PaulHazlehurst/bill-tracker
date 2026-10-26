@@ -23,7 +23,20 @@ const SERVICES = [
 ];
 
 const ICON = { ok: CheckCircle2, warn: AlertTriangle, fail: XCircle, skip: MinusCircle };
-const GROUP_ORDER = ["Data sources", "Scheduled jobs", "Database", "Alerts", "Settings"];
+const GROUP_ORDER = ["Database updates", "Data sources", "Scheduled jobs", "Database", "Alerts", "Settings"];
+
+type Run = { id: number; job: string; started_at: string; finished_at: string | null; ok: boolean | null; error: string | null; summary: Record<string, any> | null };
+
+const JOB_NAMES: Record<string, string> = { poll: "Morning check", notify: "Alerts and reports" };
+
+// One short line per run, from whatever the job reported.
+function runLine(r: Run) {
+  if (!r.finished_at) return "Didn't finish";
+  if (r.ok === false) return r.error ?? "Failed";
+  const s = r.summary ?? {};
+  if (r.job === "poll") return `${s.polled ?? 0} bills checked, ${s.changed ?? 0} changed${s.failed ? `, ${s.failed} failed` : ""}${s.timedOut ? ", ran out of time" : ""}`;
+  return `${s.emailsSent ?? 0} alert email${s.emailsSent === 1 ? "" : "s"}${s.smsSent ? `, ${s.smsSent} texts` : ""}${s.clientReports?.sent ? `, ${s.clientReports.sent} client reports` : ""}`;
+}
 
 export default function DataSourcesPage() {
   const supabase = createClient();
@@ -32,7 +45,7 @@ export default function DataSourcesPage() {
 
   const [usage, setUsage] = useState<{ hour: Record<string, number>; day: Record<string, number>; snaps: Snapshot[]; lda: boolean } | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
-  const [health, setHealth] = useState<{ checkedAt: string; summary: { ok: number; warn: number; fail: number }; results: Check[] } | null>(null);
+  const [health, setHealth] = useState<{ checkedAt: string; summary: { ok: number; warn: number; fail: number }; results: Check[]; runs?: Run[] } | null>(null);
   const [checking, setChecking] = useState(false);
 
   async function loadUsage() {
@@ -109,6 +122,22 @@ export default function DataSourcesPage() {
           </>
         )}
       </section>
+
+      {health?.runs && health.runs.length > 0 && (
+        <section className="runs">
+          <h2 className="section-title" style={{ marginTop: 36 }}>Recent scheduled runs</h2>
+          <p className="card-sub">The two daily jobs, newest first. Each one checks that the other ran, and emails if something went wrong.</p>
+          <ul className="runs-list">
+            {health.runs.map((r) => (
+              <li key={r.id} className={`runs-item ${r.ok === false || !r.finished_at ? "is-bad" : "is-ok"}`}>
+                <span className="runs-job">{JOB_NAMES[r.job] ?? r.job}</span>
+                <span className="runs-when">{new Date(r.started_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                <span className="runs-what">{runLine(r)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <h2 className="section-title" style={{ marginTop: 36 }}>Usage</h2>
       <p className="card-sub">Calls this app made to each service. Updates every 30 seconds.</p>

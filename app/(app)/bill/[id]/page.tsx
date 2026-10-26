@@ -23,6 +23,8 @@ import BillWorkspace from "@/components/BillWorkspace";
 import BillNewsSection from "@/components/BillNewsSection";
 import BillLobbyingSection from "@/components/BillLobbyingSection";
 import BillRecordSection from "@/components/BillRecordSection";
+import TextChanges from "@/components/TextChanges";
+import BillClients from "@/components/BillClients";
 import {
   ArrowLeft, ExternalLink, Printer, Share2, Check, Plus, RefreshCw, Mail, MessageSquare, ChevronDown, HelpCircle, Landmark,
 } from "lucide-react";
@@ -59,7 +61,7 @@ type TabId = "overview" | "history" | "text" | "people" | "coverage" | "workspac
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "history", label: "Full history" },
-  { id: "text", label: "Text & votes" },
+  { id: "text", label: "Text & changes" },
   { id: "people", label: "People & money" },
   { id: "coverage", label: "Hearings & news" },
   { id: "workspace", label: "Team notes" },
@@ -529,6 +531,8 @@ export default function BillDetailPage() {
 
       {/* ── Text & votes ── */}
       <div data-billpanel hidden={tab !== "text"} className="panel-stack">
+        {/* Only mounted once the tab is opened, so the comparison isn't fetched for every page view. */}
+        {tab === "text" && texts !== null && <TextChanges billId={billId} versionCount={texts.length} />}
         <section className="card">
           <h2 className="card-title">Bill text</h2>
           <p className="card-sub">The actual legislative language, every published version.</p>
@@ -590,6 +594,7 @@ export default function BillDetailPage() {
             <PartyBreakdownChart counts={{ D: breakdown.D, R: breakdown.R, I: breakdown.I }} title="Cosponsors by party" capped={breakdown.capped} />
           </section>
         )}
+        <BillClients billId={billId} />
         <MemberPositions billId={billId} />
         {lobbying.length > 0 ? (
           <BillLobbyingSection filings={lobbying} />

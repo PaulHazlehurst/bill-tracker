@@ -1,0 +1,64 @@
+# Automatic checks on every pull request (and every change to main).
+# A pull request shows a green tick only when all three pass, so a change
+# that would break the live site is caught here, before Vercel builds it.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Typecheck, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+        # Dates are shown in Washington time; run the tests somewhere else
+        # to prove that doesn't depend on the computer's own time zone.
+        env:
+          TZ: America/Los_Angeles
+      - name: Production build
+        run: npm run build
+        env:
+          # Placeholders: the build never connects to anything.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_APP_URL: https://example.com
+          NEXT_TELEMETRY_DISABLED: 1
+
+  database:
+    name: Database updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run every SQL file twice, then the security checks
+        run: supabase/ci/run-all.sh
