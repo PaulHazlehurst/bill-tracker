@@ -5,18 +5,20 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import {
-  LayoutGrid, Activity, Scale, Landmark, GitBranch, Columns3, BarChart3, Users, Contact, ClipboardList, Settings, Gauge, X,
+  LayoutGrid, Activity, Scale, Landmark, GitBranch, Columns3, BarChart3, Users, Contact, ClipboardList, Settings, Gauge, X, CalendarDays, Briefcase,
 } from "lucide-react";
 
-// Grouped by what someone is trying to do. "Congress" = the official
-// directory of members of Congress; "Contacts" = your own stakeholder list;
-// "Team" = teammates with logins.
+// Grouped by what someone is trying to do. "Clients" = the organizations
+// you represent; "Congress" = the official directory of members of
+// Congress; "Contacts" = your own stakeholder list; "Team" = teammates with
+// logins.
 const NAV_GROUPS = [
   {
     label: "Follow",
     items: [
       { href: "/dashboard", label: "My bills", Icon: LayoutGrid },
       { href: "/activity", label: "Activity", Icon: Activity },
+      { href: "/week", label: "Week ahead", Icon: CalendarDays },
       { href: "/regulations", label: "Regulations", Icon: Scale },
     ],
   },
@@ -31,6 +33,7 @@ const NAV_GROUPS = [
   {
     label: "People",
     items: [
+      { href: "/clients", label: "Clients", Icon: Briefcase },
       { href: "/legislators", label: "Congress", Icon: Landmark },
       { href: "/members", label: "Contacts", Icon: Contact },
       { href: "/team", label: "Team", Icon: Users },

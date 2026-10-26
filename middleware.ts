@@ -72,7 +72,7 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-const PROTECTED = ["/dashboard", "/team", "/bill", "/activity", "/settings", "/api-usage", "/compare", "/statistics", "/members", "/regulations", "/impact", "/briefing", "/legislators", "/legislator"];
+const PROTECTED = ["/dashboard", "/team", "/bill", "/activity", "/settings", "/api-usage", "/compare", "/statistics", "/members", "/regulations", "/impact", "/briefing", "/legislators", "/legislator", "/week", "/clients"];
 
 // Next.js requires this to be a static literal, so it's spelled out rather
 // than built from PROTECTED.
@@ -80,6 +80,6 @@ export const config = {
   matcher: [
     "/dashboard/:path*", "/team/:path*", "/bill/:path*", "/activity/:path*", "/settings/:path*",
     "/api-usage/:path*", "/compare/:path*", "/statistics/:path*", "/members/:path*", "/regulations/:path*",
-    "/impact/:path*", "/briefing/:path*", "/legislators/:path*", "/legislator/:path*",
+    "/impact/:path*", "/briefing/:path*", "/legislators/:path*", "/legislator/:path*", "/week/:path*", "/clients/:path*",
   ],
 };

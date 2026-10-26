@@ -6,6 +6,8 @@ import { sendWeeklyDigests } from "@/lib/weeklyDigest";
 import { runDiscoveryForAllOwners } from "@/lib/topicDiscovery";
 import { runRegDiscoveryForAllOwners } from "@/lib/regulationDiscovery";
 import { deadline } from "@/lib/batch";
+import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
+import { sendScheduledClientReports } from "@/lib/clientReportSend";
 
 export const maxDuration = 60;
 
@@ -29,6 +31,25 @@ export async function GET(req: NextRequest) {
 
   const clock = deadline(TOTAL_BUDGET_MS);
   const admin = createAdminClient();
+  const runId = await startJobRun(admin, "notify");
+
+  try {
+    const summary = await runNotify(admin, clock);
+    await finishJobRun(admin, runId, { ok: true, summary });
+    return NextResponse.json(summary);
+  } catch (err: any) {
+    const message = String(err?.message ?? err);
+    console.error("notify: run failed", err);
+    await finishJobRun(admin, runId, { ok: false, error: message });
+    return NextResponse.json({ error: "notify failed", detail: message }, { status: 500 });
+  }
+}
+
+async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: ReturnType<typeof deadline>) {
+  // First: did this morning's congress.gov check run and finish? If not,
+  // whoever gets failure alerts hears about it now rather than days later.
+  const watchdog = await checkAndAlert(admin, "poll").catch(() => null);
+
   const emailConfigured = !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM_EMAIL;
   const smsConfigured = !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN && !!process.env.TWILIO_FROM_NUMBER;
   const resend = emailConfigured ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -48,10 +69,7 @@ export async function GET(req: NextRequest) {
       .order("occurred_at", { ascending: true })
       .limit(MAX_EVENTS) as any);
   }
-  if (error) {
-    console.error("notify: failed to load events", error);
-    return NextResponse.json({ error: "db error", detail: error.message }, { status: 500 });
-  }
+  if (error) throw new Error(`couldn't load events: ${error.message}`);
 
   const list = (events as any[]) ?? [];
   const billIds = Array.from(new Set(list.map((e) => e.bill_id)));
@@ -152,6 +170,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Monday client reports, for clients with automatic sending turned on.
+  // Before discovery, because a client waiting on their report matters more
+  // than a new suggestion.
+  let clientReports: Awaited<ReturnType<typeof sendScheduledClientReports>> | null = null;
+  if (emailConfigured && isMondayInWashington(new Date()) && clock.remainingMs() > 15_000) {
+    try {
+      clientReports = await sendScheduledClientReports(admin, Math.min(20_000, clock.remainingMs() - 10_000));
+    } catch (err) {
+      console.error("client reports run failed", err);
+    }
+  }
+
   // Topic discovery gets whatever time is left, split with regulation
   // discovery. Both are wrapped so a problem there can never break alerts.
   let discovery: Awaited<ReturnType<typeof runDiscoveryForAllOwners>> | null = null;
@@ -174,7 +204,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
+  return {
+    watchdog,
     eventsProcessed: list.length,
     people: bundles.size,
     emailsSent,
@@ -184,10 +215,15 @@ export async function GET(req: NextRequest) {
     emailConfigured,
     smsConfigured,
     digest,
+    clientReports,
     discovery,
     regDiscovery,
     ms: clock.elapsedMs(),
-  });
+  };
+}
+
+function isMondayInWashington(d: Date) {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(d) === "Mon";
 }
 
 async function sendSms(to: string, body: string) {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { ldaFetch } from "@/lib/lda-api";
+import { MIGRATIONS, migrationStatus } from "@/lib/migrations";
+import { assessJob, JOB_LABELS, type JobRun } from "@/lib/jobLog";
 
 export const maxDuration = 30;
 
@@ -84,6 +86,47 @@ export async function GET() {
       return { id: sc.id, group: "Database", name: sc.name, status: sc.required ? "fail" : "warn", detail: "Not installed yet", fix: `Run ${sc.file} in Supabase → SQL Editor.` };
     })());
   }
+
+  // ── Numbered database updates (supabase/migrations) ──
+  let migrations: { id: string; name: string; file: string; unlocks: string; appliedAt: string | null }[] = [];
+  let runs: (JobRun & { id: number })[] = [];
+  if (admin) {
+    const { data: applied, error: migError } = await admin.from("schema_migrations").select("id, applied_at");
+    const appliedAt = new Map(((migError ? [] : applied) as any[] ?? []).map((r) => [r.id, r.applied_at]));
+    const { pending } = migrationStatus(appliedAt.keys());
+    migrations = MIGRATIONS.map((m) => ({ ...m, appliedAt: appliedAt.get(m.id) ?? null }));
+    if (pending.length === 0) {
+      config.push({ id: "migrations", group: "Database updates", name: "All database updates", status: "ok", detail: `All ${MIGRATIONS.length} have been run` });
+    } else {
+      for (const m of pending) {
+        config.push({ id: `migration-${m.id}`, group: "Database updates", name: `${m.id}: ${m.name}`, status: "warn", detail: `Not run yet. Unlocks: ${m.unlocks}`, fix: `Run ${m.file} in Supabase → SQL Editor${pending.length > 1 ? ", in number order" : ""}.` });
+      }
+    }
+
+    const { data: runRows, error: runError } = await admin.from("job_runs").select("id, job, started_at, finished_at, ok, error, summary").order("started_at", { ascending: false }).limit(14);
+    if (!runError) {
+      runs = (runRows as any[]) ?? [];
+      for (const job of ["poll", "notify"] as const) {
+        const problem = assessJob(runs, job, new Date());
+        const last = runs.find((r) => r.job === job);
+        config.push({
+          id: `run-${job}`,
+          group: "Scheduled jobs",
+          name: `${JOB_LABELS[job]}: last run`,
+          status: problem ? "fail" : last ? "ok" : "skip",
+          detail: problem ?? (last ? `Finished ${new Date(last.started_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ET` : "No runs recorded yet. The first one happens tomorrow morning."),
+          fix: problem ? `Open /api/cron/${job}?secret=YOUR_CRON_SECRET to run it by hand and see the error.` : undefined,
+        });
+      }
+    }
+  }
+  config.push({
+    id: "alerts-to",
+    group: "Scheduled jobs",
+    name: "Who hears about failed runs",
+    status: "ok",
+    detail: env.ALERT_EMAIL ? `Emails go to ${env.ALERT_EMAIL}` : "Team owners. Set ALERT_EMAIL in Vercel to send these somewhere else.",
+  });
 
   // ── Scheduled jobs ──
   checks.push((async (): Promise<Check> => {
@@ -169,5 +212,5 @@ export async function GET() {
     warn: results.filter((r) => r.status === "warn").length,
     fail: results.filter((r) => r.status === "fail").length,
   };
-  return NextResponse.json({ checkedAt: new Date().toISOString(), summary, results });
+  return NextResponse.json({ checkedAt: new Date().toISOString(), summary, results, migrations, runs });
 }

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/components/SessionProvider";
 import { citationFor } from "@/lib/billMeta";
 import {
-  LayoutGrid, Users, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact, Columns3, Scale, BarChart3, Plus, ArrowRight, Gauge,
+  LayoutGrid, Users, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact, Columns3, Scale, BarChart3, Plus, ArrowRight, Gauge, CalendarDays, Briefcase,
 } from "lucide-react";
 
 type Item = { id: string; group: string; label: string; hint?: string; icon: any; run: () => void };
@@ -14,6 +14,8 @@ type Item = { id: string; group: string; label: string; hint?: string; icon: any
 const PAGES = [
   { label: "My bills", href: "/dashboard", icon: LayoutGrid, words: "dashboard home tracked" },
   { label: "Activity", href: "/activity", icon: Activity, words: "feed changes updates" },
+  { label: "Week ahead", href: "/week", icon: CalendarDays, words: "hearings markups schedule calendar floor committee" },
+  { label: "Clients", href: "/clients", icon: Briefcase, words: "client report monday weekly customers" },
   { label: "Regulations", href: "/regulations", icon: Scale, words: "federal register rules" },
   { label: "Impact", href: "/impact", icon: GitBranch, words: "health portfolio momentum" },
   { label: "Statistics", href: "/statistics", icon: BarChart3, words: "charts analytics" },
