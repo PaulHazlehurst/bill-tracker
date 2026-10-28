@@ -145,6 +145,36 @@ on conflict (id) do nothing;
 
 -- ── Corrections from each board's own site, Oct 28, 2026 ────────────
 -- Each one only touches entries nobody on the team has edited.
+
+-- Maryland moved its site to pdab.maryland.gov, and its Jardiance and
+-- Ozempic limits are still proposed regulations (none is active yet).
+-- (Repeats the fix in the corrected 0005, for databases that ran the first copy.)
+delete from public.board_pages where url like 'https://pdab.prod.maryland.gov/%';
+insert into public.board_pages (state, url, label) values
+  ('MD', 'https://pdab.maryland.gov/public-meetings/board-meetings', 'Board meetings'),
+  ('MD', 'https://pdab.maryland.gov/cost-reviews/board-selected-drugs', 'Drugs under review'),
+  ('MD', 'https://pdab.maryland.gov/upper-payment-limits', 'Upper payment limits'),
+  ('MD', 'https://pdab.maryland.gov/about/regulations', 'Regulations')
+on conflict (url) do nothing;
+update public.drug_boards set
+  website = 'https://pdab.maryland.gov/',
+  summary = 'Voted in 2026 to limit what state and local government health plans pay for Jardiance and Ozempic. Both are still proposed regulations, so no limit is active yet. A 2025 law lets limits reach all Marylanders only after two have been in place for a year.',
+  summary_source = 'https://pdab.maryland.gov/upper-payment-limits'
+ where state = 'MD' and updated_by is null and website = 'https://pdab.prod.maryland.gov/';
+update public.board_drugs set
+  stage = 'limit_proposed',
+  next_step = 'Final board vote after the Maryland Register comment period',
+  source_url = 'https://pdab.maryland.gov/upper-payment-limits',
+  notes = case drug
+    when 'Jardiance' then 'Board voted in spring 2026 to set a limit for state and local government plans (about $320,000 a year in savings). Proposed regulations; earliest start January 1, 2027.'
+    else 'Board voted May 2026 to set a limit for state and local government plans (about $5.8 million a year in savings). Proposed regulations; earliest start January 1, 2027.' end,
+  needs_check = false
+ where id in ('c0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000003') and updated_by is null and needs_check;
+update public.board_drugs set
+  source_url = 'https://marylandmatters.org/2026/05/19/board-votes-to-cap-how-much-state-local-governments-spend-on-ozempic/',
+  notes = 'Found unaffordable in 2024 alongside Jardiance. The board held off on a limit after a generic was approved.',
+  needs_check = false
+ where id = 'c0000000-0000-4000-8000-000000000004' and updated_by is null and needs_check;
 update public.drug_boards set
   summary = 'Set the first upper payment limit in the country, for Enbrel, in fall 2025, to start January 2027. A federal judge blocked it in July 2026; the state has appealed to the Federal Circuit.',
   summary_source = 'https://www.coloradopolitics.com/2026/07/27/colorado-board-permits-state-to-appeal-injunction-against-arthritis-drug-price-cap/',
