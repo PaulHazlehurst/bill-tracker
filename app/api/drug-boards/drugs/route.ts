@@ -42,7 +42,9 @@ export async function PATCH(req: NextRequest) {
   if (!before) return NextResponse.json({ error: "That drug isn't in the tracker." }, { status: 404 });
   const changes = describeDrugChanges(before, fields);
   if (!changes.length) return NextResponse.json({ ok: true, changes: [] });
-  const { error: updateError } = await supabase.from("board_drugs").update({ ...fields, updated_by: user.id, updated_at: new Date().toISOString() }).eq("id", body.id);
+  const now = new Date().toISOString();
+  // Saving an edit means someone just looked at the source.
+  const { error: updateError } = await supabase.from("board_drugs").update({ ...fields, updated_by: user.id, updated_at: now, ...(fields.needs_check === false ? { confirmed_at: now, confirmed_by: user.id } : {}) }).eq("id", body.id);
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
   await supabase.from("board_drug_changes").insert(changes.map((summary) => ({ board_drug_id: body.id, changed_by: user.id, summary })));
   return NextResponse.json({ ok: true, changes });

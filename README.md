@@ -70,6 +70,7 @@ here needs a terminal - just type the name, paste the value.
 | `CONGRESS_API_KEY` | Your congress.gov API key |
 | `NEXT_PUBLIC_APP_URL` | Your site's address, e.g. `https://your-app.vercel.app`. Links inside alert emails use it. |
 | `OPEN_STATES_API_KEY` | Optional. Free key from open.pluralpolicy.com. Turns on the state bill search on the Drug boards page. |
+| `COURTLISTENER_API_TOKEN` | Optional. Free token from a courtlistener.com account (Profile, API). Lets the Drug boards page check court cases about the boards for new filings. |
 | `ALERT_EMAIL` | Optional. Who gets an email if a scheduled run fails or stops running. Leave blank to alert team owners. Several addresses can be separated by commas. |
 | `CRON_SECRET` | Make this up yourself - any long random string, e.g. mash your keyboard for 40+ characters. It's just a password nothing else needs to guess. |
 | `RESEND_API_KEY` | Optional for now - leave blank, see "Adding email" below |

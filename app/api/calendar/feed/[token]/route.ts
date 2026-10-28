@@ -66,7 +66,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       uid: `drug-board-${item.id}@billtracker`,
       title: `${STATE_NAMES[item.state] ?? item.state} drug board: ${item.kind === "meeting" && /meeting/i.test(item.title) ? item.title : `${kind}: ${item.title}`}${item.time ? ` (${item.time})` : ""}`,
       allDay: item.day,
-      description: [item.source === "website" ? "From the board's posted agenda." : "Added by your team.", item.url].filter(Boolean).join("\n"),
+      description: [item.source === "website" ? "From the board's website." : "Added by your team.", item.url].filter(Boolean).join("\n"),
       url: item.url,
     });
   }
