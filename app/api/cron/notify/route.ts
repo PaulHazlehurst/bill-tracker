@@ -8,6 +8,7 @@ import { runRegDiscoveryForAllOwners } from "@/lib/regulationDiscovery";
 import { deadline } from "@/lib/batch";
 import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
 import { sendScheduledClientReports } from "@/lib/clientReportSend";
+import { sendDrugBoardAlerts } from "@/lib/drugBoardAlerts";
 
 export const maxDuration = 60;
 
@@ -182,6 +183,16 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     }
   }
 
+  // Anything new from state drug affordability boards (opt-in email).
+  let drugBoards: Awaited<ReturnType<typeof sendDrugBoardAlerts>> | null = null;
+  if (clock.remainingMs() > 12_000) {
+    try {
+      drugBoards = await sendDrugBoardAlerts(admin);
+    } catch (err) {
+      console.error("drug board alerts failed", err);
+    }
+  }
+
   // Topic discovery gets whatever time is left, split with regulation
   // discovery. Both are wrapped so a problem there can never break alerts.
   let discovery: Awaited<ReturnType<typeof runDiscoveryForAllOwners>> | null = null;
@@ -216,6 +227,7 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     smsConfigured,
     digest,
     clientReports,
+    drugBoards,
     discovery,
     regDiscovery,
     ms: clock.elapsedMs(),

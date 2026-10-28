@@ -69,6 +69,7 @@ here needs a terminal - just type the name, paste the value.
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role key |
 | `CONGRESS_API_KEY` | Your congress.gov API key |
 | `NEXT_PUBLIC_APP_URL` | Your site's address, e.g. `https://your-app.vercel.app`. Links inside alert emails use it. |
+| `OPEN_STATES_API_KEY` | Optional. Free key from open.pluralpolicy.com. Turns on the state bill search on the Drug boards page. |
 | `ALERT_EMAIL` | Optional. Who gets an email if a scheduled run fails or stops running. Leave blank to alert team owners. Several addresses can be separated by commas. |
 | `CRON_SECRET` | Make this up yourself - any long random string, e.g. mash your keyboard for 40+ characters. It's just a password nothing else needs to guess. |
 | `RESEND_API_KEY` | Optional for now - leave blank, see "Adding email" below |
@@ -100,7 +101,9 @@ what's above:
 - `/api/cron/poll` runs once a day, checks every tracked bill against
   congress.gov, and records anything that changed.
   With time left over it copies the week's committee meetings and the House
-  floor schedule for the **Week ahead** page.
+  floor schedule for the **Week ahead** page, checks each state drug
+  affordability board's web pages for new documents, and searches Open
+  States for state bills about those boards.
 - `/api/cron/notify` runs 15 minutes later and emails/texts anyone
   subscribed to a bill that changed. On Mondays it also sends client
   reports that are set to go out automatically.
@@ -190,5 +193,9 @@ stopped running. Anything that needs attention comes with the fix.
   gradually.
 - Comparing versions of a bill works for any bill GovInfo has published as text. Very long bills
   (over about 6 MB of text, such as an omnibus) are too large to compare in the app.
+- State drug affordability boards don't offer data feeds. The **Drug boards** page checks each
+  board's web pages for new documents (agendas, minutes, reports) and lists them; your team reads
+  them and updates the drug tracker. If a board moves a page, the page shows a warning and the
+  address can be changed at the bottom of Drug boards.
 - The Monday client report goes out with the early-morning run (around 2 AM Eastern), because the
   free Vercel plan allows two daily jobs and both are in use.

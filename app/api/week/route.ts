@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { loadWeekView, loadDeadlines } from "@/lib/weekData";
+import { loadWeekView, loadDeadlines, loadBoardItems } from "@/lib/weekData";
 import { weekMonday, addDays } from "@/lib/houseFloor";
 import { weekHeadline } from "@/lib/weekAhead";
 import { lastMeetingSync, STALE_AFTER_MS } from "@/lib/meetings";
@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const { ctx, view, meetingsReady, floor } = await loadWeekView(supabase, user.id, start, scope);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
   const deadlines = await loadDeadlines(supabase, ctx, user.id, today);
+  const boardItems = await loadBoardItems(supabase, start, addDays(start, 6));
 
   // Titles and stages for every bill on the page (floor items and meetings
   // only carry bill numbers).
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
     view,
     headline: weekHeadline(view),
     deadlines,
+    boardItems,
     bills,
     hasTopics: ctx.topics.length > 0,
     trackedCount: ctx.tracked.size,

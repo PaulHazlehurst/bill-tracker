@@ -11,7 +11,8 @@ import { useUI } from "@/components/UIProvider";
 import { citationFor, formatDate, timeAgo } from "@/lib/billMeta";
 import { FLOOR_CATEGORY_LABELS, addDays } from "@/lib/houseFloor";
 import { reasonsFor, type WeekView, type WeekEvent, type FloorView } from "@/lib/weekAhead";
-import type { Deadline } from "@/lib/weekData";
+import type { Deadline, BoardItem } from "@/lib/weekData";
+import { STATE_NAMES } from "@/lib/drugBoards";
 import { CalendarPlus, ChevronLeft, ChevronRight, Mail, RefreshCw, Video, FileText, ExternalLink, X, Copy, Check, CalendarDays } from "lucide-react";
 
 type WeekResponse = {
@@ -21,6 +22,7 @@ type WeekResponse = {
   view: WeekView;
   headline: string;
   deadlines: Deadline[];
+  boardItems?: BoardItem[];
   bills: Record<string, { title: string; stage: string; type: string }>;
   hasTopics: boolean;
   trackedCount: number;
@@ -201,6 +203,23 @@ export default function WeekAheadPage() {
               )}
             </section>
           </div>
+
+          {data.boardItems && data.boardItems.length > 0 && (
+            <section className="wk-boards" aria-labelledby="wk-boards-title">
+              <h2 id="wk-boards-title" className="wk-boards-title">State drug boards this week</h2>
+              <ul className="wk-boards-list">
+                {data.boardItems.map((b) => (
+                  <li key={b.id}>
+                    <span className="wk-boards-day">{new Date(`${b.day}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}{b.time ? `, ${b.time}` : ""}</span>
+                    <span className="wk-boards-state">{STATE_NAMES[b.state] ?? b.state}</span>
+                    {b.url ? <a href={b.url} target="_blank" rel="noreferrer">{b.title}</a> : <span>{b.title}</span>}
+                    {b.kind === "comment_deadline" && <span className="wk-boards-tag">Comments due</span>}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/drug-boards" className="wk-boards-more">Open Drug boards</Link>
+            </section>
+          )}
 
           <section className="wk-days" aria-label="Committee meetings by day">
             {data.view.days.map((d) => {

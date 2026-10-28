@@ -4,6 +4,7 @@ import { mapLimit, deadline, chunk } from "@/lib/batch";
 import { computeRefresh, insertEventsSafe, writeBillRows, nextPollAt, REFRESH_COLUMNS, type StoredBill, type NewEvent } from "@/lib/billRefresh";
 import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
 import { syncWeekAhead } from "@/lib/meetings";
+import { syncDrugBoards } from "@/lib/drugBoardsSync";
 
 // 60s is the Hobby-plan ceiling. Without an explicit value Vercel applies a
 // short default and kills the job partway through.
@@ -115,12 +116,24 @@ async function runPoll(admin: ReturnType<typeof createAdminClient>, clock: Retur
   // Committee meetings and the House floor schedule for Week ahead get
   // whatever time is left. The page also refreshes them when opened, so a
   // busy morning that leaves no time here costs nothing.
+  // Leaves ~12 seconds for the drug board check below.
   let weekAhead: Awaited<ReturnType<typeof syncWeekAhead>> | null = null;
-  if (clock.remainingMs() > 8_000) {
+  if (clock.remainingMs() > 20_000) {
     try {
-      weekAhead = await syncWeekAhead(admin, clock.remainingMs() - 2_000);
+      weekAhead = await syncWeekAhead(admin, clock.remainingMs() - 14_000);
     } catch (err) {
       console.error("poll: week-ahead sync failed", err);
+    }
+  }
+
+  // State drug affordability boards: new documents on their sites, and state
+  // bills about them. The Drug boards page can also run this on demand.
+  let drugBoards: Awaited<ReturnType<typeof syncDrugBoards>> | null = null;
+  if (clock.remainingMs() > 6_000) {
+    try {
+      drugBoards = await syncDrugBoards(admin, clock.remainingMs() - 2_000);
+    } catch (err) {
+      console.error("poll: drug board sync failed", err);
     }
   }
 
@@ -141,6 +154,7 @@ async function runPoll(admin: ReturnType<typeof createAdminClient>, clock: Retur
     timedOut,
     errors,
     weekAhead,
+    drugBoards,
     watchdog,
     ms: clock.elapsedMs(),
   };

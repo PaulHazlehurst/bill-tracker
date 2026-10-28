@@ -40,6 +40,12 @@ export const MIGRATIONS: Migration[] = [
     name: "Clients and the Monday report",
     unlocks: "The Clients pages and the weekly client report.",
   },
+  {
+    id: "0005",
+    file: "supabase/migrations/0005_drug_affordability_boards.sql",
+    name: "Drug affordability boards",
+    unlocks: "The Drug boards page: state boards, the drug tracker, new board documents and state bills.",
+  },
 ];
 
 /** Splits the list into what's been run and what hasn't, given the ids the database reports. */

@@ -71,6 +71,39 @@ begin
   reset role;
 end $$;
 
+-- Drug boards: shared with everyone signed in, never with the public, and
+-- nobody can write history under someone else's name.
+do $$
+declare n int;
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'anon', true);
+  set local role anon;
+  select count(*) into n from public.drug_boards;   if n <> 0 then raise exception 'LEAK: signed-out visitors can read drug boards'; end if;
+  select count(*) into n from public.board_drugs;   if n <> 0 then raise exception 'LEAK: signed-out visitors can read the drug tracker'; end if;
+  reset role;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  set local role authenticated;
+  select count(*) into n from public.drug_boards;   if n < 7 then raise exception 'signed-in users should see the boards, saw %', n; end if;
+  begin
+    insert into public.board_drug_changes (board_drug_id, changed_by, summary)
+    values ('c0000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-00000000000b', 'forged');
+    raise exception 'LEAK: wrote drug history as someone else';
+  exception when insufficient_privilege then null;
+  end;
+  insert into public.board_drug_changes (board_drug_id, changed_by, summary)
+  values ('c0000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-00000000000a', 'ok');
+  begin
+    update public.profiles set drug_board_alerts = true where id = '00000000-0000-0000-0000-00000000000b';
+    get diagnostics n = row_count;
+    if n <> 0 then raise exception 'LEAK: changed someone else''s email setting'; end if;
+  end;
+  reset role;
+end $$;
+delete from public.board_drug_changes where summary = 'ok';
+
 -- Leave the throwaway database as it was.
 delete from public.clients;
 delete from public.calendar_feeds;

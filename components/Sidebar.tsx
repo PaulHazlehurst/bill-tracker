@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import {
-  LayoutGrid, Activity, Scale, Landmark, GitBranch, Columns3, BarChart3, Users, Contact, ClipboardList, Settings, Gauge, X, CalendarDays, Briefcase,
+  LayoutGrid, Activity, Scale, Landmark, GitBranch, Columns3, BarChart3, Users, Contact, ClipboardList, Settings, Gauge, X, CalendarDays, Briefcase, Pill,
 } from "lucide-react";
 
 // Grouped by what someone is trying to do. "Clients" = the organizations
@@ -20,6 +20,7 @@ const NAV_GROUPS = [
       { href: "/activity", label: "Activity", Icon: Activity },
       { href: "/week", label: "Week ahead", Icon: CalendarDays },
       { href: "/regulations", label: "Regulations", Icon: Scale },
+      { href: "/drug-boards", label: "Drug boards", Icon: Pill },
     ],
   },
   {

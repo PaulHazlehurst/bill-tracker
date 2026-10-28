@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { loadWeekContext, loadMeetings, loadDeadlines } from "@/lib/weekData";
+import { loadWeekContext, loadMeetings, loadDeadlines, loadBoardItems } from "@/lib/weekData";
+import { STATE_NAMES } from "@/lib/drugBoards";
 import { buildWeek, reasonsFor } from "@/lib/weekAhead";
 import { weekMonday, addDays } from "@/lib/houseFloor";
 import { buildIcs, type IcsEvent } from "@/lib/ics";
@@ -55,6 +56,18 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       allDay: d.closes,
       description: [d.agency, `Matches your topic: ${d.topic}`, d.url].filter(Boolean).join("\n"),
       url: d.url ?? `${appUrl}/regulations`,
+    });
+  }
+
+  // State drug affordability board meetings and deadlines.
+  for (const item of await loadBoardItems(admin, today, addDays(today, 45))) {
+    const kind = item.kind === "comment_deadline" ? "Comments due" : item.kind === "hearing" ? "Hearing" : "Meeting";
+    events.push({
+      uid: `drug-board-${item.id}@billtracker`,
+      title: `${STATE_NAMES[item.state] ?? item.state} drug board: ${item.kind === "meeting" && /meeting/i.test(item.title) ? item.title : `${kind}: ${item.title}`}${item.time ? ` (${item.time})` : ""}`,
+      allDay: item.day,
+      description: [item.source === "website" ? "From the board's posted agenda." : "Added by your team.", item.url].filter(Boolean).join("\n"),
+      url: item.url,
     });
   }
 

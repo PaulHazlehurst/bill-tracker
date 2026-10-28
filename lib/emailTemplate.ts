@@ -262,6 +262,60 @@ export function clientReportEmail(report: ClientReport, opts: { replyName?: stri
   return { html, text, subject: `${report.clientName}: week of ${label}` };
 }
 
+// ── Drug affordability boards: new documents and state bills ─────────
+
+export type DrugBoardEmailInput = {
+  userId: string;
+  documents: { state: string; title: string; url: string; kind: string; date: string | null }[];
+  bills: { state: string; identifier: string; title: string; latestAction: string | null; url: string | null }[];
+};
+
+export function drugBoardEmail(input: DrugBoardEmailInput) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const pageUrl = `${appUrl}/drug-boards`;
+  const settingsUrl = `${appUrl}/settings`;
+  const unsubscribeUrl = `${appUrl}/unsubscribe?uid=${input.userId}`;
+  const n = input.documents.length + input.bills.length;
+  const chip = (s: string) => `<span style="display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:#1a35b8;background:#e8edff;border-radius:4px;padding:1px 6px;margin-right:6px;">${escapeHtml(s)}</span>`;
+
+  const docs = input.documents.length
+    ? `<div style="padding:14px 0;border-top:1px solid #dfe4ee;"><div style="font-size:15px;font-weight:700;margin-bottom:8px;">New on board websites</div>${input.documents
+        .map((d) => `<p style="margin:0 0 8px;font-size:14px;line-height:1.45;">${chip(d.state)}<a href="${escapeHtml(d.url)}" style="color:#0e1530;">${escapeHtml(d.title)}</a>${d.date ? ` <span style="color:#5b6478;font-size:12px;">${escapeHtml(d.date)}</span>` : ""}</p>`)
+        .join("")}</div>`
+    : "";
+  const bills = input.bills.length
+    ? `<div style="padding:14px 0;border-top:1px solid #dfe4ee;"><div style="font-size:15px;font-weight:700;margin-bottom:8px;">State bills on drug affordability boards</div>${input.bills
+        .map((b) => `<p style="margin:0 0 10px;font-size:14px;line-height:1.45;">${chip(b.state)}<strong>${escapeHtml(b.identifier)}</strong> ${b.url ? `<a href="${escapeHtml(b.url)}" style="color:#0e1530;">${escapeHtml(b.title)}</a>` : escapeHtml(b.title)}${b.latestAction ? `<br/><span style="color:#5b6478;font-size:12px;">${escapeHtml(b.latestAction)}</span>` : ""}</p>`)
+        .join("")}</div>`
+    : "";
+
+  const html = `
+<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:580px;margin:0 auto;color:#0e1530;">
+  <div style="padding:24px 0 14px;"><span style="font-size:15px;font-weight:700;">Bill Tracker</span></div>
+  <h1 style="font-size:22px;font-weight:700;margin:0 0 6px;line-height:1.25;">${n} update${n === 1 ? "" : "s"} from state drug affordability boards</h1>
+  <p style="font-size:13px;color:#5b6478;margin:0 0 10px;">Open each one to see what changed, then update the drug tracker if a status moved.</p>
+  ${docs}${bills}
+  <div style="padding:18px 0;border-top:1px solid #dfe4ee;"><a href="${pageUrl}" style="display:inline-block;background:#2b50f0;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:999px;font-size:14px;font-weight:600;">Open Drug boards</a></div>
+  <p style="font-size:12px;color:#5b6478;margin:0 0 24px;">You turned on drug board emails on the Drug boards page. <a href="${pageUrl}" style="color:#5b6478;">Turn them off there</a> &nbsp;|&nbsp; <a href="${settingsUrl}" style="color:#5b6478;">Notification settings</a> &nbsp;|&nbsp; <a href="${unsubscribeUrl}" style="color:#5b6478;">Unsubscribe from all emails</a></p>
+</div>`.trim();
+
+  const text = [
+    `${n} update${n === 1 ? "" : "s"} from state drug affordability boards`,
+    input.documents.length ? `\nNew on board websites:\n${input.documents.map((d) => `- [${d.state}] ${d.title}${d.date ? ` (${d.date})` : ""}\n  ${d.url}`).join("\n")}` : "",
+    input.bills.length ? `\nState bills:\n${input.bills.map((b) => `- [${b.state}] ${b.identifier} ${b.title}${b.latestAction ? `\n  ${b.latestAction}` : ""}${b.url ? `\n  ${b.url}` : ""}`).join("\n")}` : "",
+    `\nOpen Drug boards: ${pageUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const subject = input.documents.length && input.bills.length
+    ? `Drug boards: ${input.documents.length} new document${input.documents.length === 1 ? "" : "s"}, ${input.bills.length} state bill${input.bills.length === 1 ? "" : "s"}`
+    : input.documents.length
+      ? `Drug boards: ${input.documents.length} new document${input.documents.length === 1 ? "" : "s"} (${Array.from(new Set(input.documents.map((d) => d.state))).join(", ")})`
+      : `Drug boards: ${input.bills.length} state bill update${input.bills.length === 1 ? "" : "s"}`;
+  return { html, text, subject };
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")

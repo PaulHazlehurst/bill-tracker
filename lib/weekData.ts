@@ -107,3 +107,26 @@ export async function loadWeekView(db: Db, userId: string, start: string, scope:
   const view: WeekView = buildWeek(start, meetings.rows, floor.items, ctx, scope);
   return { ctx, view, meetingsReady: meetings.ready, floor };
 }
+
+export type BoardItem = { id: string; day: string; state: string; title: string; kind: string; time: string | null; url: string | null; source: "team" | "website" };
+
+/**
+ * State drug board dates in a date range: what the team added, plus any
+ * agenda on a board's website dated in the range (unless the team already
+ * added that board's meeting for the same day). Empty until migration 0005.
+ */
+export async function loadBoardItems(db: Db, from: string, to: string): Promise<BoardItem[]> {
+  const [{ data: dates, error }, { data: agendas }] = await Promise.all([
+    db.from("board_dates").select("id, state, date, time, kind, title, url").gte("date", from).lte("date", to).order("date"),
+    db.from("board_documents").select("id, state, doc_date, title, url").eq("kind", "agenda").gte("doc_date", from).lte("doc_date", to),
+  ]);
+  if (error) return [];
+  const items: BoardItem[] = ((dates as any[]) ?? []).map((d) => ({ id: d.id, day: d.date, state: d.state, title: d.title, kind: d.kind, time: d.time, url: d.url, source: "team" as const }));
+  const taken = new Set(items.filter((i) => i.kind === "meeting").map((i) => `${i.state}|${i.day}`));
+  for (const a of (agendas as any[]) ?? []) {
+    if (taken.has(`${a.state}|${a.doc_date}`)) continue;
+    taken.add(`${a.state}|${a.doc_date}`);
+    items.push({ id: a.id, day: a.doc_date, state: a.state, title: a.title || "Board meeting", kind: "meeting", time: null, url: a.url, source: "website" });
+  }
+  return items.sort((a, b) => a.day.localeCompare(b.day) || a.state.localeCompare(b.state));
+}
