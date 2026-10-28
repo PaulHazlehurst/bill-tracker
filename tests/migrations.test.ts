@@ -26,6 +26,8 @@ describe("numbered database updates", () => {
   });
 
   it("works out what's still waiting", () => {
-    expect(migrationStatus(["0001", "0003"]).pending.map((m) => m.id)).toEqual(["0002", "0004"]);
+    const all = MIGRATIONS.map((m) => m.id);
+    expect(migrationStatus(["0001", "0003"]).pending.map((m) => m.id)).toEqual(all.filter((id) => id !== "0001" && id !== "0003"));
+    expect(migrationStatus(all).pending).toEqual([]);
   });
 });

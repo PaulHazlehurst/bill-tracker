@@ -170,6 +170,21 @@ export async function GET() {
     if (res.ok) return { id: "lda", group: "Data sources", name: "LDA.gov (lobbying disclosures)", status: "ok", detail: "Responding", ms: r.ms };
     return { id: "lda", group: "Data sources", name: "LDA.gov (lobbying disclosures)", status: res.status === 429 ? "warn" : "fail", detail: res.status === 401 ? "Rejected the LDA API key" : `Returned HTTP ${res.status}`, ms: r.ms, fix: res.status === 401 ? "Check LDA_API_KEY in Vercel, or remove it to use anonymous access." : undefined };
   })());
+  if (env.OPEN_STATES_API_KEY) {
+    checks.push(httpCheck("openstates", "Data sources", "Open States (state bills for Drug boards)", "https://v3.openstates.org/jurisdictions?classification=state&per_page=1", { headers: { "X-API-KEY": env.OPEN_STATES_API_KEY } }));
+  } else {
+    config.push({ id: "openstates", group: "Data sources", name: "Open States (state bills for Drug boards)", status: "skip", detail: "Not set up. The Drug boards page won't list state bills.", fix: "Add OPEN_STATES_API_KEY in Vercel (free at open.pluralpolicy.com)." });
+  }
+  checks.push((async (): Promise<Check> => {
+    if (!admin) return { id: "board-pages", group: "Data sources", name: "State drug board websites", status: "skip", detail: "Needs the admin key" };
+    const { data, error } = await admin.from("board_pages").select("url, last_checked_at, last_error");
+    if (error) return { id: "board-pages", group: "Data sources", name: "State drug board websites", status: "skip", detail: "Not set up yet (database update 0005)" };
+    const rows = (data as any[]) ?? [];
+    const failing = rows.filter((r) => r.last_error);
+    const never = rows.filter((r) => !r.last_checked_at);
+    if (failing.length) return { id: "board-pages", group: "Data sources", name: "State drug board websites", status: "warn", detail: `${failing.length} of ${rows.length} pages couldn't be read last time, e.g. ${failing[0].url}: ${failing[0].last_error}`, fix: "A board may have moved the page. Update it under Drug boards, at the bottom of the page." };
+    return { id: "board-pages", group: "Data sources", name: "State drug board websites", status: "ok", detail: never.length === rows.length ? `${rows.length} pages, not checked yet` : `All ${rows.length} pages read fine` };
+  })());
   checks.push(httpCheck("fedreg", "Data sources", "Federal Register (regulations)", "https://www.federalregister.gov/api/v1/documents.json?per_page=1"));
   checks.push(httpCheck("news", "Data sources", "Google News feed (bill coverage)", "https://news.google.com/rss/search?q=congress&hl=en-US&gl=US&ceid=US:en"));
 
