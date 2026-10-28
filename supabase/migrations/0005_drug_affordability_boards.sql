@@ -160,9 +160,9 @@ insert into public.drug_boards (state, name, agency, status, authority, summary,
    'https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/',
    'https://doi.colorado.gov/types-of-insurance/health-insurance/prescription-drug-affordability-review-board', 'https://doi.colorado.gov/sign-up-for-division-of-insurance-email-lists', 1),
   ('MD', 'Maryland Prescription Drug Affordability Board', null, 'active', 'Can set price limits',
-   'A 2025 law extended its limits from state programs to everyone in Maryland. Sources differ on which limits were finalized in 2026; check the board''s Upper Payment Limits page.',
-   'https://familiesusa.org/wp-content/uploads/2026/04/PDABs-1-Pager_2026-Update_Fact-Sheet-1.pdf',
-   'https://pdab.prod.maryland.gov/', null, 2),
+   'Voted in 2026 to limit what state and local government health plans pay for Jardiance and Ozempic. Both are still proposed regulations, so no limit is active yet. A 2025 law lets limits reach all Marylanders only after two have been in place for a year.',
+   'https://pdab.maryland.gov/upper-payment-limits',
+   'https://pdab.maryland.gov/', null, 2),
   ('MN', 'Minnesota Prescription Drug Affordability Board', 'Department of Commerce', 'active', 'Can set price limits',
    'Still setting up its drug cost review process; no reviews finished yet.',
    'https://www.multistate.us/insider/2026/6/8/pdab-implementation-challenges-slow-state-drug-cost-efforts',
@@ -191,11 +191,21 @@ insert into public.drug_boards (state, name, agency, status, authority, summary,
    'https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/', null, null, 91)
 on conflict (state) do nothing;
 
+-- Maryland moved its board site from pdab.prod.maryland.gov to pdab.maryland.gov.
+-- These lines fix a database that already ran an earlier copy of this file.
+delete from public.board_pages where url like 'https://pdab.prod.maryland.gov/%';
+update public.drug_boards
+   set website = 'https://pdab.maryland.gov/',
+       summary = 'Voted in 2026 to limit what state and local government health plans pay for Jardiance and Ozempic. Both are still proposed regulations, so no limit is active yet. A 2025 law lets limits reach all Marylanders only after two have been in place for a year.',
+       summary_source = 'https://pdab.maryland.gov/upper-payment-limits'
+ where state = 'MD' and website = 'https://pdab.prod.maryland.gov/';
+
 insert into public.board_pages (state, url, label) values
   ('CO', 'https://doi.colorado.gov/types-of-insurance/health-insurance/prescription-drug-affordability-review-board', 'Board page'),
-  ('MD', 'https://pdab.prod.maryland.gov/public-meetings', 'Public meetings'),
-  ('MD', 'https://pdab.prod.maryland.gov/cost-reviews', 'Cost reviews'),
-  ('MD', 'https://pdab.prod.maryland.gov/upper-payment-limits', 'Upper payment limits'),
+  ('MD', 'https://pdab.maryland.gov/public-meetings/board-meetings', 'Board meetings'),
+  ('MD', 'https://pdab.maryland.gov/cost-reviews/board-selected-drugs', 'Drugs under review'),
+  ('MD', 'https://pdab.maryland.gov/upper-payment-limits', 'Upper payment limits'),
+  ('MD', 'https://pdab.maryland.gov/about/regulations', 'Regulations'),
   ('MN', 'https://mn.gov/commerce/insurance/health/pharmacy-drug-affordability-board/index.jsp', 'Board page and meetings'),
   ('WA', 'https://www.hca.wa.gov/about-hca/programs-and-initiatives/clinical-collaboration-and-initiatives/prescription-drug-affordability-board', 'Board page'),
   ('OR', 'https://dfr.oregon.gov/pdab/Pages/board-calendar.aspx', 'Board calendar and materials'),
@@ -208,16 +218,20 @@ insert into public.board_drugs (id, state, drug, manufacturer, stage, price_limi
   ('c0000000-0000-4000-8000-000000000001', 'CO', 'Enbrel', 'Amgen', 'limit_blocked', '$600 per dose', 'Close to the Medicare negotiated price',
    'Court hearing on the merits', 'https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/',
    'Set October 2025 to start January 2027. A federal judge granted a preliminary injunction on July 1, 2026 (patent preemption).', false),
-  ('c0000000-0000-4000-8000-000000000002', 'MD', 'Jardiance', 'Boehringer Ingelheim', 'limit_set', null, 'Tied to the Medicare negotiated price',
-   null, 'https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/',
-   'Avalere (Aug 2026) reports a limit was set in 2026; Families USA (Apr 2026) described it as upcoming.', true),
-  ('c0000000-0000-4000-8000-000000000003', 'MD', 'Ozempic', 'Novo Nordisk', 'limit_set', null, 'Tied to the Medicare negotiated price',
-   null, 'https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/',
-   'Reported by Avalere (Aug 2026). Confirm on the board''s Upper Payment Limits page.', true),
+  ('c0000000-0000-4000-8000-000000000002', 'MD', 'Jardiance', 'Boehringer Ingelheim', 'limit_proposed', null, 'Tied to the Medicare negotiated price',
+   'Final board vote after the Maryland Register comment period', 'https://pdab.maryland.gov/upper-payment-limits',
+   'Board voted in spring 2026 to set a limit for state and local government plans (about $320,000 a year in savings). Proposed regulations; earliest start January 1, 2027.', false),
+  ('c0000000-0000-4000-8000-000000000003', 'MD', 'Ozempic', 'Novo Nordisk', 'limit_proposed', null, 'Tied to the Medicare negotiated price',
+   'Final board vote after the Maryland Register comment period', 'https://pdab.maryland.gov/upper-payment-limits',
+   'Board voted May 2026 to set a limit for state and local government plans (about $5.8 million a year in savings). Proposed regulations; earliest start January 1, 2027.', false),
   ('c0000000-0000-4000-8000-000000000004', 'MD', 'Farxiga', 'AstraZeneca', 'closed', null, null,
-   null, 'https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/',
-   'Limit deferred after the patent expired and generics arrived (Avalere, Aug 2026).', true)
-on conflict (id) do nothing;
+   null, 'https://marylandmatters.org/2026/05/19/board-votes-to-cap-how-much-state-local-governments-spend-on-ozempic/',
+   'Found unaffordable in 2024 alongside Jardiance. The board held off on a limit after a generic was approved.', false)
+-- Replace the earlier starting entries only if nobody on the team has confirmed them yet.
+on conflict (id) do update set
+  stage = excluded.stage, limit_basis = excluded.limit_basis, next_step = excluded.next_step,
+  source_url = excluded.source_url, notes = excluded.notes, needs_check = excluded.needs_check, updated_at = now()
+  where public.board_drugs.needs_check;
 
 insert into public.schema_migrations (id, name)
 values ('0005', 'Drug affordability boards')
