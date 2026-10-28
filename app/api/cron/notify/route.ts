@@ -8,6 +8,7 @@ import { runRegDiscoveryForAllOwners } from "@/lib/regulationDiscovery";
 import { deadline } from "@/lib/batch";
 import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
 import { sendScheduledClientReports } from "@/lib/clientReportSend";
+import { syncBoardReading } from "@/lib/boardReadingSync";
 import { sendDrugBoardAlerts } from "@/lib/drugBoardAlerts";
 
 export const maxDuration = 60;
@@ -183,6 +184,18 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     }
   }
 
+  // Open the board documents found at 6:00 and check court cases, so this
+  // morning's email can say which drugs they mention. Capped so discovery
+  // below still gets its share.
+  let boardReading: Awaited<ReturnType<typeof syncBoardReading>> | null = null;
+  if (clock.remainingMs() > 30_000) {
+    try {
+      boardReading = await syncBoardReading(admin, Math.min(18_000, clock.remainingMs() - 24_000));
+    } catch (err) {
+      console.error("drug board reading failed", err);
+    }
+  }
+
   // Anything new from state drug affordability boards (opt-in email).
   let drugBoards: Awaited<ReturnType<typeof sendDrugBoardAlerts>> | null = null;
   if (clock.remainingMs() > 12_000) {
@@ -227,6 +240,7 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     smsConfigured,
     digest,
     clientReports,
+    boardReading,
     drugBoards,
     discovery,
     regDiscovery,

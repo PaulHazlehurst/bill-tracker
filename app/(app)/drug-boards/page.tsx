@@ -10,17 +10,29 @@ import { formatDate, timeAgo } from "@/lib/billMeta";
 import {
   DRUG_STAGES, DRUG_STAGE_LABELS, DRUG_TRACK, drugStageTone, drugTrackPosition, STATE_TILES, STATE_NAMES, DOC_KIND_LABELS, isAboutDrugBoards, type DrugStage,
 } from "@/lib/drugBoards";
-import { Pill, RefreshCw, Plus, Check, ExternalLink, X, Pencil, Bell, BellOff, AlertTriangle, EyeOff, FileText, CalendarPlus } from "lucide-react";
+import { matchMedicarePrice, formatUsd, checkAge, type MedicarePrice } from "@/lib/boardReading";
+import type { Op } from "@/lib/textDiff";
+import { Pill, RefreshCw, Plus, Check, ExternalLink, X, Pencil, Bell, BellOff, AlertTriangle, EyeOff, FileText, CalendarPlus, ShieldCheck, Gavel, ChevronDown } from "lucide-react";
 
-type Board = { state: string; name: string; agency: string | null; status: string; authority: string | null; summary: string | null; summary_source: string | null; website: string | null; email_signup: string | null; updated_at: string };
+type Board = { state: string; name: string; agency: string | null; status: string; authority: string | null; summary: string | null; summary_source: string | null; website: string | null; email_signup: string | null; updated_at: string; confirmed_at?: string | null };
 type Page = { id: string; state: string; url: string; label: string | null; last_checked_at: string | null; last_changed_at: string | null; last_error: string | null };
-type Drug = { id: string; state: string; drug: string; manufacturer: string | null; stage: DrugStage; price_limit: string | null; limit_basis: string | null; next_step: string | null; next_date: string | null; source_url: string | null; notes: string | null; needs_check: boolean; updated_at: string };
-type Doc = { id: string; state: string; url: string; title: string | null; kind: string | null; doc_date: string | null; first_seen_at: string; reviewed_at?: string | null };
-type DateItem = { id: string; state: string; date: string; time: string | null; kind: string; title: string; url: string | null };
+type Drug = { id: string; state: string; drug: string; manufacturer: string | null; stage: DrugStage; price_limit: string | null; limit_basis: string | null; next_step: string | null; next_date: string | null; source_url: string | null; notes: string | null; needs_check: boolean; updated_at: string; confirmed_at?: string | null };
+type Doc = {
+  id: string; state: string; url: string; title: string | null; kind: string | null; doc_date: string | null; first_seen_at: string; reviewed_at?: string | null;
+  text_status?: "read" | "unreadable" | "skipped" | null; text_note?: string | null; mentions?: string[]; mention_snippets?: { term: string; snippet: string }[];
+};
+type DateItem = { id: string; state: string; date: string; time: string | null; kind: string; title: string; url: string | null; source?: "team" | "document"; document_id?: string | null };
+type PageChange = { id: string; page_id: string; state: string; detected_at: string; ops: Op[] | null; added: number; removed: number };
+type Case = {
+  id: string; state: string; board_drug_id: string | null; name: string; court: string; court_code: string | null; docket_number: string | null; courtlistener_id: number | null;
+  url: string | null; notes: string | null; last_filing_date: string | null; last_checked_at: string | null; last_error: string | null;
+};
+type Filing = { id: string; case_id: string; date_filed: string | null; description: string; url: string | null; baseline: boolean; reviewed_at: string | null; first_seen_at: string };
 type StateBill = { id: string; state: string; session: string | null; identifier: string; title: string; latest_action: string | null; latest_action_date: string | null; url: string | null; first_seen_at: string };
 type Data = {
   ready: boolean; error?: string; today: string; boards: Board[]; pages: Page[]; drugs: Drug[]; newDocuments: Doc[]; recentDocuments: Doc[];
   dates: DateItem[]; datedAgendas: Doc[]; bills: StateBill[]; hiddenBills: number; lastChecked: string | null; alerts: { on: boolean; emailOn: boolean }; openStatesConfigured: boolean;
+  accuracy: boolean; pageChanges: PageChange[]; cases: Case[]; filings: Filing[]; medicarePrices: MedicarePrice[]; courtListenerConfigured: boolean;
 };
 
 const KIND_LABEL: Record<string, string> = { meeting: "Meeting", comment_deadline: "Comments due", hearing: "Hearing", other: "Date" };
@@ -41,6 +53,10 @@ export default function DrugBoardsPage() {
   const [editingBoard, setEditingBoard] = useState<Board | null>(null);
   const [addingDate, setAddingDate] = useState(false);
   const [showPages, setShowPages] = useState(false);
+  const [showPrices, setShowPrices] = useState(false);
+  const [onlyToCheck, setOnlyToCheck] = useState(false);
+  const [openChange, setOpenChange] = useState<string | null>(null);
+  const [editingCase, setEditingCase] = useState<Case | "new" | null>(null);
 
   async function load() {
     const res = await fetch("/api/drug-boards").catch(() => null);
@@ -58,19 +74,45 @@ export default function DrugBoardsPage() {
     setChecking(false);
     const body = res ? await res.json().catch(() => ({})) : {};
     if (!res || !res.ok) return toast(body.error ?? "The check didn't finish.", "error");
-    const docs = body.pages?.newDocuments ?? 0;
-    const bills = body.bills?.added ?? 0;
-    toast(docs || bills ? `Found ${docs} new document${docs === 1 ? "" : "s"} and ${bills} new state bill${bills === 1 ? "" : "s"}` : "Checked every board. Nothing new.", docs || bills ? "success" : "info");
+    const found = [
+      [body.pages?.newDocuments ?? 0, "new document"],
+      [body.pages?.wordingChanges ?? 0, "page wording change"],
+      [body.reading?.courts?.newFilings ?? 0, "court filing"],
+      [body.bills?.added ?? 0, "new state bill"],
+    ].filter(([n]) => (n as number) > 0).map(([n, label]) => `${n} ${label}${n === 1 ? "" : "s"}`);
+    toast(found.length ? `Found ${found.join(", ")}` : "Checked every board. Nothing new.", found.length ? "success" : "info");
     load();
   }
 
-  async function markRead(ids: string[]) {
-    setData((d) => d && { ...d, newDocuments: d.newDocuments.filter((x) => !ids.includes(x.id)) });
-    const res = await fetch("/api/drug-boards/documents", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, reviewed: true }) });
+  async function markRead(ids: string[], type: "document" | "change" | "filing" = "document") {
+    if (!ids.length) return;
+    setData((d) =>
+      d && {
+        ...d,
+        newDocuments: type === "document" ? d.newDocuments.filter((x) => !ids.includes(x.id)) : d.newDocuments,
+        pageChanges: type === "change" ? d.pageChanges.filter((x) => !ids.includes(x.id)) : d.pageChanges,
+        filings: type === "filing" ? d.filings.map((x) => (ids.includes(x.id) ? { ...x, reviewed_at: new Date().toISOString() } : x)) : d.filings,
+      },
+    );
+    const res = await fetch("/api/drug-boards/documents", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, reviewed: true, type }) });
     if (!res.ok) {
       toast("Couldn't mark that as read.", "error");
       load();
     }
+  }
+
+  async function confirmEntry(kind: "drug" | "board", id: string, label: string) {
+    const res = await fetch("/api/drug-boards/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, id }) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return toast(body.error ?? "Couldn't save that.", "error");
+    toast(`Marked ${label} as checked today`, "success");
+    setData((d) =>
+      d && {
+        ...d,
+        drugs: kind === "drug" ? d.drugs.map((x) => (x.id === id ? { ...x, confirmed_at: body.confirmed_at, needs_check: false } : x)) : d.drugs,
+        boards: kind === "board" ? d.boards.map((x) => (x.state === id ? { ...x, confirmed_at: body.confirmed_at } : x)) : d.boards,
+      },
+    );
   }
 
   async function setAlerts(on: boolean) {
@@ -125,13 +167,29 @@ export default function DrugBoardsPage() {
   const newDocs = inState(data?.newDocuments ?? []);
   const bills = inState(data?.bills ?? []).sort((a, b) => Number(isAboutDrugBoards(b.title)) - Number(isAboutDrugBoards(a.title)) || String(b.latest_action_date ?? "").localeCompare(String(a.latest_action_date ?? "")));
   const upcoming = [
-    ...inState(data?.dates ?? []).map((d) => ({ ...d, source: "team" as const })),
+    ...inState(data?.dates ?? []).map((d) => ({ ...d, source: d.source === "document" ? ("document" as const) : ("team" as const) })),
     ...inState(data?.datedAgendas ?? [])
       .filter((a) => !(data?.dates ?? []).some((d) => d.state === a.state && d.date === a.doc_date))
       .map((a) => ({ id: a.id, state: a.state, date: a.doc_date!, time: null, kind: "meeting", title: a.title ?? "Board meeting", url: a.url, source: "website" as const })),
   ].sort((a, b) => a.date.localeCompare(b.date));
   const visibleBoards = state ? active.filter((b) => b.state === state) : active;
   const brokenPages = (data?.pages ?? []).filter((p) => p.last_error);
+
+  // Closer reading (migration 0006): wording changes, court filings, Medicare prices, last-checked dates.
+  const accuracy = !!data?.accuracy;
+  const prices = data?.medicarePrices ?? [];
+  const thisYear = Number((data?.today ?? "").slice(0, 4)) || new Date().getFullYear();
+  const pageById = new Map((data?.pages ?? []).map((p) => [p.id, p]));
+  const changes = inState(data?.pageChanges ?? []);
+  const cases = inState(data?.cases ?? []);
+  const caseById = new Map((data?.cases ?? []).map((c) => [c.id, c]));
+  const drugById = new Map((data?.drugs ?? []).map((d) => [d.id, d]));
+  const newFilings = (data?.filings ?? []).filter((f) => !f.baseline && !f.reviewed_at && (!state || caseById.get(f.case_id)?.state === state));
+  const datesFromDoc = (id: string) => (data?.dates ?? []).filter((d) => d.document_id === id).length;
+  const dueForCheck = (d: Drug) => d.needs_check || (accuracy && checkAge(d.confirmed_at ?? null).stale);
+  const toCheck = drugs.filter(dueForCheck);
+  const shownDrugs = onlyToCheck ? toCheck : drugs;
+  const feedCount = newDocs.length + changes.length + newFilings.length;
 
   return (
     <div className="page page-wide db-page">
@@ -155,6 +213,12 @@ export default function DrugBoardsPage() {
           </>
         }
       />
+
+      {data && data.ready && !data.accuracy && (
+        <p className="db-notice">
+          <AlertTriangle size={14} aria-hidden="true" /> One more database update turns on document reading, wording changes, court cases, Medicare prices and last-checked dates: run supabase/migrations/0006_drug_board_accuracy.sql in Supabase.
+        </p>
+      )}
 
       {!data ? (
         <div className="db-top"><div className="skel skel-block" style={{ height: 320 }} /><div className="skel skel-block" style={{ height: 320 }} /></div>
@@ -202,25 +266,106 @@ export default function DrugBoardsPage() {
             <section className="card db-new" aria-labelledby="new-title">
               <div className="db-section-head">
                 <div>
-                  <h2 id="new-title" className="card-title">New on board websites</h2>
+                  <h2 id="new-title" className="card-title">New from the boards</h2>
                   <p className="card-sub">{data.lastChecked ? `Checked ${timeAgo(data.lastChecked)}.` : "Not checked yet. The first check runs tomorrow morning, or now with Check boards now."} Open each one, then update the drug tracker if anything moved.</p>
                 </div>
-                {newDocs.length > 1 && <button className="link-btn" onClick={() => markRead(newDocs.map((d) => d.id))}>Mark all read</button>}
+                {feedCount > 1 && (
+                  <button
+                    className="link-btn"
+                    onClick={() => {
+                      markRead(newDocs.map((d) => d.id));
+                      markRead(changes.map((c) => c.id), "change");
+                      markRead(newFilings.map((f) => f.id), "filing");
+                    }}
+                  >
+                    Mark all read
+                  </button>
+                )}
               </div>
-              {newDocs.length === 0 ? (
+              {feedCount === 0 ? (
                 <p className="db-empty">Nothing new{state ? ` from ${STATE_NAMES[state]}` : ""} since you last looked.</p>
               ) : (
-                <ul className="db-docs">
-                  {newDocs.slice(0, 12).map((d) => (
-                    <li key={d.id}>
-                      <span className="db-state">{d.state}</span>
-                      <a href={d.url} target="_blank" rel="noreferrer" className="db-doc-title">{d.title || d.url}</a>
-                      <span className="db-doc-meta">{DOC_KIND_LABELS[d.kind ?? "other"]}{d.doc_date ? `, ${formatDate(d.doc_date)}` : ""}. Found {timeAgo(d.first_seen_at)}.</span>
-                      <button className="icon-btn db-read" onClick={() => markRead([d.id])} aria-label={`Mark ${d.title ?? "document"} as read`} title="Mark as read"><Check size={15} /></button>
-                    </li>
-                  ))}
-                  {newDocs.length > 12 && <li className="db-more">and {newDocs.length - 12} more</li>}
-                </ul>
+                <>
+                  {newDocs.length > 0 && (
+                    <>
+                      {(changes.length > 0 || newFilings.length > 0) && <h3 className="db-feed-h">Documents</h3>}
+                      <ul className="db-docs">
+                        {newDocs.slice(0, 12).map((d) => {
+                          const added = datesFromDoc(d.id);
+                          return (
+                            <li key={d.id}>
+                              <span className="db-state">{d.state}</span>
+                              <div className="db-doc-main">
+                                <a href={d.url} target="_blank" rel="noreferrer" className="db-doc-title">{d.title || d.url}</a>
+                                <span className="db-doc-meta">{DOC_KIND_LABELS[d.kind ?? "other"]}{d.doc_date ? `, ${formatDate(d.doc_date)}` : ""}. Found {timeAgo(d.first_seen_at)}.</span>
+                                {(d.mention_snippets ?? []).slice(0, 3).map((m) => (
+                                  <span key={m.term} className="db-mention-row">
+                                    <span className="db-mention">{m.term}</span>
+                                    <q className="db-snippet">{m.snippet}</q>
+                                  </span>
+                                ))}
+                                {added > 0 && <span className="db-doc-note is-good"><CalendarPlus size={12} aria-hidden="true" /> Added {added} date{added === 1 ? "" : "s"} to Coming up</span>}
+                                {d.text_status === "unreadable" && <span className="db-doc-note">Couldn&apos;t open it: {d.text_note}. Open it yourself to check.</span>}
+                                {d.text_status === "read" && !(d.mentions ?? []).length && !added && <span className="db-doc-note">Doesn&apos;t name a drug on your tracker.</span>}
+                              </div>
+                              <button className="icon-btn db-read" onClick={() => markRead([d.id])} aria-label={`Mark ${d.title ?? "document"} as read`} title="Mark as read"><Check size={15} /></button>
+                            </li>
+                          );
+                        })}
+                        {newDocs.length > 12 && <li className="db-more">and {newDocs.length - 12} more</li>}
+                      </ul>
+                    </>
+                  )}
+                  {changes.length > 0 && (
+                    <>
+                      <h3 className="db-feed-h">Wording changed on a board page</h3>
+                      <ul className="db-docs">
+                        {changes.slice(0, 8).map((c) => {
+                          const pg = pageById.get(c.page_id);
+                          const open = openChange === c.id;
+                          return (
+                            <li key={c.id}>
+                              <span className="db-state">{c.state}</span>
+                              <div className="db-doc-main">
+                                {pg ? <a href={pg.url} target="_blank" rel="noreferrer" className="db-doc-title">{pg.label || pg.url}</a> : <span className="db-doc-title">Board page</span>}
+                                <span className="db-doc-meta">
+                                  {c.ops ? `${c.added} word${c.added === 1 ? "" : "s"} added, ${c.removed} removed` : "The page was rebuilt, so there's no word-by-word comparison. Open it to see what's there now"}. Noticed {timeAgo(c.detected_at)}.
+                                </span>
+                                {c.ops && (
+                                  <button className="link-btn db-redline-toggle" aria-expanded={open} onClick={() => setOpenChange(open ? null : c.id)}>
+                                    <ChevronDown size={14} aria-hidden="true" className={open ? "is-open" : ""} /> {open ? "Hide" : "Show"} what changed
+                                  </button>
+                                )}
+                                {open && c.ops && <Redline ops={c.ops} />}
+                              </div>
+                              <button className="icon-btn db-read" onClick={() => markRead([c.id], "change")} aria-label={`Mark the change to ${pg?.label ?? "this page"} as read`} title="Mark as read"><Check size={15} /></button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
+                  {newFilings.length > 0 && (
+                    <>
+                      <h3 className="db-feed-h">New court filings</h3>
+                      <ul className="db-docs">
+                        {newFilings.slice(0, 8).map((f) => {
+                          const c = caseById.get(f.case_id);
+                          return (
+                            <li key={f.id}>
+                              <span className="db-state">{c?.state}</span>
+                              <div className="db-doc-main">
+                                {f.url ? <a href={f.url} target="_blank" rel="noreferrer" className="db-doc-title">{f.description}</a> : <span className="db-doc-title">{f.description}</span>}
+                                <span className="db-doc-meta">{c?.name}{f.date_filed ? `, filed ${formatDate(f.date_filed)}` : ""}.</span>
+                              </div>
+                              <button className="icon-btn db-read" onClick={() => markRead([f.id], "filing")} aria-label={`Mark the filing in ${c?.name ?? "this case"} as read`} title="Mark as read"><Check size={15} /></button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
+                </>
               )}
               {brokenPages.length > 0 && (
                 <p className="db-warn"><AlertTriangle size={14} aria-hidden="true" /> {brokenPages.length} watched page{brokenPages.length === 1 ? "" : "s"} couldn&apos;t be read last time. <button className="link-btn" onClick={() => setShowPages(true)}>See which</button></p>
@@ -232,12 +377,22 @@ export default function DrugBoardsPage() {
             <div className="db-section-head">
               <div>
                 <h2 id="tracker-title" className="card-title">Drugs under review{state ? ` in ${STATE_NAMES[state]}` : ""}</h2>
-                <p className="card-sub">Kept current by your team. Every change is recorded with who made it.</p>
+                <p className="card-sub">
+                  Kept current by your team. Every change is recorded with who made it.
+                  {accuracy && toCheck.length > 0 && (
+                    <>
+                      {" "}
+                      <button className="link-btn" onClick={() => setOnlyToCheck(!onlyToCheck)} aria-pressed={onlyToCheck}>
+                        {onlyToCheck ? "Show every drug" : `${toCheck.length} due for a check`}
+                      </button>
+                    </>
+                  )}
+                </p>
               </div>
               <button className="btn btn-secondary btn-sm" onClick={() => setEditing("new")}><Plus size={14} /> Add a drug</button>
             </div>
-            {drugs.length === 0 ? (
-              <p className="db-empty">No drugs tracked{state ? ` for ${STATE_NAMES[state]}` : ""} yet.</p>
+            {shownDrugs.length === 0 ? (
+              <p className="db-empty">{onlyToCheck ? "Nothing due for a check." : `No drugs tracked${state ? ` for ${STATE_NAMES[state]}` : ""} yet.`}</p>
             ) : (
               <div className="db-table-wrap">
                 <table className="db-table">
@@ -245,7 +400,10 @@ export default function DrugBoardsPage() {
                     <tr><th scope="col">Drug</th><th scope="col">Board</th><th scope="col">Where it stands</th><th scope="col">Price limit</th><th scope="col">Next</th><th scope="col"><span className="sr-only">Edit</span></th></tr>
                   </thead>
                   <tbody>
-                    {drugs.map((d) => (
+                    {shownDrugs.map((d) => {
+                      const age = checkAge(d.confirmed_at ?? null);
+                      const medicare = matchMedicarePrice(d.drug, prices);
+                      return (
                       <tr key={d.id}>
                         <td>
                           <span className="db-drug">{d.drug}</span>
@@ -255,11 +413,23 @@ export default function DrugBoardsPage() {
                         <td>
                           <span className={`stage-pill tone-${drugStageTone(d.stage)}`}>{DRUG_STAGE_LABELS[d.stage]}</span>
                           <DrugTrack stage={d.stage} />
-                          {d.needs_check && <span className="db-check" title="Sources disagree. Confirm on the board's site."><AlertTriangle size={12} aria-hidden="true" /> Needs a check</span>}
+                          {d.needs_check ? (
+                            <span className="db-check" title="Sources disagree. Confirm on the board's site."><AlertTriangle size={12} aria-hidden="true" /> Needs a check</span>
+                          ) : accuracy && age.stale ? (
+                            <span className="db-check" title="Nobody has confirmed this against its source in the last 30 days."><AlertTriangle size={12} aria-hidden="true" /> {age.days === null ? "Not checked yet" : `Not checked in ${age.days} days`}</span>
+                          ) : accuracy ? (
+                            <span className="db-checked">{age.label}</span>
+                          ) : null}
                         </td>
                         <td>
                           {d.price_limit ? <span className="db-limit">{d.price_limit}</span> : <span className="db-sub">None yet</span>}
                           {d.limit_basis && <span className="db-sub">{d.limit_basis}</span>}
+                          {medicare && (
+                            <span className="db-medicare">
+                              Medicare pays <a href={medicare.source_url} target="_blank" rel="noreferrer">{formatUsd(medicare.price_30_day)}</a> per 30 days
+                              {medicare.effective_year > thisYear ? ` from ${medicare.effective_year}` : ` (${medicare.effective_year})`}
+                            </span>
+                          )}
                         </td>
                         <td>
                           {d.next_date && <span className="db-next-date">{formatDate(d.next_date)}</span>}
@@ -267,15 +437,76 @@ export default function DrugBoardsPage() {
                         </td>
                         <td className="db-row-actions">
                           {d.source_url && <a className="icon-btn" href={d.source_url} target="_blank" rel="noreferrer" aria-label={`Source for ${d.drug}`} title="Source"><ExternalLink size={15} /></a>}
+                          {accuracy && <button className="icon-btn" onClick={() => confirmEntry("drug", d.id, d.drug)} aria-label={`${d.drug}: checked against the source, still right`} title="Checked against the source: still right"><ShieldCheck size={15} /></button>}
                           <button className="icon-btn" onClick={() => setEditing(d)} aria-label={`Edit ${d.drug}`} title={`Updated ${timeAgo(d.updated_at)}`}><Pencil size={15} /></button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </section>
+
+          {accuracy && (
+            <section className="card db-cases" aria-labelledby="cases-title">
+              <div className="db-section-head">
+                <div>
+                  <h2 id="cases-title" className="card-title">Court cases</h2>
+                  <p className="card-sub">Lawsuits over board decisions. New filings are checked every morning on CourtListener, a free public court records site.</p>
+                </div>
+                <button className="btn btn-secondary btn-sm" onClick={() => setEditingCase("new")}><Gavel size={14} /> Follow a case</button>
+              </div>
+              {!data.courtListenerConfigured && (
+                <p className="db-warn"><AlertTriangle size={14} aria-hidden="true" /> To check filings automatically, add a free CourtListener API token in Vercel as COURTLISTENER_API_TOKEN.</p>
+              )}
+              {cases.length === 0 ? (
+                <p className="db-empty">No cases followed{state ? ` in ${STATE_NAMES[state]}` : ""}.</p>
+              ) : (
+                <ul className="db-cases-list">
+                  {cases.map((c) => {
+                    const drug = c.board_drug_id ? drugById.get(c.board_drug_id) : null;
+                    const recent = (data.filings ?? []).filter((f) => f.case_id === c.id).slice(0, 3);
+                    return (
+                      <li key={c.id}>
+                        <div className="db-case-top">
+                          <span className="db-state">{c.state}</span>
+                          <span className="db-case-name">{c.url ? <a href={c.url} target="_blank" rel="noreferrer">{c.name}</a> : c.name}</span>
+                          {drug && <span className="db-mention">{drug.drug}</span>}
+                          <button className="icon-btn db-case-edit" onClick={() => setEditingCase(c)} aria-label={`Edit ${c.name}`}><Pencil size={14} /></button>
+                        </div>
+                        <span className="db-sub">
+                          {c.court}{c.docket_number ? `, No. ${c.docket_number}` : ""}
+                          {c.last_filing_date ? `. Latest filing ${formatDate(c.last_filing_date)}` : ""}
+                          {c.courtlistener_id ? <>. <a href={`https://www.courtlistener.com/docket/${c.courtlistener_id}/`} target="_blank" rel="noreferrer">Docket on CourtListener</a></> : ""}
+                        </span>
+                        {c.last_error ? (
+                          <span className="db-case-error"><AlertTriangle size={12} aria-hidden="true" /> {c.last_error}</span>
+                        ) : !c.last_checked_at ? (
+                          <span className="db-sub">Not checked yet.</span>
+                        ) : null}
+                        {recent.length > 0 && (
+                          <ul className="db-filings">
+                            {recent.map((f) => {
+                              const isNew = !f.baseline && !f.reviewed_at;
+                              return (
+                                <li key={f.id} className={isNew ? "is-new" : ""}>
+                                  <span className="db-filing-date">{f.date_filed ? formatDate(f.date_filed) : "No date"}</span>
+                                  <span>{f.url ? <a href={f.url} target="_blank" rel="noreferrer">{f.description}</a> : f.description}{isNew && <span className="db-new-tag">New</span>}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                        {c.notes && <p className="db-case-notes">{c.notes}</p>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          )}
 
           <section aria-labelledby="boards-title">
             <h2 id="boards-title" className="section-title db-h2">The boards</h2>
@@ -284,6 +515,7 @@ export default function DrugBoardsPage() {
                 const next = upcoming.find((u) => u.state === b.state);
                 const count = (data.drugs ?? []).filter((d) => d.state === b.state).length;
                 const pages = (data.pages ?? []).filter((p) => p.state === b.state);
+                const age = checkAge(b.confirmed_at ?? null);
                 return (
                   <li key={b.state} className={`db-board tone-${boardTone(b)}`}>
                     <div className="db-board-top">
@@ -296,11 +528,13 @@ export default function DrugBoardsPage() {
                       <div><dt>Next date</dt><dd>{next ? `${formatDate(next.date)}: ${next.title}` : "None posted"}</dd></div>
                       <div><dt>Drugs tracked</dt><dd>{count}</dd></div>
                       <div><dt>Pages checked</dt><dd>{pages.length}{pages.some((p) => p.last_error) ? ` (${pages.filter((p) => p.last_error).length} couldn't be read)` : ""}</dd></div>
+                      {accuracy && <div><dt>Summary</dt><dd className={age.stale ? "db-stale" : ""}>{age.stale && <AlertTriangle size={12} aria-hidden="true" />} {age.label}</dd></div>}
                     </dl>
                     <div className="db-board-links">
                       {b.website && <a href={b.website} target="_blank" rel="noreferrer"><ExternalLink size={13} aria-hidden="true" /> Website</a>}
                       {b.email_signup && <a href={b.email_signup} target="_blank" rel="noreferrer">Board email list</a>}
                       <button className="link-btn" onClick={() => setEditingBoard(b)}>Correct details</button>
+                      {accuracy && <button className="link-btn" onClick={() => confirmEntry("board", b.state, STATE_NAMES[b.state])}>Still right</button>}
                     </div>
                   </li>
                 );
@@ -313,7 +547,7 @@ export default function DrugBoardsPage() {
               <div className="db-section-head">
                 <div>
                   <h2 id="dates-title" className="card-title">Coming up</h2>
-                  <p className="card-sub">Meetings and comment deadlines. Dated agendas on board websites appear here on their own; add anything else.</p>
+                  <p className="card-sub">Meetings and comment deadlines. Dates in new board agendas and notices appear here on their own; add anything else.</p>
                 </div>
                 <button className="btn btn-secondary btn-sm" onClick={() => setAddingDate(true)}><CalendarPlus size={14} /> Add a date</button>
               </div>
@@ -327,9 +561,9 @@ export default function DrugBoardsPage() {
                       <span className="db-state">{u.state}</span>
                       <span className="db-date-title">
                         {u.url ? <a href={u.url} target="_blank" rel="noreferrer">{u.title}</a> : u.title}
-                        <span className="db-sub">{KIND_LABEL[u.kind] ?? "Date"}{u.source === "website" ? ". From the board's posted agenda" : ""}</span>
+                        <span className="db-sub">{KIND_LABEL[u.kind] ?? "Date"}{u.source === "website" ? ". From the board's posted agenda" : u.source === "document" ? ". Found in a board document" : ""}</span>
                       </span>
-                      {u.source === "team" && <button className="icon-btn" onClick={() => deleteDate(u as DateItem)} aria-label={`Remove ${u.title}`}><X size={14} /></button>}
+                      {u.source !== "website" && <button className="icon-btn" onClick={() => deleteDate(u as DateItem)} aria-label={`Remove ${u.title}`}><X size={14} /></button>}
                     </li>
                   ))}
                 </ul>
@@ -374,13 +608,160 @@ export default function DrugBoardsPage() {
             </button>
             {showPages && <PagesList pages={data.pages} boards={active} onChange={load} />}
           </section>
+
+          {accuracy && prices.length > 0 && (
+            <section className="db-pages">
+              <button className="link-btn" onClick={() => setShowPrices(!showPrices)} aria-expanded={showPrices}>
+                <Pill size={14} aria-hidden="true" /> {showPrices ? "Hide" : "Show"} Medicare negotiated prices ({prices.length} drugs)
+              </button>
+              {showPrices && <MedicarePrices prices={prices} />}
+            </section>
+          )}
         </>
       )}
 
       {editing && data && <DrugDialog drug={editing === "new" ? null : editing} boards={active} defaultState={state} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {editingBoard && <BoardDialog board={editingBoard} onClose={() => setEditingBoard(null)} onSaved={() => { setEditingBoard(null); load(); }} />}
+      {editingCase && data && <CaseDialog item={editingCase === "new" ? null : editingCase} boards={active} drugs={data.drugs} defaultState={state} onClose={() => setEditingCase(null)} onSaved={() => { setEditingCase(null); load(); }} />}
       {addingDate && data && <DateDialog boards={active} defaultState={state} onClose={() => setAddingDate(false)} onSaved={() => { setAddingDate(false); load(); }} />}
     </div>
+  );
+}
+
+function Redline({ ops }: { ops: Op[] }) {
+  return (
+    <p className="official-text rl-ops db-redline">
+      {ops
+        .map((op, i) =>
+          op.t === "gap" ? (
+            <span key={i} className="rl-gap">{op.n.toLocaleString()} unchanged words</span>
+          ) : op.t === "ins" ? (
+            <ins key={i}>{op.s}</ins>
+          ) : op.t === "del" ? (
+            <del key={i}>{op.s}</del>
+          ) : (
+            <span key={i}>{op.s}</span>
+          ),
+        )
+        .reduce<React.ReactNode[]>((acc, node, i) => (i ? [...acc, " ", node] : [node]), [])}
+    </p>
+  );
+}
+
+function MedicarePrices({ prices }: { prices: MedicarePrice[] }) {
+  const years = Array.from(new Set(prices.map((p) => p.effective_year))).sort();
+  return (
+    <div className="card db-prices-card">
+      <p className="card-sub">
+        What Medicare pays for a 30-day supply after negotiating with the manufacturer, next to the list price CMS compared it with. Boards are starting to use these as a reference for their own limits.
+      </p>
+      {years.map((y) => (
+        <div key={y} className="db-prices-year">
+          <h3 className="db-feed-h">In effect from January {y}</h3>
+          <div className="db-table-wrap">
+            <table className="db-table db-prices">
+              <thead>
+                <tr><th scope="col">Drug</th><th scope="col">Generic name</th><th scope="col" className="num">Medicare price</th><th scope="col" className="num">List price</th><th scope="col" className="num">Lower by</th></tr>
+              </thead>
+              <tbody>
+                {prices.filter((p) => p.effective_year === y).sort((a, b) => a.brand_names[0].localeCompare(b.brand_names[0])).map((p) => {
+                  const list = p.list_price_30_day == null ? null : Number(p.list_price_30_day);
+                  return (
+                    <tr key={p.id}>
+                      <td><span className="db-drug">{p.brand_names.join(", ")}</span></td>
+                      <td>{p.generic_name}</td>
+                      <td className="num"><a href={p.source_url} target="_blank" rel="noreferrer">{formatUsd(p.price_30_day)}</a></td>
+                      <td className="num">{list == null ? "" : `${formatUsd(list)} (${p.list_price_year})`}</td>
+                      <td className="num">{list ? `${Math.round((1 - Number(p.price_30_day) / list) * 100)}%` : ""}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CaseDialog({ item, boards, drugs, defaultState, onClose, onSaved }: { item: Case | null; boards: Board[]; drugs: Drug[]; defaultState: string | null; onClose: () => void; onSaved: () => void }) {
+  const { toast, confirm } = useUI();
+  const [f, setF] = useState({
+    state: item?.state ?? defaultState ?? boards[0]?.state ?? "",
+    name: item?.name ?? "",
+    court: item?.court ?? "",
+    link: item?.url ?? "",
+    court_code: item?.court_code ?? "",
+    docket_number: item?.docket_number ?? "",
+    board_drug_id: item?.board_drug_id ?? "",
+    notes: item?.notes ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const stateDrugs = drugs.filter((d) => d.state === f.state);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const payload = { ...f, board_drug_id: f.board_drug_id || null };
+    const res = await fetch("/api/drug-boards/cases", { method: item ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item ? { id: item.id, ...payload } : payload) });
+    const body = await res.json().catch(() => ({}));
+    setSaving(false);
+    if (!res.ok) return toast(body.error ?? "Couldn't save.", "error");
+    toast(item ? "Saved" : "Following it. New filings are checked each morning, or now with Check boards now.", "success");
+    onSaved();
+  }
+
+  async function remove() {
+    if (!item || !(await confirm(`Stop following ${item.name}? Its saved filings go with it.`, { confirmLabel: "Stop following", danger: true }))) return;
+    const res = await fetch(`/api/drug-boards/cases?id=${item.id}`, { method: "DELETE" });
+    if (!res.ok) return toast("Couldn't remove it.", "error");
+    onSaved();
+  }
+
+  return (
+    <Dialog title={item ? item.name : "Follow a court case"} onClose={onClose}>
+      <form onSubmit={save} className="db-form">
+        <div className="db-form-row">
+          <label className="field">State
+            <select className="select" value={f.state} onChange={(e) => setF((x) => ({ ...x, state: e.target.value, board_drug_id: "" }))}>{boards.map((b) => <option key={b.state} value={b.state}>{STATE_NAMES[b.state]}</option>)}</select>
+          </label>
+          <label className="field">Case name
+            <input className="input" value={f.name} onChange={set("name")} required placeholder="e.g. Amgen Inc. v. Mizner" />
+          </label>
+        </div>
+        <label className="field">Court
+          <input className="input" value={f.court} onChange={set("court")} placeholder="e.g. U.S. District Court for Colorado" />
+        </label>
+        <label className="field">CourtListener link <span className="field-optional">the easiest way to follow it</span>
+          <input className="input" type="url" value={f.link} onChange={set("link")} placeholder="https://www.courtlistener.com/docket/…" />
+        </label>
+        <p className="muted db-form-hint">No link? Give CourtListener&apos;s court code and the docket number, and the app will look it up.</p>
+        <div className="db-form-row">
+          <label className="field">Court code <span className="field-optional">e.g. cod, cafc, mdd</span>
+            <input className="input" value={f.court_code} onChange={set("court_code")} />
+          </label>
+          <label className="field">Docket number <span className="field-optional">e.g. 1:25-cv-03452</span>
+            <input className="input" value={f.docket_number} onChange={set("docket_number")} />
+          </label>
+        </div>
+        <label className="field">Drug <span className="field-optional">optional</span>
+          <select className="select" value={f.board_drug_id} onChange={set("board_drug_id")}>
+            <option value="">Not about one drug</option>
+            {stateDrugs.map((d) => <option key={d.id} value={d.id}>{d.drug}</option>)}
+          </select>
+        </label>
+        <label className="field">Notes <span className="field-optional">optional</span>
+          <textarea className="input cl-textarea" rows={3} value={f.notes} onChange={set("notes")} />
+        </label>
+        <div className="db-form-actions">
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Saving…" : item ? "Save changes" : "Follow case"}</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          {item && <button type="button" className="link-btn db-remove" onClick={remove}>Stop following</button>}
+        </div>
+      </form>
+    </Dialog>
   );
 }
 

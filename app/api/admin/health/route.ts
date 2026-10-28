@@ -185,6 +185,21 @@ export async function GET() {
     if (failing.length) return { id: "board-pages", group: "Data sources", name: "State drug board websites", status: "warn", detail: `${failing.length} of ${rows.length} pages couldn't be read last time, e.g. ${failing[0].url}: ${failing[0].last_error}`, fix: "A board may have moved the page. Update it under Drug boards, at the bottom of the page." };
     return { id: "board-pages", group: "Data sources", name: "State drug board websites", status: "ok", detail: never.length === rows.length ? `${rows.length} pages, not checked yet` : `All ${rows.length} pages read fine` };
   })());
+  if (env.COURTLISTENER_API_TOKEN) {
+    checks.push(httpCheck("courtlistener", "Data sources", "CourtListener (court cases for Drug boards)", "https://www.courtlistener.com/api/rest/v4/courts/?id=cod", { headers: { Authorization: `Token ${env.COURTLISTENER_API_TOKEN}` } }));
+  } else {
+    config.push({ id: "courtlistener", group: "Data sources", name: "CourtListener (court cases for Drug boards)", status: "skip", detail: "Not set up. Court cases on the Drug boards page won't get new filings.", fix: "Make a free account at courtlistener.com, copy the API token from your profile, and add it in Vercel as COURTLISTENER_API_TOKEN." });
+  }
+  checks.push((async (): Promise<Check> => {
+    if (!admin) return { id: "board-reading", group: "Data sources", name: "Reading new board documents", status: "skip", detail: "Needs the admin key" };
+    const { data, error } = await admin.from("board_documents").select("text_status, text_note").not("text_status", "is", null).order("text_checked_at", { ascending: false }).limit(30);
+    if (error) return { id: "board-reading", group: "Data sources", name: "Reading new board documents", status: "skip", detail: "Not set up yet (database update 0006)" };
+    const rows = (data as any[]) ?? [];
+    const bad = rows.filter((r) => r.text_status === "unreadable");
+    if (!rows.length) return { id: "board-reading", group: "Data sources", name: "Reading new board documents", status: "ok", detail: "Ready. Nothing new to read yet" };
+    if (bad.length > rows.length / 2) return { id: "board-reading", group: "Data sources", name: "Reading new board documents", status: "warn", detail: `${bad.length} of the last ${rows.length} documents couldn't be opened, e.g. ${bad[0].text_note}`, fix: "Scanned PDFs have no text to read. Open those documents yourself." };
+    return { id: "board-reading", group: "Data sources", name: "Reading new board documents", status: "ok", detail: `${rows.length - bad.length} of the last ${rows.length} documents read` };
+  })());
   checks.push(httpCheck("fedreg", "Data sources", "Federal Register (regulations)", "https://www.federalregister.gov/api/v1/documents.json?per_page=1"));
   checks.push(httpCheck("news", "Data sources", "Google News feed (bill coverage)", "https://news.google.com/rss/search?q=congress&hl=en-US&gl=US&ceid=US:en"));
 

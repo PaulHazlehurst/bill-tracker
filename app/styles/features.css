@@ -382,12 +382,59 @@ a.wk-floor-item:hover { border-color: var(--blue); }
 .db-state { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 5px; background: var(--blue-wash); color: var(--blue-ink); font: 600 0.6875rem/1 var(--font-mono); flex: none; }
 .db-sub { display: block; font-size: 0.75rem; color: var(--ink-3); line-height: 1.4; }
 .db-docs { list-style: none; margin: 0; padding: 0; }
-.db-docs li { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "state title read" "state meta read"; column-gap: 10px; row-gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.db-docs li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
 .db-docs li:first-child { border-top: 0; }
-.db-docs .db-state { grid-area: state; margin-top: 1px; }
-.db-doc-title { grid-area: title; font-weight: 600; font-size: 0.875rem; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
-.db-doc-meta { grid-area: meta; font-size: 0.75rem; color: var(--ink-3); }
-.db-read { grid-area: read; }
+.db-docs .db-state { margin-top: 1px; }
+.db-doc-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.db-doc-title { font-weight: 600; font-size: 0.875rem; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
+.db-doc-meta { font-size: 0.75rem; color: var(--ink-3); }
+.db-docs .db-more { display: block; }
+.db-feed-h { margin: 14px 0 2px; font-size: 0.75rem; font-weight: 700; color: var(--ink-2); }
+.db-feed-h:first-child { margin-top: 0; }
+
+/* What a new document says: the tracked drug it names, in its own words */
+.db-mention-row { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; font-size: 0.8125rem; line-height: 1.45; }
+.db-mention { flex: none; display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--r-pill); background: var(--blue); color: #fff; font-size: 0.6875rem; font-weight: 700; line-height: 1.6; }
+.db-snippet { color: var(--ink-2); quotes: none; font-family: var(--font-official); font-size: 0.875rem; overflow-wrap: anywhere; }
+.db-doc-note { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--ink-3); }
+.db-doc-note.is-good { color: var(--mint); font-weight: 600; }
+.db-redline-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 0.8125rem; }
+.db-redline-toggle svg { transition: transform 0.15s ease; }
+.db-redline-toggle svg.is-open { transform: rotate(180deg); }
+.db-redline { margin-top: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-2); font-size: 0.875rem; max-height: 320px; overflow: auto; }
+
+.db-checked { display: block; margin-top: 6px; font-size: 0.6875rem; color: var(--ink-3); }
+.db-medicare { display: block; margin-top: 6px; font-size: 0.75rem; color: var(--ink-2); }
+.db-medicare a { font-weight: 700; }
+.db-stale { color: var(--amber); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.db-notice { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: var(--r-md); background: var(--amber-wash); color: var(--amber); font-size: 0.8125rem; line-height: 1.45; }
+.db-notice svg { flex: none; margin-top: 2px; }
+
+/* Court cases */
+.db-cases { margin-bottom: 28px; }
+.db-cases-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 0 28px; }
+.db-cases-list > li { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-top: 1px solid var(--line); }
+.db-case-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.db-case-name { font-weight: 700; font-size: 0.9375rem; }
+.db-case-name a { color: var(--ink); }
+.db-case-edit { margin-left: auto; }
+.db-case-error { display: inline-flex; align-items: flex-start; gap: 5px; font-size: 0.75rem; color: var(--amber); line-height: 1.4; }
+.db-case-error svg { flex: none; margin-top: 2px; }
+.db-case-notes { margin: 4px 0 0; font-size: 0.8125rem; color: var(--ink-2); line-height: 1.45; }
+.db-filings { list-style: none; margin: 6px 0 0; padding: 0 0 0 12px; border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.db-filings li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; font-size: 0.8125rem; line-height: 1.4; }
+.db-filings li.is-new { border-left: 2px solid var(--blue); margin-left: -14px; padding-left: 12px; }
+.db-filings a { color: var(--ink); }
+.db-filing-date { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.db-new-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: var(--r-pill); background: var(--blue-wash); color: var(--blue-ink); font-size: 0.625rem; font-weight: 700; vertical-align: 1px; }
+.db-form-hint { margin: -4px 0 0; font-size: 0.8125rem; }
+
+/* Medicare negotiated prices */
+.db-prices-card { margin-top: 10px; }
+.db-prices-year + .db-prices-year { margin-top: 14px; }
+.db-prices { min-width: 600px; }
+.db-prices .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.db-read { align-self: start; }
 .db-more { font-size: 0.8125rem; color: var(--ink-3); padding-top: 8px; }
 .db-warn { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 0.8125rem; color: var(--amber); }
 

@@ -117,11 +117,11 @@ export type BoardItem = { id: string; day: string; state: string; title: string;
  */
 export async function loadBoardItems(db: Db, from: string, to: string): Promise<BoardItem[]> {
   const [{ data: dates, error }, { data: agendas }] = await Promise.all([
-    db.from("board_dates").select("id, state, date, time, kind, title, url").gte("date", from).lte("date", to).order("date"),
+    db.from("board_dates").select("*").gte("date", from).lte("date", to).order("date"),
     db.from("board_documents").select("id, state, doc_date, title, url").eq("kind", "agenda").gte("doc_date", from).lte("doc_date", to),
   ]);
   if (error) return [];
-  const items: BoardItem[] = ((dates as any[]) ?? []).map((d) => ({ id: d.id, day: d.date, state: d.state, title: d.title, kind: d.kind, time: d.time, url: d.url, source: "team" as const }));
+  const items: BoardItem[] = ((dates as any[]) ?? []).map((d) => ({ id: d.id, day: d.date, state: d.state, title: d.title, kind: d.kind, time: d.time, url: d.url, source: d.source === "document" ? ("website" as const) : ("team" as const) }));
   const taken = new Set(items.filter((i) => i.kind === "meeting").map((i) => `${i.state}|${i.day}`));
   for (const a of (agendas as any[]) ?? []) {
     if (taken.has(`${a.state}|${a.doc_date}`)) continue;

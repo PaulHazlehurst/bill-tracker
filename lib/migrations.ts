@@ -46,6 +46,12 @@ export const MIGRATIONS: Migration[] = [
     name: "Drug affordability boards",
     unlocks: "The Drug boards page: state boards, the drug tracker, new board documents and state bills.",
   },
+  {
+    id: "0006",
+    file: "supabase/migrations/0006_drug_board_accuracy.sql",
+    name: "Drug board accuracy",
+    unlocks: "Medicare prices beside each drug, what new board documents mention, wording changes on board pages, court cases, and last-checked dates.",
+  },
 ];
 
 /** Splits the list into what's been run and what hasn't, given the ids the database reports. */

@@ -1,14 +1,17 @@
 // SERVER-ONLY. The morning work for the Drug boards page:
-//  1. Visit each board page we watch and record any document link we
-//     haven't seen before (new agenda, minutes, report...). Nothing is
-//     interpreted: the team reads the document and updates the drug
-//     tracker, so every status traces back to the board's own words.
+//  1. Visit each board page we watch, record any document link we haven't
+//     seen before (new agenda, minutes, report...), and note when the
+//     page's own wording changes. The team reads what's new and updates the
+//     drug tracker, so every status traces back to the board's own words.
 //  2. Ask Open States for state bills about drug affordability boards that
 //     changed since the last run.
-// Both are cheap (a dozen page loads, a few API calls) and resumable.
+// Opening the new documents and checking court cases is in
+// lib/boardReadingSync.ts. All of it is cheap and resumable.
 
 import { mapLimit, deadline, chunk, rotateByDay } from "@/lib/batch";
 import { extractDocuments, parseDocDate, docKind, normalizeOpenStatesBill, isPublicWebUrl, STATE_NAMES, type StateBill } from "@/lib/drugBoards";
+import { pageText, pageChange, textHash } from "@/lib/boardReading";
+import { syncBoardReading } from "@/lib/boardReadingSync";
 
 type Admin = any;
 
@@ -34,15 +37,22 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}, ms = PAGE_T
   }
 }
 
-export type PageCheckResult = { checked: number; newDocuments: number; errors: string[] };
+export type PageCheckResult = { checked: number; newDocuments: number; wordingChanges: number; errors: string[] };
 
 export async function checkBoardPages(admin: Admin, budgetMs: number): Promise<PageCheckResult> {
   const clock = deadline(budgetMs);
-  const { data: pages, error } = await admin.from("board_pages").select("id, state, url, last_checked_at").order("last_checked_at", { ascending: true, nullsFirst: true });
+  // Wording changes need migration 0006; without it, only new documents are found.
+  let watchText = true;
+  let { data: pages, error } = await admin.from("board_pages").select("id, state, url, last_checked_at, page_text, text_hash").order("last_checked_at", { ascending: true, nullsFirst: true });
+  if (error) {
+    watchText = false;
+    ({ data: pages, error } = await admin.from("board_pages").select("id, state, url, last_checked_at").order("last_checked_at", { ascending: true, nullsFirst: true }));
+  }
   if (error) throw new Error(`board pages unavailable: ${error.message}`);
 
   let checked = 0;
   let newDocuments = 0;
+  let wordingChanges = 0;
   const errors: string[] = [];
 
   await mapLimit((pages as any[]) ?? [], 4, async (page) => {
@@ -80,7 +90,25 @@ export async function checkBoardPages(admin: Admin, budgetMs: number): Promise<P
         if (insertError) throw new Error(insertError.message);
         if (!firstLook) newDocuments += rows.length;
       }
-      await admin.from("board_pages").update({ last_checked_at: now, last_error: null, ...(fresh.length && !firstLook ? { last_changed_at: now } : {}) }).eq("id", page.id);
+
+      // Did the words on the page change? (Statuses are often edited in place.)
+      const textPatch: Record<string, string> = {};
+      const isHtml = /html|text\//i.test(res.headers.get("content-type") ?? "text/html");
+      if (watchText && isHtml) {
+        const text = pageText(html);
+        const hash = textHash(text);
+        if (hash !== page.text_hash) {
+          textPatch.page_text = text;
+          textPatch.text_hash = hash;
+          // The first reading is the starting point, not a change.
+          const change = page.text_hash && page.page_text ? pageChange(page.page_text, text, fresh.map((d) => d.title)) : null;
+          if (change) {
+            const { error: changeError } = await admin.from("board_page_changes").insert({ page_id: page.id, state: page.state, ops: change.ops, added: change.added, removed: change.removed });
+            if (!changeError) wordingChanges++;
+          }
+        }
+      }
+      await admin.from("board_pages").update({ last_checked_at: now, last_error: null, ...textPatch, ...(fresh.length && !firstLook ? { last_changed_at: now } : {}) }).eq("id", page.id);
       checked++;
     } catch (err: any) {
       const message = err?.name === "AbortError" ? "no response within 12 seconds" : String(err?.message ?? err);
@@ -89,7 +117,7 @@ export async function checkBoardPages(admin: Admin, budgetMs: number): Promise<P
     }
   });
 
-  return { checked, newDocuments, errors: errors.slice(0, 10) };
+  return { checked, newDocuments, wordingChanges, errors: errors.slice(0, 10) };
 }
 
 export type BillSearchResult = { skipped?: string; requests: number; found: number; added: number; updated: number; complete: boolean; error?: string };
@@ -197,12 +225,17 @@ export async function searchStateBills(admin: Admin, budgetMs: number): Promise<
   return { requests, found: bills.size, added: inserts.length, updated: updates.length, complete, error };
 }
 
-/** Both jobs within a time budget. Skips quietly until migration 0005 has been run. */
-export async function syncDrugBoards(admin: Admin, budgetMs: number) {
+/**
+ * The morning check within a time budget. Skips quietly until migration 0005
+ * has been run. With `read`, also opens new documents and checks court cases
+ * (the alert job does that part each morning; "Check boards now" does it all).
+ */
+export async function syncDrugBoards(admin: Admin, budgetMs: number, opts: { read?: boolean } = {}) {
   const { error: notReady } = await admin.from("drug_boards").select("state").limit(1);
   if (notReady) return { skipped: "Drug board tables not set up yet (supabase/migrations/0005_drug_affordability_boards.sql)" };
   const clock = deadline(budgetMs);
-  const pages = await checkBoardPages(admin, Math.floor(budgetMs * 0.6)).catch((e) => ({ error: String(e?.message ?? e) }));
+  const pages = await checkBoardPages(admin, Math.floor(budgetMs * (opts.read ? 0.4 : 0.6))).catch((e) => ({ error: String(e?.message ?? e) }));
+  const reading = opts.read ? await syncBoardReading(admin, Math.floor(clock.remainingMs() * 0.6)).catch((e) => ({ error: String(e?.message ?? e) })) : undefined;
   const bills = await searchStateBills(admin, Math.max(4_000, clock.remainingMs())).catch((e) => ({ error: String(e?.message ?? e) }));
-  return { pages, bills };
+  return { pages, reading, bills };
 }
