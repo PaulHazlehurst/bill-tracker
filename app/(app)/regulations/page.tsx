@@ -10,6 +10,8 @@ import { useUI } from "@/components/UIProvider";
 import { Landmark, AlertTriangle, ExternalLink, X, Search } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { formatDate } from "@/lib/billMeta";
+import { optimistic } from "@/lib/motion";
+import { MotionItem } from "@/components/Motion";
 
 // The /regulations page. Companion to the dashboard: dashboard shows bills
 // matching your topics, this shows federal rulemaking matching them.
@@ -68,7 +70,6 @@ export default function RegulationsPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | DocType>("all");
   const [topicFilter, setTopicFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [dismissingId, setDismissingId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -123,19 +124,24 @@ export default function RegulationsPage() {
     return [...open, ...closed];
   }, [filtered]);
 
+  // Dismissing is instant, animated and can be undone.
   async function dismiss(prospectiveId: string) {
-    setDismissingId(prospectiveId);
-    const res = await fetch("/api/regulations", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: prospectiveId }),
+    const before = rows;
+    const save = (dismissed: boolean) =>
+      fetch("/api/regulations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: prospectiveId, dismissed }) });
+    const ok = await optimistic({
+      apply: () => setRows((prev) => prev.filter((r) => r.id !== prospectiveId)),
+      revert: () => setRows(before),
+      save: () => save(true),
+      onError: () => toast("Couldn't dismiss that one. Try again.", "error"),
     });
-    setDismissingId(null);
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== prospectiveId));
-    } else {
-      toast("Couldn't dismiss that one. Try again.", "error");
-    }
+    if (ok)
+      toast("Dismissed", "info", {
+        action: {
+          label: "Undo",
+          run: () => optimistic({ apply: () => setRows(before), revert: () => {}, save: () => save(false), onError: () => toast("Couldn't bring it back. Refresh to try again.", "error") }),
+        },
+      });
   }
 
   const openCount = flat.filter((f) => f.reg.comment_close_date && f.reg.comment_close_date >= new Date().toISOString().slice(0, 10)).length;
@@ -150,7 +156,7 @@ export default function RegulationsPage() {
       {loading ? (
         <div className="list-skel">{[0, 1, 2].map((i) => <div key={i} className="skel skel-billrow" />)}</div>
       ) : (
-        <>
+        <div className="settle">
           {error && <p className="error-text">Couldn't load regulations: {error}</p>}
           {flat.length === 0 ? (
             <EmptyState icon={Landmark} title="No matching regulations yet">
@@ -182,12 +188,14 @@ export default function RegulationsPage() {
               </p>
               <ul className="regs">
                 {sorted.map((f) => (
-                  <RegCard key={f.prospectiveId} f={f} onDismiss={() => dismiss(f.prospectiveId)} dismissing={dismissingId === f.prospectiveId} />
+                  <MotionItem key={f.prospectiveId}>
+                    <RegCard f={f} onDismiss={() => dismiss(f.prospectiveId)} dismissing={false} />
+                  </MotionItem>
                 ))}
               </ul>
             </>
           )}
-        </>
+        </div>
       )}
     </div>
   );

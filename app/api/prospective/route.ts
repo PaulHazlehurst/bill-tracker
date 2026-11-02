@@ -32,7 +32,7 @@ export async function GET() {
   return NextResponse.json({ prospective: rows.slice(0, 50) });
 }
 
-// PATCH { id } or { ids: [] } - dismiss suggestions.
+// PATCH { id } or { ids: [] } - dismiss suggestions (or bring them back with dismissed: false).
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest) {
   const ids: string[] = Array.isArray(body.ids) ? body.ids : body.id ? [body.id] : [];
   if (ids.length === 0) return NextResponse.json({ error: "missing id" }, { status: 400 });
 
-  const { error } = await supabase.from("prospective_bills").update({ dismissed: true }).in("id", ids);
+  const { error } = await supabase.from("prospective_bills").update({ dismissed: body.dismissed !== false }).in("id", ids);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

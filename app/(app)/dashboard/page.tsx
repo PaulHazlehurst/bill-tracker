@@ -21,6 +21,7 @@ import { fetchEvents, readAndMarkVisit, type BillEventRow } from "@/lib/events";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
 import { Download, BarChart3, Search } from "lucide-react";
+import { animated, optimistic } from "@/lib/motion";
 
 const SORTS: Record<string, string> = {
   active: "Latest activity",
@@ -67,14 +68,16 @@ export default function DashboardPage() {
       return;
     }
     const rows = ((data as any) ?? []) as TableRow[];
-    setError(null);
-    setTracked(rows);
-    setLoading(false);
-
+    // Recent changes come before anything is shown, so the summary card and
+    // the list appear together instead of the list being pushed down when
+    // the card fills in a moment later.
     const ids = rows.map((r) => r.bill_id);
     const since = new Date(Date.now() - 15 * 86_400_000).toISOString();
-    const { rows: ev } = await fetchEvents(supabase, { billIds: ids, since, limit: 400 });
+    const { rows: ev } = ids.length ? await fetchEvents(supabase, { billIds: ids, since, limit: 400 }) : { rows: [] as BillEventRow[] };
+    setError(null);
+    setTracked(rows);
     setEvents(ev);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -98,19 +101,26 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionLoading, userId]);
 
+  // Untracking happens on screen at once; the save runs behind it and the
+  // rows come back with a message if it fails.
   async function untrack(id: string) {
-    const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (res.ok) {
-      setTracked((prev) => prev.filter((r) => r.id !== id));
-      toast("Stopped tracking", "info");
-    } else toast("Couldn't stop tracking that bill. Try again.", "error");
+    const before = tracked;
+    const ok = await optimistic({
+      apply: () => setTracked((prev) => prev.filter((r) => r.id !== id)),
+      revert: () => setTracked(before),
+      save: () => fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(id)}`, { method: "DELETE" }),
+      onError: () => toast("Couldn't stop tracking that bill. Try again.", "error"),
+    });
+    if (ok) toast("Stopped tracking", "info");
   }
 
   async function bulkUntrack(ids: string[]) {
-    const results = await Promise.all(ids.map((id) => fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(id)}`, { method: "DELETE" })));
-    const ok = ids.filter((_, i) => results[i].ok);
-    setTracked((prev) => prev.filter((r) => !ok.includes(r.id)));
-    toast(ok.length === ids.length ? `Stopped tracking ${ok.length} bill${ok.length > 1 ? "s" : ""}` : `Stopped ${ok.length} of ${ids.length}. Try the rest again.`, ok.length === ids.length ? "info" : "error");
+    const before = tracked;
+    animated(() => setTracked((prev) => prev.filter((r) => !ids.includes(r.id))));
+    const results = await Promise.all(ids.map((id) => fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null)));
+    const failed = ids.filter((_, i) => !results[i]?.ok);
+    if (failed.length) animated(() => setTracked((prev) => [...prev, ...before.filter((r) => failed.includes(r.id))]));
+    toast(!failed.length ? `Stopped tracking ${ids.length} bill${ids.length > 1 ? "s" : ""}` : `Stopped ${ids.length - failed.length} of ${ids.length}. Try the rest again.`, failed.length ? "error" : "info");
   }
 
   const titles = useMemo(() => {
@@ -172,8 +182,10 @@ export default function DashboardPage() {
         }
       />
 
-      {!loading && tracked.length > 0 && (
-        <CatchUp events={events} lastVisit={lastVisit} titles={titles} trackedCount={tracked.length} />
+      {loading ? (
+        <div className="skel catchup-skel" aria-hidden="true" />
+      ) : (
+        tracked.length > 0 && <CatchUp events={events} lastVisit={lastVisit} titles={titles} trackedCount={tracked.length} />
       )}
 
       <div className="dash-grid">
@@ -182,9 +194,11 @@ export default function DashboardPage() {
             <FirstRunHero onTracked={loadTracked} />
           ) : (
             <section aria-labelledby="mybills-title">
-              {!loading && (
-                <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={!!profile?.email_notifications_enabled} hasTeam={!!profile?.organization_id} hasPhone={!!profile?.phone} />
-              )}
+              {loading && !error ? (
+                <div className="list-skel" aria-label="Loading your bills">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="skel skel-billrow" />)}</div>
+              ) : (
+              <div className="settle">
+              <OnboardingChecklist hasTrackedBill={tracked.length > 0} hasEmailEnabled={!!profile?.email_notifications_enabled} hasTeam={!!profile?.organization_id} hasPhone={!!profile?.phone} />
               <div className="section-head">
                 <h2 id="mybills-title" className="section-title">Your bills <span className="count">{filtered.length}{filtersOn ? ` of ${tracked.length}` : ""}</span></h2>
               </div>
@@ -218,8 +232,6 @@ export default function DashboardPage() {
 
               {error ? (
                 <p className="error-text">Couldn't load your bills: {error}</p>
-              ) : loading ? (
-                <div className="list-skel">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="skel skel-billrow" />)}</div>
               ) : filtered.length === 0 ? (
                 <div className="nomatch">
                   <p>No bills match those filters.</p>
@@ -227,6 +239,8 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <BillList rows={filtered} editable onUntrack={untrack} onBulkUntrack={bulkUntrack} animate={firstPaint} />
+              )}
+              </div>
               )}
             </section>
           )}

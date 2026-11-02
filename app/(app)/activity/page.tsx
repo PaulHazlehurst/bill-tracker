@@ -147,7 +147,7 @@ export default function ActivityPage() {
           <button className="btn btn-secondary btn-sm" onClick={() => { setFilter("all"); setScope("all"); setQ(""); }}>Show everything</button>
         </div>
       ) : (
-        <div className="feed">
+        <div className="feed settle">
           {groups.map((g) => (
             <section key={g.day} className="feed-day">
               <h2 className="feed-date">{dayHeading(g.day)}</h2>

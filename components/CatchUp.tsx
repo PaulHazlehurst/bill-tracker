@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { TrendingUp, FileText, Users, ScrollText, Calculator, BookOpen, ArrowRight } from "lucide-react";
 import { citationFor, formatDate, EVENT_TYPE_LABELS } from "@/lib/billMeta";
 import { eventDate, type BillEventRow } from "@/lib/events";
+import { AnimatedNumber } from "@/components/Motion";
 
 const ICONS: Record<string, any> = {
   status_change: TrendingUp,
@@ -92,7 +93,7 @@ export default function CatchUp({
         <h2 id="catchup-title" className="catchup-title">
           {movedBills > 0 ? (
             <>
-              <span className="catchup-num">{movedBills}</span> of your {trackedCount} bill{trackedCount === 1 ? "" : "s"} changed {windowLabel}
+              <span className="catchup-num"><AnimatedNumber value={movedBills} /></span> of your <AnimatedNumber value={trackedCount} /> bill{trackedCount === 1 ? "" : "s"} changed {windowLabel}
             </>
           ) : (
             <>Nothing new on your bills {windowLabel}</>

@@ -10,7 +10,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 // must NEVER read from `tracked_bills` - that table holds a specific
 // person's or team's private position, notes, and notification settings,
 // and none of that belongs on a page anyone with the link can view.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   const admin = createAdminClient();
 

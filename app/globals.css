@@ -93,9 +93,9 @@
 }
 
 :root {
-  --font-display: "Bricolage Grotesque", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-ui: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-ui: var(--font-instrument), "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --font-official: Georgia, "Times New Roman", serif;
 
   /* Radii follow hierarchy: identifiers < controls < panels; buttons are pills. */
@@ -685,6 +685,11 @@ input.switch:checked::after { transform: translateX(14px); }
   border-left: 4px solid var(--blue);
   animation: toast-in 0.28s var(--ease);
 }
+.toast.has-action { display: flex; align-items: center; gap: 14px; }
+.toast.has-action > span { flex: 1; }
+.toast-action { flex: none; border: 0; background: transparent; color: var(--paper); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 4px 2px; }
+.toast-action:hover { opacity: 0.85; }
+.toast-action:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; border-radius: 4px; }
 .toast-success { border-left-color: var(--mint); }
 .toast-error { border-left-color: var(--red); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
@@ -755,8 +760,6 @@ input.switch:checked::after { transform: translateX(14px); }
 }
 .skip-link:focus { top: 12px; }
 
-.page-transition { animation: page-in 0.32s var(--ease); }
-@keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
 
 .reveal { opacity: 0; transform: translateY(10px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
 .reveal-visible { opacity: 1; transform: none; }

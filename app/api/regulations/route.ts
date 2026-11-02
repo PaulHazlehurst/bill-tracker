@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest) {
 }
 
 // PATCH /api/regulations
-// Body: { id } — dismiss a match (mirrors /api/prospective PATCH). Same
+// Body: { id, dismissed? } — dismiss a match, or bring it back with dismissed: false (mirrors /api/prospective PATCH). Same
 // RLS check applies via the update policy on prospective_regulations.
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient();
@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest) {
 
   const { error } = await supabase
     .from("prospective_regulations")
-    .update({ dismissed: true })
+    .update({ dismissed: body.dismissed !== false })
     .eq("id", body.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

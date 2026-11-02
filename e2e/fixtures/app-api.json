@@ -1,0 +1,2455 @@
+{
+ "api": {
+  "/api/legislators": {
+   "members": [
+    {
+     "bioguideId": "V000128",
+     "name": "Van Hollen, Chris",
+     "party": "D",
+     "state": "Maryland",
+     "district": null,
+     "chamber": "Senate",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "A000382",
+     "name": "Alsobrooks, Angela",
+     "party": "D",
+     "state": "Maryland",
+     "district": null,
+     "chamber": "Senate",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "H001091",
+     "name": "Hinson, Ashley",
+     "party": "R",
+     "state": "Iowa",
+     "district": "2",
+     "chamber": "House",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "B001261",
+     "name": "Barrasso, John",
+     "party": "R",
+     "state": "Wyoming",
+     "district": null,
+     "chamber": "Senate",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "C001120",
+     "name": "Craig, Angie",
+     "party": "D",
+     "state": "Minnesota",
+     "district": "2",
+     "chamber": "House",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "S001194",
+     "name": "Schatz, Brian",
+     "party": "D",
+     "state": "Hawaii",
+     "district": null,
+     "chamber": "Senate",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "K000399",
+     "name": "Kiggans, Jennifer",
+     "party": "R",
+     "state": "Virginia",
+     "district": "2",
+     "chamber": "House",
+     "imageUrl": null
+    },
+    {
+     "bioguideId": "S000033",
+     "name": "Sanders, Bernard",
+     "party": "I",
+     "state": "Vermont",
+     "district": null,
+     "chamber": "Senate",
+     "imageUrl": null
+    }
+   ]
+  },
+  "/api/admin/api-usage": {
+   "callsLastHour": {
+    "congress_gov": 42,
+    "govinfo_gov": 18,
+    "lda_gov": 3,
+    "federal_register": 4,
+    "news_feed": 2
+   },
+   "callsLast24h": {
+    "congress_gov": 612,
+    "govinfo_gov": 140,
+    "lda_gov": 31,
+    "federal_register": 22,
+    "news_feed": 19,
+    "rss_feed": 7
+   },
+   "officialSnapshots": [
+    {
+     "service": "congress_gov",
+     "limit_value": 5000,
+     "remaining_value": 4958,
+     "updated_at": "2026-11-02T17:19:07.995344Z"
+    }
+   ],
+   "ldaKeyConfigured": false
+  },
+  "/api/admin/health": {
+   "checkedAt": "2026-11-02T17:19:07.995344Z",
+   "summary": {
+    "ok": 11,
+    "warn": 5,
+    "fail": 1
+   },
+   "runs": [
+    {
+     "id": 4,
+     "job": "notify",
+     "started_at": "2026-10-25T06:15:02Z",
+     "finished_at": "2026-10-25T06:15:40Z",
+     "ok": true,
+     "error": null,
+     "summary": {
+      "emailsSent": 3,
+      "smsSent": 0
+     }
+    },
+    {
+     "id": 3,
+     "job": "poll",
+     "started_at": "2026-10-25T06:00:01Z",
+     "finished_at": "2026-10-25T06:00:39Z",
+     "ok": true,
+     "error": null,
+     "summary": {
+      "polled": 8,
+      "changed": 2,
+      "failed": 0
+     }
+    },
+    {
+     "id": 2,
+     "job": "notify",
+     "started_at": "2026-10-24T06:15:02Z",
+     "finished_at": null,
+     "ok": null,
+     "error": null,
+     "summary": null
+    },
+    {
+     "id": 1,
+     "job": "poll",
+     "started_at": "2026-10-24T06:00:01Z",
+     "finished_at": "2026-10-24T06:00:52Z",
+     "ok": true,
+     "error": null,
+     "summary": {
+      "polled": 8,
+      "changed": 5,
+      "failed": 1,
+      "timedOut": false
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "migration-0002",
+     "group": "Database updates",
+     "name": "0002: Week ahead",
+     "status": "warn",
+     "detail": "Not run yet. Unlocks: Committee hearings, markups and the House floor schedule on the Week ahead page, and calendar links.",
+     "fix": "Run supabase/migrations/0002_week_ahead.sql in Supabase \u2192 SQL Editor, in number order."
+    },
+    {
+     "id": "migration-0004",
+     "group": "Database updates",
+     "name": "0004: Clients and the Monday report",
+     "status": "warn",
+     "detail": "Not run yet. Unlocks: The Clients pages and the weekly client report.",
+     "fix": "Run supabase/migrations/0004_clients.sql in Supabase \u2192 SQL Editor, in number order."
+    },
+    {
+     "id": "run-poll",
+     "group": "Scheduled jobs",
+     "name": "Morning check of congress.gov: last run",
+     "status": "ok",
+     "detail": "Finished Oct 25, 2:00 AM ET"
+    },
+    {
+     "id": "congress",
+     "group": "Data sources",
+     "name": "congress.gov (bills, votes, members)",
+     "status": "ok",
+     "detail": "Responding. 4,958 requests left this hour.",
+     "ms": 412
+    },
+    {
+     "id": "govinfo",
+     "group": "Data sources",
+     "name": "GovInfo (full-text bill search, Congressional Record)",
+     "status": "ok",
+     "detail": "Responding",
+     "ms": 890
+    },
+    {
+     "id": "lda",
+     "group": "Data sources",
+     "name": "LDA.gov (lobbying disclosures)",
+     "status": "ok",
+     "detail": "Responding",
+     "ms": 640
+    },
+    {
+     "id": "fedreg",
+     "group": "Data sources",
+     "name": "Federal Register (regulations)",
+     "status": "ok",
+     "detail": "Responding",
+     "ms": 301
+    },
+    {
+     "id": "news",
+     "group": "Data sources",
+     "name": "Google News feed (bill coverage)",
+     "status": "ok",
+     "detail": "Responding",
+     "ms": 220
+    },
+    {
+     "id": "cron-poll",
+     "group": "Scheduled jobs",
+     "name": "Morning check of congress.gov",
+     "status": "ok",
+     "detail": "All 8 tracked bills checked in the last 10 hours"
+    },
+    {
+     "id": "cron-discover",
+     "group": "Scheduled jobs",
+     "name": "Topic discovery",
+     "status": "ok",
+     "detail": "Last new suggestion 10/23/2026"
+    },
+    {
+     "id": "db",
+     "group": "Database",
+     "name": "Supabase database",
+     "status": "ok",
+     "detail": "214 bills cached",
+     "ms": 180
+    },
+    {
+     "id": "schema-events",
+     "group": "Database",
+     "name": "Activity dates (October 2026 update)",
+     "status": "warn",
+     "detail": "Not installed yet",
+     "fix": "Run supabase/2026-10-activity-and-discovery.sql in Supabase \u2192 SQL Editor."
+    },
+    {
+     "id": "schema-regs",
+     "group": "Database",
+     "name": "Regulation suggestions table",
+     "status": "ok",
+     "detail": "Installed"
+    },
+    {
+     "id": "resend",
+     "group": "Alerts",
+     "name": "Email (Resend)",
+     "status": "warn",
+     "detail": "Using Resend's test sender, which only delivers to the Resend account owner",
+     "fix": "Verify a sending domain in Resend and update RESEND_FROM_EMAIL.",
+     "ms": 330
+    },
+    {
+     "id": "twilio",
+     "group": "Alerts",
+     "name": "Text messages (Twilio)",
+     "status": "skip",
+     "detail": "Not set up. Text alerts are off."
+    },
+    {
+     "id": "alerts-to",
+     "group": "Scheduled jobs",
+     "name": "Who hears about failed runs",
+     "status": "ok",
+     "detail": "Team owners. Set ALERT_EMAIL in Vercel to send these somewhere else."
+    },
+    {
+     "id": "env-appurl",
+     "group": "Settings",
+     "name": "App address for email links",
+     "status": "fail",
+     "detail": "Missing. Links in alert emails won't open the app.",
+     "fix": "Add NEXT_PUBLIC_APP_URL in Vercel, e.g. https://your-app.vercel.app, then redeploy."
+    },
+    {
+     "id": "env-lda",
+     "group": "Settings",
+     "name": "Lobbying data key",
+     "status": "warn",
+     "detail": "Not set. Works, but limited to 15 requests a minute."
+    }
+   ]
+  },
+  "/api/regulations": {
+   "regulations": [
+    {
+     "id": "r1",
+     "regulation_id": "2026-21001",
+     "matched_topic": "telehealth",
+     "discovered_at": "2026-11-02T17:19:07.995344Z",
+     "dismissed": false,
+     "regulations": {
+      "id": "2026-21001",
+      "title": "Medicare Program; Telehealth Services Furnished by Rural Health Clinics and Federally Qualified Health Centers",
+      "abstract": "This proposed rule would revise payment policies for telehealth services furnished by rural health clinics and federally qualified health centers, including permanent coverage of certain audio-only services.",
+      "doc_type": "proposed",
+      "docket_id": "CMS-2026-0142",
+      "agencies": [
+       "Centers for Medicare & Medicaid Services"
+      ],
+      "publication_date": "2026-10-09",
+      "comment_close_date": "2026-10-28",
+      "effective_date": null,
+      "html_url": "https://www.federalregister.gov/"
+     }
+    },
+    {
+     "id": "r2",
+     "regulation_id": "2026-20117",
+     "matched_topic": "340B",
+     "discovered_at": "2026-11-02T17:19:07.995344Z",
+     "dismissed": false,
+     "regulations": {
+      "id": "2026-20117",
+      "title": "340B Drug Pricing Program; Administrative Dispute Resolution",
+      "abstract": "HRSA is finalizing changes to the administrative dispute resolution process for the 340B Drug Pricing Program.",
+      "doc_type": "final",
+      "docket_id": null,
+      "agencies": [
+       "Health Resources and Services Administration"
+      ],
+      "publication_date": "2026-09-30",
+      "comment_close_date": null,
+      "effective_date": "2026-11-29",
+      "html_url": "https://www.federalregister.gov/"
+     }
+    },
+    {
+     "id": "r3",
+     "regulation_id": "2026-19980",
+     "matched_topic": "critical access hospital",
+     "discovered_at": "2026-11-02T17:19:07.995344Z",
+     "dismissed": false,
+     "regulations": {
+      "id": "2026-19980",
+      "title": "Request for Information: Critical Access Hospital Conditions of Participation",
+      "abstract": "CMS seeks comment on regulatory burdens affecting critical access hospitals.",
+      "doc_type": "notice",
+      "docket_id": null,
+      "agencies": [
+       "Centers for Medicare & Medicaid Services"
+      ],
+      "publication_date": "2026-09-22",
+      "comment_close_date": "2026-11-21",
+      "effective_date": null,
+      "html_url": "https://www.federalregister.gov/"
+     }
+    }
+   ]
+  }
+ },
+ "clients": {
+  "ready": true,
+  "clients": [
+   {
+    "id": "c1",
+    "name": "Valley Regional Health Network",
+    "reportEnabled": true,
+    "shared": true,
+    "billCount": 4,
+    "movedCount": 1,
+    "recipientCount": 2,
+    "updatedAt": "2026-11-02T17:19:07.995344Z"
+   },
+   {
+    "id": "c2",
+    "name": "Tri-County Clinics Association",
+    "reportEnabled": false,
+    "shared": false,
+    "billCount": 9,
+    "movedCount": 0,
+    "recipientCount": 0,
+    "updatedAt": "2026-11-02T17:19:07.995344Z"
+   },
+   {
+    "id": "c3",
+    "name": "High Plains EMS Coalition",
+    "reportEnabled": true,
+    "shared": false,
+    "billCount": 3,
+    "movedCount": 2,
+    "recipientCount": 0,
+    "updatedAt": "2026-11-02T17:19:07.995344Z"
+   }
+  ]
+ },
+ "clientDetail": {
+  "client": {
+   "id": "c1",
+   "organization_id": "o",
+   "user_id": null,
+   "name": "Valley Regional Health Network",
+   "notes": "Main contact is the CFO. Board meets the first Tuesday of each month.",
+   "lead_user_id": "11111111-1111-1111-1111-111111111111",
+   "report_enabled": true,
+   "report_ask": "Please confirm by Thursday that you'll sign the coalition letter on the 340B guidance.",
+   "share_token": "5f0c2a6e-1111-4c2b-9a77-0d3e9b1c2a10",
+   "created_at": "2026-11-02T17:19:07.995344Z",
+   "updated_at": "2026-11-02T17:19:07.995344Z"
+  },
+  "bills": [
+   {
+    "billId": "hr-2407-119",
+    "title": "Rural Hospital Closure Relief Act of 2025",
+    "stage": "passed_house",
+    "billType": "hr",
+    "position": "support",
+    "note": "Their top priority. The 20 percent threshold would qualify their Cedar Falls campus.",
+    "latestAction": null,
+    "latestActionDate": "2026-10-24"
+   },
+   {
+    "billId": "s-1260-119",
+    "title": "Critical Access Hospital Relief Act",
+    "stage": "committee",
+    "billType": "s",
+    "position": "support",
+    "note": null,
+    "latestAction": null,
+    "latestActionDate": "2026-10-21"
+   },
+   {
+    "billId": "hr-2950-119",
+    "title": "Medicare Site-Neutral Payment Act",
+    "stage": "committee",
+    "billType": "hr",
+    "position": "oppose",
+    "note": null,
+    "latestAction": null,
+    "latestActionDate": "2026-06-01"
+   },
+   {
+    "billId": "hr-4206-119",
+    "title": "Telehealth Modernization Act",
+    "stage": "committee",
+    "billType": "hr",
+    "position": "watching",
+    "note": null,
+    "latestAction": null,
+    "latestActionDate": "2026-10-20"
+   }
+  ],
+  "recipients": [
+   {
+    "id": "r1",
+    "email": "cfo@valleyregional.example",
+    "name": "Dana Ortiz"
+   },
+   {
+    "id": "r2",
+    "email": "gov.affairs@valleyregional.example",
+    "name": null
+   }
+  ],
+  "reports": [
+   {
+    "id": "x1",
+    "week_of": "2026-10-19",
+    "sent_at": "2026-10-19T06:16:00Z",
+    "sent_to": [
+     "cfo@valleyregional.example",
+     "gov.affairs@valleyregional.example"
+    ],
+    "sent_by": null,
+    "is_test": false
+   }
+  ],
+  "team": [
+   {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "email": "ben@pinnaclestrategies.com"
+   },
+   {
+    "id": "2",
+    "email": "jordan@pinnaclestrategies.com"
+   }
+  ]
+ },
+ "clientReport": {
+  "report": {
+   "clientName": "Valley Regional Health Network",
+   "firmName": "Pinnacle Strategies",
+   "weekOf": "2026-10-26",
+   "generatedAt": "2026-10-26T10:00:00.000Z",
+   "moved": [
+    {
+     "billId": "hr-2407-119",
+     "citation": "H.R. 2407",
+     "title": "Rural Hospital Closure Relief Act of 2025",
+     "stage": "passed_house",
+     "stageLabel": "Passed House",
+     "position": "support",
+     "lines": [
+      {
+       "date": "2026-10-24",
+       "text": "Passed House: On motion to suspend the rules and pass the bill, as amended Agreed to by the Yeas and Nays: (2/3 required): 402 - 18 (Roll no. 301).",
+       "plain": "A fast-track House vote: limited debate, no amendments, and two-thirds needed to pass. Usually used for less controversial bills. Next it needs to pass the Senate."
+      },
+      {
+       "date": "2026-10-24",
+       "text": "New version of the bill text published",
+       "plain": null
+      }
+     ]
+    }
+   ],
+   "upcoming": [
+    {
+     "day": "2026-10-28",
+     "time": "9:30 AM",
+     "kind": "Markup",
+     "title": "Executive Session to consider S. 1260 and other pending health legislation",
+     "committees": [
+      "Finance Committee"
+     ],
+     "citations": [
+      "S. 1260"
+     ],
+     "cancelled": false
+    }
+   ],
+   "floor": [],
+   "quiet": [
+    {
+     "billId": "hr-2950-119",
+     "citation": "H.R. 2950",
+     "title": "Medicare Site-Neutral Payment Act",
+     "days": 146
+    }
+   ],
+   "portfolio": [
+    {
+     "billId": "hr-2407-119",
+     "citation": "H.R. 2407",
+     "title": "Rural Hospital Closure Relief Act of 2025",
+     "stage": "passed_house",
+     "stageLabel": "Passed House",
+     "billType": "hr",
+     "position": "support",
+     "positionLabel": "Support",
+     "note": "Their top priority. The 20 percent threshold would qualify their Cedar Falls campus.",
+     "lastActionDate": "2026-10-24"
+    },
+    {
+     "billId": "s-1260-119",
+     "citation": "S. 1260",
+     "title": "Critical Access Hospital Relief Act",
+     "stage": "committee",
+     "stageLabel": "In committee",
+     "billType": "s",
+     "position": "support",
+     "positionLabel": "Support",
+     "note": null,
+     "lastActionDate": "2026-10-21"
+    },
+    {
+     "billId": "hr-2950-119",
+     "citation": "H.R. 2950",
+     "title": "Medicare Site-Neutral Payment Act",
+     "stage": "committee",
+     "stageLabel": "In committee",
+     "billType": "hr",
+     "position": "oppose",
+     "positionLabel": "Oppose",
+     "note": null,
+     "lastActionDate": "2026-06-01"
+    },
+    {
+     "billId": "hr-4206-119",
+     "citation": "H.R. 4206",
+     "title": "Telehealth Modernization Act",
+     "stage": "committee",
+     "stageLabel": "In committee",
+     "billType": "hr",
+     "position": "watching",
+     "positionLabel": "Watching",
+     "note": null,
+     "lastActionDate": "2026-10-20"
+    }
+   ],
+   "ask": "Please confirm by Thursday that you'll sign the coalition letter on the 340B guidance."
+  },
+  "summary": ""
+ },
+ "weekMine": {
+  "start": "2026-10-26",
+  "thisWeek": "2026-10-26",
+  "scope": "mine",
+  "view": {
+   "start": "2026-10-26",
+   "days": [
+    {
+     "day": "2026-10-26",
+     "weekday": "Mon",
+     "dayOfMonth": 26,
+     "events": []
+    },
+    {
+     "day": "2026-10-27",
+     "weekday": "Tue",
+     "dayOfMonth": 27,
+     "events": [
+      {
+       "id": "1",
+       "day": "2026-10-27",
+       "time": "10:00 AM",
+       "startsAt": "2026-10-27T14:00:00Z",
+       "title": "Keeping Rural Hospitals Open: Examining Closures and Conversions",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "House",
+       "committees": [
+        "Energy and Commerce Committee",
+        "Health Subcommittee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "hr-2407-119",
+         "citation": "H.R. 2407",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "hr-2407-119"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/1"
+      }
+     ]
+    },
+    {
+     "day": "2026-10-28",
+     "weekday": "Wed",
+     "dayOfMonth": 28,
+     "events": [
+      {
+       "id": "2",
+       "day": "2026-10-28",
+       "time": "9:30 AM",
+       "startsAt": "2026-10-28T13:30:00Z",
+       "title": "Executive Session to consider S. 1260 and other pending health legislation",
+       "kind": "Markup",
+       "status": "Scheduled",
+       "chamber": "Senate",
+       "committees": [
+        "Finance Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "s-1260-119",
+         "citation": "S. 1260",
+         "tracked": true,
+         "suggested": false,
+         "clients": [
+          "Valley Regional"
+         ]
+        },
+        {
+         "billId": "s-2016-119",
+         "citation": "S. 2016",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "s-1260-119"
+        },
+        {
+         "kind": "client",
+         "billId": "s-1260-119",
+         "client": "Valley Regional"
+        },
+        {
+         "kind": "tracked",
+         "billId": "s-2016-119"
+        }
+       ],
+       "witnessCount": 0,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/senate-event/2"
+      },
+      {
+       "id": "3",
+       "day": "2026-10-28",
+       "time": "2:00 PM",
+       "startsAt": "2026-10-28T18:00:00Z",
+       "title": "The Primary Care Workforce in Rural America",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "Senate",
+       "committees": [
+        "Health, Education, Labor, and Pensions Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [],
+       "relevance": [
+        {
+         "kind": "topic",
+         "topic": "workforce"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/senate-event/3"
+      }
+     ]
+    },
+    {
+     "day": "2026-10-29",
+     "weekday": "Thu",
+     "dayOfMonth": 29,
+     "events": [
+      {
+       "id": "4",
+       "day": "2026-10-29",
+       "time": "10:00 AM",
+       "startsAt": "2026-10-29T14:00:00Z",
+       "title": "Telehealth After the Waivers: What Comes Next",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "House",
+       "committees": [
+        "Ways and Means Committee",
+        "Health Subcommittee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "hr-4206-119",
+         "citation": "H.R. 4206",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        },
+        {
+         "billId": "hr-3592-119",
+         "citation": "H.R. 3592",
+         "tracked": false,
+         "suggested": true,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "hr-4206-119"
+        },
+        {
+         "kind": "suggested",
+         "billId": "hr-3592-119"
+        },
+        {
+         "kind": "topic",
+         "topic": "telehealth"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/4"
+      },
+      {
+       "id": "5",
+       "day": "2026-10-29",
+       "time": "11:00 AM",
+       "startsAt": "2026-10-29T15:00:00Z",
+       "title": "Markup of H.R. 5110, Rural EMS Funding Extension Act",
+       "kind": "Markup",
+       "status": "Postponed",
+       "chamber": "House",
+       "committees": [
+        "Energy and Commerce Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "hr-5110-119",
+         "citation": "H.R. 5110",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "hr-5110-119"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/5"
+      }
+     ]
+    },
+    {
+     "day": "2026-10-30",
+     "weekday": "Fri",
+     "dayOfMonth": 30,
+     "events": []
+    }
+   ],
+   "floor": [
+    {
+     "citation": "H.R. 2407",
+     "billId": "hr-2407-119",
+     "title": "Rural Hospital Closure Relief Act, as amended",
+     "category": "suspension",
+     "tracked": true,
+     "suggested": false,
+     "clients": []
+    }
+   ],
+   "counts": {
+    "meetings": 4,
+    "markups": 1,
+    "floor": 1
+   }
+  },
+  "headline": "4 committee meetings touch your bills or topics, and 1 of your bills is on the House floor schedule. One is a markup, where a bill can be voted out of committee.",
+  "bills": {
+   "hr-2407-119": {
+    "title": "Rural Hospital Closure Relief Act of 2025",
+    "stage": "reported",
+    "type": "hr"
+   },
+   "s-1260-119": {
+    "title": "Critical Access Hospital Relief Act",
+    "stage": "committee",
+    "type": "s"
+   },
+   "s-2016-119": {
+    "title": "CONNECT for Health Act of 2025",
+    "stage": "committee",
+    "type": "s"
+   },
+   "hr-4206-119": {
+    "title": "Telehealth Modernization Act",
+    "stage": "committee",
+    "type": "hr"
+   },
+   "hr-3592-119": {
+    "title": "Rural Obstetrics Readiness Act",
+    "stage": "introduced",
+    "type": "hr"
+   },
+   "hr-5110-119": {
+    "title": "Rural EMS Funding Extension Act",
+    "stage": "committee",
+    "type": "hr"
+   },
+   "hr-3388-119": {
+    "title": "Rural EMS Access Act",
+    "stage": "reported",
+    "type": "hr"
+   },
+   "hr-1874-119": {
+    "title": "Community Health Center Funding Extension",
+    "stage": "reported",
+    "type": "hr"
+   }
+  },
+  "deadlines": [
+   {
+    "id": "a",
+    "title": "Medicare Program; Telehealth Services Furnished by Rural Health Clinics",
+    "closes": "2026-10-28",
+    "agency": "Centers for Medicare & Medicaid Services",
+    "url": "#",
+    "docType": "proposed",
+    "topic": "telehealth"
+   },
+   {
+    "id": "b",
+    "title": "Request for Information: Critical Access Hospital Conditions of Participation",
+    "closes": "2026-11-21",
+    "agency": "Centers for Medicare & Medicaid Services",
+    "url": "#",
+    "docType": "notice",
+    "topic": "critical access hospital"
+   }
+  ],
+  "hasTopics": true,
+  "trackedCount": 5,
+  "floorSource": "https://docs.house.gov/floor/",
+  "floorFetchedAt": "2026-10-26T03:44:38.112Z",
+  "lastSync": "2026-10-26T00:44:38.112Z",
+  "stale": false,
+  "ready": true
+ },
+ "weekAll": {
+  "start": "2026-10-26",
+  "thisWeek": "2026-10-26",
+  "scope": "all",
+  "view": {
+   "start": "2026-10-26",
+   "days": [
+    {
+     "day": "2026-10-26",
+     "weekday": "Mon",
+     "dayOfMonth": 26,
+     "events": []
+    },
+    {
+     "day": "2026-10-27",
+     "weekday": "Tue",
+     "dayOfMonth": 27,
+     "events": [
+      {
+       "id": "1",
+       "day": "2026-10-27",
+       "time": "10:00 AM",
+       "startsAt": "2026-10-27T14:00:00Z",
+       "title": "Keeping Rural Hospitals Open: Examining Closures and Conversions",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "House",
+       "committees": [
+        "Energy and Commerce Committee",
+        "Health Subcommittee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "hr-2407-119",
+         "citation": "H.R. 2407",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "hr-2407-119"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/1"
+      }
+     ]
+    },
+    {
+     "day": "2026-10-28",
+     "weekday": "Wed",
+     "dayOfMonth": 28,
+     "events": [
+      {
+       "id": "2",
+       "day": "2026-10-28",
+       "time": "9:30 AM",
+       "startsAt": "2026-10-28T13:30:00Z",
+       "title": "Executive Session to consider S. 1260 and other pending health legislation",
+       "kind": "Markup",
+       "status": "Scheduled",
+       "chamber": "Senate",
+       "committees": [
+        "Finance Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "s-1260-119",
+         "citation": "S. 1260",
+         "tracked": true,
+         "suggested": false,
+         "clients": [
+          "Valley Regional"
+         ]
+        },
+        {
+         "billId": "s-2016-119",
+         "citation": "S. 2016",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "s-1260-119"
+        },
+        {
+         "kind": "client",
+         "billId": "s-1260-119",
+         "client": "Valley Regional"
+        },
+        {
+         "kind": "tracked",
+         "billId": "s-2016-119"
+        }
+       ],
+       "witnessCount": 0,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/senate-event/2"
+      },
+      {
+       "id": "3",
+       "day": "2026-10-28",
+       "time": "2:00 PM",
+       "startsAt": "2026-10-28T18:00:00Z",
+       "title": "The Primary Care Workforce in Rural America",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "Senate",
+       "committees": [
+        "Health, Education, Labor, and Pensions Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [],
+       "relevance": [
+        {
+         "kind": "topic",
+         "topic": "workforce"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/senate-event/3"
+      }
+     ]
+    },
+    {
+     "day": "2026-10-29",
+     "weekday": "Thu",
+     "dayOfMonth": 29,
+     "events": [
+      {
+       "id": "4",
+       "day": "2026-10-29",
+       "time": "10:00 AM",
+       "startsAt": "2026-10-29T14:00:00Z",
+       "title": "Telehealth After the Waivers: What Comes Next",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "House",
+       "committees": [
+        "Ways and Means Committee",
+        "Health Subcommittee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "hr-4206-119",
+         "citation": "H.R. 4206",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        },
+        {
+         "billId": "hr-3592-119",
+         "citation": "H.R. 3592",
+         "tracked": false,
+         "suggested": true,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "hr-4206-119"
+        },
+        {
+         "kind": "suggested",
+         "billId": "hr-3592-119"
+        },
+        {
+         "kind": "topic",
+         "topic": "telehealth"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/4"
+      },
+      {
+       "id": "5",
+       "day": "2026-10-29",
+       "time": "11:00 AM",
+       "startsAt": "2026-10-29T15:00:00Z",
+       "title": "Markup of H.R. 5110, Rural EMS Funding Extension Act",
+       "kind": "Markup",
+       "status": "Postponed",
+       "chamber": "House",
+       "committees": [
+        "Energy and Commerce Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [
+        {
+         "billId": "hr-5110-119",
+         "citation": "H.R. 5110",
+         "tracked": true,
+         "suggested": false,
+         "clients": []
+        }
+       ],
+       "relevance": [
+        {
+         "kind": "tracked",
+         "billId": "hr-5110-119"
+        }
+       ],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/5"
+      }
+     ]
+    },
+    {
+     "day": "2026-10-30",
+     "weekday": "Fri",
+     "dayOfMonth": 30,
+     "events": [
+      {
+       "id": "6",
+       "day": "2026-10-30",
+       "time": "10:00 AM",
+       "startsAt": "2026-10-30T14:00:00Z",
+       "title": "Oversight of the Coast Guard",
+       "kind": "Hearing",
+       "status": "Scheduled",
+       "chamber": "House",
+       "committees": [
+        "Transportation and Infrastructure Committee"
+       ],
+       "location": "Rayburn House Office Building, Room 2123",
+       "bills": [],
+       "relevance": [],
+       "witnessCount": 4,
+       "documentCount": 6,
+       "videoUrl": null,
+       "url": "https://www.congress.gov/event/119th-congress/house-event/6"
+      }
+     ]
+    }
+   ],
+   "floor": [
+    {
+     "citation": "H.R. 2407",
+     "billId": "hr-2407-119",
+     "title": "Rural Hospital Closure Relief Act, as amended",
+     "category": "suspension",
+     "tracked": true,
+     "suggested": false,
+     "clients": []
+    },
+    {
+     "citation": "H.R. 3388",
+     "billId": "hr-3388-119",
+     "title": "Rural EMS Access Act",
+     "category": "suspension",
+     "tracked": false,
+     "suggested": false,
+     "clients": []
+    },
+    {
+     "citation": "H.R. 1874",
+     "billId": "hr-1874-119",
+     "title": "Community Health Center Funding Extension",
+     "category": "rule",
+     "tracked": false,
+     "suggested": false,
+     "clients": []
+    }
+   ],
+   "counts": {
+    "meetings": 4,
+    "markups": 1,
+    "floor": 1
+   }
+  },
+  "headline": "4 committee meetings touch your bills or topics, and 1 of your bills is on the House floor schedule. One is a markup, where a bill can be voted out of committee.",
+  "bills": {
+   "hr-2407-119": {
+    "title": "Rural Hospital Closure Relief Act of 2025",
+    "stage": "reported",
+    "type": "hr"
+   },
+   "s-1260-119": {
+    "title": "Critical Access Hospital Relief Act",
+    "stage": "committee",
+    "type": "s"
+   },
+   "s-2016-119": {
+    "title": "CONNECT for Health Act of 2025",
+    "stage": "committee",
+    "type": "s"
+   },
+   "hr-4206-119": {
+    "title": "Telehealth Modernization Act",
+    "stage": "committee",
+    "type": "hr"
+   },
+   "hr-3592-119": {
+    "title": "Rural Obstetrics Readiness Act",
+    "stage": "introduced",
+    "type": "hr"
+   },
+   "hr-5110-119": {
+    "title": "Rural EMS Funding Extension Act",
+    "stage": "committee",
+    "type": "hr"
+   },
+   "hr-3388-119": {
+    "title": "Rural EMS Access Act",
+    "stage": "reported",
+    "type": "hr"
+   },
+   "hr-1874-119": {
+    "title": "Community Health Center Funding Extension",
+    "stage": "reported",
+    "type": "hr"
+   }
+  },
+  "deadlines": [
+   {
+    "id": "a",
+    "title": "Medicare Program; Telehealth Services Furnished by Rural Health Clinics",
+    "closes": "2026-10-28",
+    "agency": "Centers for Medicare & Medicaid Services",
+    "url": "#",
+    "docType": "proposed",
+    "topic": "telehealth"
+   },
+   {
+    "id": "b",
+    "title": "Request for Information: Critical Access Hospital Conditions of Participation",
+    "closes": "2026-11-21",
+    "agency": "Centers for Medicare & Medicaid Services",
+    "url": "#",
+    "docType": "notice",
+    "topic": "critical access hospital"
+   }
+  ],
+  "hasTopics": true,
+  "trackedCount": 5,
+  "floorSource": "https://docs.house.gov/floor/",
+  "floorFetchedAt": "2026-10-26T03:44:38.115Z",
+  "lastSync": "2026-10-26T00:44:38.115Z",
+  "stale": false,
+  "ready": true
+ },
+ "textDiff": {
+  "versions": [
+   {
+    "packageId": "BILLS-119hr2407ih",
+    "label": "Introduced in House",
+    "date": "2025-03-27"
+   },
+   {
+    "packageId": "BILLS-119hr2407rh",
+    "label": "Reported in House",
+    "date": "2026-10-09"
+   },
+   {
+    "packageId": "BILLS-119hr2407eh",
+    "label": "Engrossed in House",
+    "date": "2026-10-24"
+   }
+  ],
+  "from": "BILLS-119hr2407ih",
+  "to": "BILLS-119hr2407rh",
+  "result": {
+   "sections": [
+    {
+     "key": "1|short title",
+     "num": "1",
+     "header": "Short title",
+     "status": "same",
+     "added": 0,
+     "removed": 0,
+     "words": 14
+    },
+    {
+     "key": "2|definitions",
+     "num": "2",
+     "header": "Definitions",
+     "status": "changed",
+     "added": 21,
+     "removed": 0,
+     "words": 60,
+     "ops": [
+      {
+       "t": "gap",
+       "n": 15
+      },
+      {
+       "t": "eq",
+       "s": "given such term in section 1861(mm)(1) of the Social Security Act. (2)"
+      },
+      {
+       "t": "ins",
+       "s": "Rural emergency hospital. The term rural emergency hospital has the meaning given such term in section 1861(kkk) of such Act. (3)"
+      },
+      {
+       "t": "eq",
+       "s": "Secretary. The term Secretary means the Secretary of Health and Human Services."
+      }
+     ]
+    },
+    {
+     "key": "3|critical access hospital designation",
+     "num": "3",
+     "header": "Critical access hospital designation",
+     "status": "changed",
+     "added": 13,
+     "removed": 3,
+     "words": 72,
+     "ops": [
+      {
+       "t": "gap",
+       "n": 30
+      },
+      {
+       "t": "eq",
+       "s": "or is a hospital that serves a population of which at least"
+      },
+      {
+       "t": "del",
+       "s": "25"
+      },
+      {
+       "t": "ins",
+       "s": "20"
+      },
+      {
+       "t": "eq",
+       "s": "percent is"
+      },
+      {
+       "t": "del",
+       "s": "low-income,"
+      },
+      {
+       "t": "ins",
+       "s": "low-income or that is located in a health professional shortage area,"
+      },
+      {
+       "t": "eq",
+       "s": "for the period beginning on the date of enactment and ending"
+      },
+      {
+       "t": "del",
+       "s": "5"
+      },
+      {
+       "t": "ins",
+       "s": "7"
+      },
+      {
+       "t": "eq",
+       "s": "years after such date."
+      }
+     ]
+    },
+    {
+     "key": "4|rural emergency hospital transition grants",
+     "num": "4",
+     "header": "Rural emergency hospital transition grants",
+     "status": "added",
+     "added": 50,
+     "removed": 0,
+     "words": 50,
+     "ops": [
+      {
+       "t": "ins",
+       "s": "(a) Grants authorized. The Secretary shall award grants to eligible hospitals that convert to rural emergency hospitals, to be used for workforce retention, telehealth equipment, and transfer agreements with nearby facilities. (b) Priority. In awarding grants, the Secretary shall give priority to hospitals in counties with no other inpatient facility."
+      }
+     ]
+    },
+    {
+     "key": "5|authorization of appropriations",
+     "num": "5",
+     "header": "Authorization of appropriations",
+     "status": "changed",
+     "added": 2,
+     "removed": 2,
+     "words": 20,
+     "ops": [
+      {
+       "t": "eq",
+       "s": "There are authorized to be appropriated to carry out this Act"
+      },
+      {
+       "t": "del",
+       "s": "$250,000,000"
+      },
+      {
+       "t": "ins",
+       "s": "$400,000,000"
+      },
+      {
+       "t": "eq",
+       "s": "for each of fiscal years 2026 through"
+      },
+      {
+       "t": "del",
+       "s": "2028."
+      },
+      {
+       "t": "ins",
+       "s": "2030."
+      }
+     ]
+    },
+    {
+     "key": "old-5|report",
+     "num": "5",
+     "header": "Report",
+     "status": "removed",
+     "added": 0,
+     "removed": 27,
+     "words": 27,
+     "ops": [
+      {
+       "t": "del",
+       "s": "Not later than 2 years after the date of enactment of this Act, the Secretary shall submit to Congress a report on the implementation of this Act."
+      }
+     ]
+    }
+   ],
+   "totals": {
+    "added": 86,
+    "removed": 32,
+    "sectionsChanged": 3,
+    "sectionsAdded": 1,
+    "sectionsRemoved": 1
+   },
+   "numbers": [
+    {
+     "section": "Sec. 3, Critical access hospital designation",
+     "from": "25 percent",
+     "to": "20 percent",
+     "context": "a population of which at least"
+    },
+    {
+     "section": "Sec. 3, Critical access hospital designation",
+     "from": "5 years",
+     "to": "7 years",
+     "context": "the date of enactment and ending"
+    },
+    {
+     "section": "Sec. 5, Authorization of appropriations",
+     "from": "$250 million",
+     "to": "$400 million",
+     "context": "appropriated to carry out this Act"
+    },
+    {
+     "section": "Sec. 5, Authorization of appropriations",
+     "from": "2028",
+     "to": "2030",
+     "context": "each of fiscal years 2026 through"
+    }
+   ]
+  },
+  "headline": "1 new section, 3 changed and 1 removed. 86 words added, 32 removed.",
+  "cached": true
+ },
+ "drugBoards": {
+  "ready": true,
+  "today": "2026-10-28",
+  "boards": [
+   {
+    "state": "CO",
+    "name": "Colorado Prescription Drug Affordability Review Board",
+    "agency": "Division of Insurance",
+    "status": "active",
+    "authority": "Can set price limits",
+    "summary": "Set the nation's first upper payment limit, for Enbrel, in October 2025. A federal judge blocked it in July 2026 while the case continues.",
+    "summary_source": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "website": "https://doi.colorado.gov/types-of-insurance/health-insurance/prescription-drug-affordability-review-board",
+    "email_signup": "https://doi.colorado.gov/sign-up-for-division-of-insurance-email-lists",
+    "sort": 1,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": "2026-10-28T12:00:00Z"
+   },
+   {
+    "state": "MD",
+    "name": "Maryland Prescription Drug Affordability Board",
+    "agency": null,
+    "status": "active",
+    "authority": "Can set price limits",
+    "summary": "A 2025 law extended its limits from state programs to everyone in Maryland. Sources differ on which limits were finalized in 2026; check the board's Upper Payment Limits page.",
+    "summary_source": "https://familiesusa.org/wp-content/uploads/2026/04/PDABs-1-Pager_2026-Update_Fact-Sheet-1.pdf",
+    "website": "https://pdab.prod.maryland.gov/",
+    "email_signup": null,
+    "sort": 2,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": "2026-10-28T12:00:00Z"
+   },
+   {
+    "state": "MN",
+    "name": "Minnesota Prescription Drug Affordability Board",
+    "agency": "Department of Commerce",
+    "status": "active",
+    "authority": "Can set price limits",
+    "summary": "Still setting up its drug cost review process; no reviews finished yet.",
+    "summary_source": "https://www.multistate.us/insider/2026/6/8/pdab-implementation-challenges-slow-state-drug-cost-efforts",
+    "website": "https://mn.gov/commerce/insurance/health/pharmacy-drug-affordability-board/index.jsp",
+    "email_signup": "https://public.govdelivery.com/accounts/MNCOMM/subscriber/new",
+    "sort": 3,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": "2026-10-28T12:00:00Z"
+   },
+   {
+    "state": "WA",
+    "name": "Washington Prescription Drug Affordability Board",
+    "agency": "Health Care Authority",
+    "status": "active",
+    "authority": "Can set price limits",
+    "summary": "Still building its rules; no affordability reviews finished yet.",
+    "summary_source": "https://www.multistate.us/insider/2026/6/8/pdab-implementation-challenges-slow-state-drug-cost-efforts",
+    "website": "https://www.hca.wa.gov/about-hca/programs-and-initiatives/clinical-collaboration-and-initiatives/prescription-drug-affordability-board",
+    "email_signup": null,
+    "sort": 4,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": "2026-10-28T12:00:00Z"
+   },
+   {
+    "state": "OR",
+    "name": "Oregon Prescription Drug Affordability Board",
+    "agency": "Division of Financial Regulation",
+    "status": "active",
+    "authority": "Recommendations only",
+    "summary": "Can't cap prices. Has reviewed more than 30 drugs and sends recommendations to the Legislature.",
+    "summary_source": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "website": "https://dfr.oregon.gov/pdab/pages/index.aspx",
+    "email_signup": null,
+    "sort": 5,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": null
+   },
+   {
+    "state": "ME",
+    "name": "Maine Prescription Drug Affordability Board",
+    "agency": "Office of Affordable Health Care",
+    "status": "active",
+    "authority": "Check current law",
+    "summary": "Reviews drug spending for public payers. Reports say a newer law lets it set payment limits; confirm the details.",
+    "summary_source": "https://familiesusa.org/wp-content/uploads/2026/04/PDABs-1-Pager_2026-Update_Fact-Sheet-1.pdf",
+    "website": "https://www.maine.gov/oahc/our-work/PDAB",
+    "email_signup": null,
+    "sort": 6,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": null
+   },
+   {
+    "state": "NJ",
+    "name": "New Jersey Drug Affordability Council",
+    "agency": "Division of Consumer Affairs",
+    "status": "limited",
+    "authority": "Recommendations only",
+    "summary": "A council rather than a board: it recommends policy and the state collects drug pricing data. No price limits.",
+    "summary_source": "https://www.drugtopics.com/view/nj-governor-phil-murphy-signs-pbm-drug-price-legislation",
+    "website": "https://www.njconsumeraffairs.gov/dau/Pages/default.aspx",
+    "email_signup": null,
+    "sort": 7,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": null
+   },
+   {
+    "state": "NH",
+    "name": "New Hampshire Prescription Drug Affordability Board",
+    "agency": null,
+    "status": "dissolved",
+    "authority": "Dissolved",
+    "summary": "Dissolved in 2025 budget legislation.",
+    "summary_source": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "website": null,
+    "email_signup": null,
+    "sort": 90,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": null
+   },
+   {
+    "state": "OH",
+    "name": "Ohio Prescription Drug Affordability Board",
+    "agency": null,
+    "status": "dissolved",
+    "authority": "Dissolved",
+    "summary": "Dissolved in 2025 budget legislation.",
+    "summary_source": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "website": null,
+    "email_signup": null,
+    "sort": 91,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "confirmed_at": null
+   }
+  ],
+  "pages": [
+   {
+    "id": "a8971218-907d-4913-a8ff-f5087eb81945",
+    "state": "CO",
+    "url": "https://doi.colorado.gov/types-of-insurance/health-insurance/prescription-drug-affordability-review-board",
+    "label": "Board page",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "969878c6-8973-42f5-94a1-9bfba003fe5e",
+    "state": "MD",
+    "url": "https://pdab.maryland.gov/public-meetings",
+    "label": "Public meetings",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "b0e58e9f-efd4-4b25-8b5a-f06f793f34c7",
+    "state": "MD",
+    "url": "https://pdab.maryland.gov/cost-reviews",
+    "label": "Cost reviews",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "67c7b6eb-360a-4f90-ba05-b0c3e4e68bb1",
+    "state": "MD",
+    "url": "https://pdab.maryland.gov/upper-payment-limits",
+    "label": "Upper payment limits",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": "the page returned 404"
+   },
+   {
+    "id": "dc5ed89a-83c5-4379-8aeb-e7a3bf134dd9",
+    "state": "ME",
+    "url": "https://www.maine.gov/oahc/our-work/PDAB",
+    "label": "Board page",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "c30080d5-1d7d-4934-8ac6-e6c83870b9f0",
+    "state": "MN",
+    "url": "https://mn.gov/commerce/insurance/health/pharmacy-drug-affordability-board/index.jsp",
+    "label": "Board page and meetings",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "df7e1190-2ae9-4dd8-b860-c986cce320ba",
+    "state": "NJ",
+    "url": "https://www.njconsumeraffairs.gov/dau/Pages/default.aspx",
+    "label": "Drug Affordability Unit",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "d233aac6-8499-408f-b648-8dd95c0823cc",
+    "state": "OR",
+    "url": "https://dfr.oregon.gov/pdab/Pages/affordability-review.aspx",
+    "label": "Drug reviews",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "8abdf995-4170-440f-8844-e4fca3c5396b",
+    "state": "OR",
+    "url": "https://dfr.oregon.gov/pdab/Pages/board-calendar.aspx",
+    "label": "Board calendar and materials",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   },
+   {
+    "id": "32427601-7f49-4dbe-a75f-0c73a0484417",
+    "state": "WA",
+    "url": "https://www.hca.wa.gov/about-hca/programs-and-initiatives/clinical-collaboration-and-initiatives/prescription-drug-affordability-board",
+    "label": "Board page",
+    "last_checked_at": "2026-10-28T11:37:40.469642Z",
+    "last_changed_at": null,
+    "last_error": null
+   }
+  ],
+  "drugs": [
+   {
+    "id": "c0000000-0000-4000-8000-000000000001",
+    "state": "CO",
+    "drug": "Enbrel",
+    "manufacturer": "Amgen",
+    "stage": "limit_blocked",
+    "price_limit": "$600 per dose",
+    "limit_basis": "Close to the Medicare negotiated price",
+    "next_step": "Court hearing on the merits",
+    "next_date": null,
+    "source_url": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "notes": "Set October 2025 to start January 2027. A federal judge granted a preliminary injunction on July 1, 2026 (patent preemption).",
+    "needs_check": false,
+    "created_by": null,
+    "created_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "confirmed_at": "2026-10-28T12:00:00Z"
+   },
+   {
+    "id": "c0000000-0000-4000-8000-000000000002",
+    "state": "MD",
+    "drug": "Jardiance",
+    "manufacturer": "Boehringer Ingelheim",
+    "stage": "limit_set",
+    "price_limit": null,
+    "limit_basis": "Tied to the Medicare negotiated price",
+    "next_step": null,
+    "next_date": null,
+    "source_url": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "notes": "Avalere (Aug 2026) reports a limit was set in 2026; Families USA (Apr 2026) described it as upcoming.",
+    "needs_check": true,
+    "created_by": null,
+    "created_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "confirmed_at": "2026-09-10T12:00:00Z"
+   },
+   {
+    "id": "c0000000-0000-4000-8000-000000000003",
+    "state": "MD",
+    "drug": "Ozempic",
+    "manufacturer": "Novo Nordisk",
+    "stage": "limit_set",
+    "price_limit": null,
+    "limit_basis": "Tied to the Medicare negotiated price",
+    "next_step": null,
+    "next_date": null,
+    "source_url": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "notes": "Reported by Avalere (Aug 2026). Confirm on the board's Upper Payment Limits page.",
+    "needs_check": true,
+    "created_by": null,
+    "created_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "confirmed_at": "2026-10-27T12:00:00Z"
+   },
+   {
+    "id": "c0000000-0000-4000-8000-000000000004",
+    "state": "MD",
+    "drug": "Farxiga",
+    "manufacturer": "AstraZeneca",
+    "stage": "closed",
+    "price_limit": null,
+    "limit_basis": null,
+    "next_step": null,
+    "next_date": null,
+    "source_url": "https://avalerehealth.com/thought-leadership/state-pricing-controls-at-an-inflection-point-maximum-fair-price-and-the-shifting-prescription-drug-affordability-board-landscape/",
+    "notes": "Limit deferred after the patent expired and generics arrived (Avalere, Aug 2026).",
+    "needs_check": true,
+    "created_by": null,
+    "created_at": "2026-10-28T12:37:17.117917-04:00",
+    "updated_by": null,
+    "updated_at": "2026-10-28T12:37:17.117917-04:00",
+    "confirmed_at": "2026-10-20T12:00:00Z"
+   },
+   {
+    "id": "x1",
+    "state": "OR",
+    "drug": "Trulicity",
+    "manufacturer": "Eli Lilly",
+    "stage": "recommendation",
+    "price_limit": null,
+    "limit_basis": null,
+    "next_step": "Report to the Legislature",
+    "next_date": "2026-12-15",
+    "source_url": "https://dfr.oregon.gov/pdab",
+    "notes": null,
+    "needs_check": false,
+    "updated_at": "2026-10-28T16:37:40.469642Z",
+    "confirmed_at": null
+   },
+   {
+    "id": "x2",
+    "state": "MN",
+    "drug": "Stelara",
+    "manufacturer": "Janssen",
+    "stage": "under_review",
+    "price_limit": null,
+    "limit_basis": null,
+    "next_step": "Cost review outline vote",
+    "next_date": "2026-11-10",
+    "source_url": null,
+    "notes": null,
+    "needs_check": false,
+    "updated_at": "2026-10-28T16:37:40.469642Z",
+    "confirmed_at": null
+   }
+  ],
+  "newDocuments": [
+   {
+    "id": "d9",
+    "state": "MD",
+    "url": "https://pdab.maryland.gov/media/2026-11-16-agenda.pdf",
+    "title": "November 16, 2026 Board Meeting Agenda",
+    "kind": "agenda",
+    "doc_date": "2026-11-16",
+    "first_seen_at": "2026-10-28T10:01:00Z",
+    "text_status": "read",
+    "mentions": [
+     "Ozempic",
+     "Jardiance"
+    ],
+    "mention_snippets": [
+     {
+      "term": "Ozempic",
+      "snippet": "\u20263. Upper payment limit for Ozempic (semaglutide): staff update on proposed regulations COMAR 14.01.05 and the public comment period\u2026"
+     },
+     {
+      "term": "Jardiance",
+      "snippet": "\u20264. Jardiance: response to comments received on the proposed upper payment limit\u2026"
+     }
+    ]
+   },
+   {
+    "id": "d1",
+    "state": "MN",
+    "url": "https://mn.gov/commerce-stat/insurance/pdab/11-10-2026/board_agenda_11-10-2026.pdf",
+    "title": "Board agenda, November 10",
+    "kind": "agenda",
+    "doc_date": "2026-11-10",
+    "first_seen_at": "2026-10-28T11:37:40.469642Z",
+    "text_status": "read",
+    "mentions": [],
+    "mention_snippets": []
+   },
+   {
+    "id": "d2",
+    "state": "MN",
+    "url": "https://mn.gov/commerce-stat/insurance/pdab/11-10-2026/draft_drug_cost_review_outline_2026-10-02.pdf",
+    "title": "Draft drug cost review outline (open for comment)",
+    "kind": "report",
+    "doc_date": "2026-10-02",
+    "first_seen_at": "2026-10-28T11:37:40.469642Z",
+    "text_status": "unreadable",
+    "text_note": "there's no text in it (it may be a scanned image)"
+   },
+   {
+    "id": "d3",
+    "state": "OR",
+    "url": "https://dfr.oregon.gov/pdab/Documents/20261021-PDAB-document-package.pdf",
+    "title": "20261021 PDAB document package",
+    "kind": "materials",
+    "doc_date": "2026-10-21",
+    "first_seen_at": "2026-10-27T16:37:40.469642Z"
+   }
+  ],
+  "recentDocuments": [
+   {
+    "id": "d1",
+    "state": "MN",
+    "url": "https://mn.gov/commerce-stat/insurance/pdab/11-10-2026/board_agenda_11-10-2026.pdf",
+    "title": "Board agenda, November 10",
+    "kind": "agenda",
+    "doc_date": "2026-11-10",
+    "first_seen_at": "2026-10-28T11:37:40.469642Z"
+   },
+   {
+    "id": "d2",
+    "state": "MN",
+    "url": "https://mn.gov/commerce-stat/insurance/pdab/11-10-2026/draft_drug_cost_review_outline_2026-10-02.pdf",
+    "title": "Draft drug cost review outline (open for comment)",
+    "kind": "report",
+    "doc_date": "2026-10-02",
+    "first_seen_at": "2026-10-28T11:37:40.469642Z"
+   },
+   {
+    "id": "d3",
+    "state": "OR",
+    "url": "https://dfr.oregon.gov/pdab/Documents/20261021-PDAB-document-package.pdf",
+    "title": "20261021 PDAB document package",
+    "kind": "materials",
+    "doc_date": "2026-10-21",
+    "first_seen_at": "2026-10-27T16:37:40.469642Z"
+   }
+  ],
+  "dates": [
+   {
+    "id": "t2",
+    "state": "MN",
+    "date": "2026-11-06",
+    "time": null,
+    "kind": "comment_deadline",
+    "title": "Comments on the drug cost review outline",
+    "url": null
+   },
+   {
+    "id": "t1",
+    "state": "MD",
+    "date": "2026-11-16",
+    "time": "2:00 PM",
+    "kind": "meeting",
+    "title": "Board meeting (virtual)",
+    "url": "https://pdab.prod.maryland.gov/public-meetings"
+   },
+   {
+    "id": "dd2",
+    "state": "MD",
+    "date": "2026-11-16",
+    "time": "1:00 PM",
+    "kind": "meeting",
+    "title": "Board meeting",
+    "url": "https://pdab.maryland.gov/media/2026-11-16-agenda.pdf",
+    "source": "document",
+    "document_id": "d9"
+   },
+   {
+    "id": "t3",
+    "state": "OR",
+    "date": "2026-11-18",
+    "time": "8:00 AM",
+    "kind": "meeting",
+    "title": "Board meeting",
+    "url": "https://dfr.oregon.gov/pdab/Pages/board-calendar.aspx"
+   },
+   {
+    "id": "dd1",
+    "state": "MD",
+    "date": "2026-12-01",
+    "time": null,
+    "kind": "comment_deadline",
+    "title": "Comments due",
+    "url": "https://pdab.maryland.gov/media/2026-11-16-agenda.pdf",
+    "source": "document",
+    "document_id": "d9"
+   }
+  ],
+  "datedAgendas": [
+   {
+    "id": "d1",
+    "state": "MN",
+    "url": "https://mn.gov/commerce-stat/insurance/pdab/11-10-2026/board_agenda_11-10-2026.pdf",
+    "title": "Board agenda, November 10",
+    "kind": "agenda",
+    "doc_date": "2026-11-10"
+   }
+  ],
+  "bills": [
+   {
+    "id": "b1",
+    "state": "IL",
+    "session": "104th",
+    "identifier": "HB 4205",
+    "title": "Creates the Prescription Drug Affordability Act and board",
+    "latest_action": "Referred to Rules Committee",
+    "latest_action_date": "2026-10-14",
+    "url": "#",
+    "first_seen_at": "2026-10-28T16:37:40.469642"
+   },
+   {
+    "id": "b2",
+    "state": "VA",
+    "session": "2026",
+    "identifier": "SB 1012",
+    "title": "Prescription Drug Affordability Board; established, upper payment limits",
+    "latest_action": "Vetoed by Governor",
+    "latest_action_date": "2026-04-11",
+    "url": "#",
+    "first_seen_at": "2026-10-28T16:37:40.469642"
+   },
+   {
+    "id": "b3",
+    "state": "CO",
+    "session": "2026A",
+    "identifier": "HB 26-1188",
+    "title": "Concerning the prescription drug affordability review board",
+    "latest_action": "Governor signed",
+    "latest_action_date": "2026-05-30",
+    "url": "#",
+    "first_seen_at": "2026-10-28T16:37:40.469642"
+   },
+   {
+    "id": "b4",
+    "state": "PA",
+    "session": "2025-2026",
+    "identifier": "HB 1993",
+    "title": "An act providing for health care cost containment",
+    "latest_action": "Referred to Health",
+    "latest_action_date": "2026-09-02",
+    "url": "#",
+    "first_seen_at": "2026-10-28T16:37:40.469642"
+   }
+  ],
+  "hiddenBills": 3,
+  "lastChecked": "2026-10-28T11:37:40.469642Z",
+  "alerts": {
+   "on": false,
+   "emailOn": true
+  },
+  "openStatesConfigured": true,
+  "medicarePrices": [
+   {
+    "id": "eliquis-2026",
+    "brand_names": [
+     "Eliquis"
+    ],
+    "generic_name": "apixaban",
+    "price_30_day": 231.0,
+    "list_price_30_day": 521.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "jardiance-2026",
+    "brand_names": [
+     "Jardiance"
+    ],
+    "generic_name": "empagliflozin",
+    "price_30_day": 197.0,
+    "list_price_30_day": 573.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "xarelto-2026",
+    "brand_names": [
+     "Xarelto"
+    ],
+    "generic_name": "rivaroxaban",
+    "price_30_day": 197.0,
+    "list_price_30_day": 517.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "januvia-2026",
+    "brand_names": [
+     "Januvia"
+    ],
+    "generic_name": "sitagliptin",
+    "price_30_day": 113.0,
+    "list_price_30_day": 527.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "farxiga-2026",
+    "brand_names": [
+     "Farxiga"
+    ],
+    "generic_name": "dapagliflozin",
+    "price_30_day": 178.5,
+    "list_price_30_day": 556.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "entresto-2026",
+    "brand_names": [
+     "Entresto"
+    ],
+    "generic_name": "sacubitril/valsartan",
+    "price_30_day": 295.0,
+    "list_price_30_day": 628.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "enbrel-2026",
+    "brand_names": [
+     "Enbrel"
+    ],
+    "generic_name": "etanercept",
+    "price_30_day": 2355.0,
+    "list_price_30_day": 7106.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "imbruvica-2026",
+    "brand_names": [
+     "Imbruvica"
+    ],
+    "generic_name": "ibrutinib",
+    "price_30_day": 9319.0,
+    "list_price_30_day": 14934.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "stelara-2026",
+    "brand_names": [
+     "Stelara"
+    ],
+    "generic_name": "ustekinumab",
+    "price_30_day": 4695.0,
+    "list_price_30_day": 13836.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "novolog-2026",
+    "brand_names": [
+     "NovoLog",
+     "Fiasp"
+    ],
+    "generic_name": "insulin aspart",
+    "price_30_day": 119.0,
+    "list_price_30_day": 495.0,
+    "list_price_year": 2023,
+    "effective_year": 2026,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf"
+   },
+   {
+    "id": "semaglutide-2027",
+    "brand_names": [
+     "Ozempic",
+     "Wegovy",
+     "Rybelsus"
+    ],
+    "generic_name": "semaglutide",
+    "price_30_day": 274.0,
+    "list_price_30_day": 959.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "trelegy-2027",
+    "brand_names": [
+     "Trelegy Ellipta",
+     "Trelegy"
+    ],
+    "generic_name": "fluticasone furoate/umeclidinium/vilanterol",
+    "price_30_day": 175.0,
+    "list_price_30_day": 654.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "xtandi-2027",
+    "brand_names": [
+     "Xtandi"
+    ],
+    "generic_name": "enzalutamide",
+    "price_30_day": 7004.0,
+    "list_price_30_day": 13480.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "pomalyst-2027",
+    "brand_names": [
+     "Pomalyst"
+    ],
+    "generic_name": "pomalidomide",
+    "price_30_day": 8650.0,
+    "list_price_30_day": 21744.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "ofev-2027",
+    "brand_names": [
+     "Ofev"
+    ],
+    "generic_name": "nintedanib",
+    "price_30_day": 6350.0,
+    "list_price_30_day": 12622.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "ibrance-2027",
+    "brand_names": [
+     "Ibrance"
+    ],
+    "generic_name": "palbociclib",
+    "price_30_day": 7871.0,
+    "list_price_30_day": 15741.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "linzess-2027",
+    "brand_names": [
+     "Linzess"
+    ],
+    "generic_name": "linaclotide",
+    "price_30_day": 136.0,
+    "list_price_30_day": 539.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "calquence-2027",
+    "brand_names": [
+     "Calquence"
+    ],
+    "generic_name": "acalabrutinib",
+    "price_30_day": 8600.0,
+    "list_price_30_day": 14228.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "austedo-2027",
+    "brand_names": [
+     "Austedo",
+     "Austedo XR"
+    ],
+    "generic_name": "deutetrabenazine",
+    "price_30_day": 4093.0,
+    "list_price_30_day": 6623.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "breo-2027",
+    "brand_names": [
+     "Breo Ellipta",
+     "Breo"
+    ],
+    "generic_name": "fluticasone furoate/vilanterol",
+    "price_30_day": 67.0,
+    "list_price_30_day": 397.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "xifaxan-2027",
+    "brand_names": [
+     "Xifaxan"
+    ],
+    "generic_name": "rifaximin",
+    "price_30_day": 1000.0,
+    "list_price_30_day": 2696.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "vraylar-2027",
+    "brand_names": [
+     "Vraylar"
+    ],
+    "generic_name": "cariprazine",
+    "price_30_day": 770.0,
+    "list_price_30_day": 1376.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "tradjenta-2027",
+    "brand_names": [
+     "Tradjenta"
+    ],
+    "generic_name": "linagliptin",
+    "price_30_day": 78.0,
+    "list_price_30_day": 488.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "janumet-2027",
+    "brand_names": [
+     "Janumet",
+     "Janumet XR"
+    ],
+    "generic_name": "sitagliptin/metformin",
+    "price_30_day": 80.0,
+    "list_price_30_day": 526.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   },
+   {
+    "id": "otezla-2027",
+    "brand_names": [
+     "Otezla"
+    ],
+    "generic_name": "apremilast",
+    "price_30_day": 1650.0,
+    "list_price_30_day": 4722.0,
+    "list_price_year": 2024,
+    "effective_year": 2027,
+    "source_url": "https://www.cms.gov/files/document/fact-sheet-negotiated-prices-ipay-2027.pdf"
+   }
+  ],
+  "accuracy": true,
+  "courtListenerConfigured": false,
+  "pageChanges": [
+   {
+    "id": "pc1",
+    "page_id": "67c7b6eb-360a-4f90-ba05-b0c3e4e68bb1",
+    "state": "MD",
+    "detected_at": "2026-10-28T10:02:00Z",
+    "added": 14,
+    "removed": 9,
+    "ops": [
+     {
+      "t": "eq",
+      "s": "Upper Payment Limits The Board has voted to apply an Upper Payment Limit to"
+     },
+     {
+      "t": "del",
+      "s": "Jardiance and Ozempic. There are currently no drugs with an active UPL."
+     },
+     {
+      "t": "ins",
+      "s": "Jardiance and Ozempic. The Board adopted final regulations on October 26, 2026. The UPL for Jardiance takes effect January 1, 2027."
+     },
+     {
+      "t": "eq",
+      "s": "Eligible governmental entities may begin implementing"
+     },
+     {
+      "t": "gap",
+      "n": 212
+     }
+    ]
+   }
+  ],
+  "cases": [
+   {
+    "id": "e1",
+    "state": "CO",
+    "board_drug_id": "c0000000-0000-4000-8000-000000000001",
+    "name": "Amgen Inc. v. Mizner",
+    "court": "U.S. District Court for Colorado",
+    "court_code": "cod",
+    "docket_number": "1:25-cv-03452",
+    "courtlistener_id": null,
+    "url": "https://dockets.justia.com/docket/colorado/codce/1:2025cv03452/248711",
+    "notes": "Amgen's challenge to the Enbrel limit. Preliminary injunction granted July 2026.",
+    "last_filing_date": null,
+    "last_checked_at": "2026-10-28T10:15:00Z",
+    "last_error": "CourtListener needs a free API token: add COURTLISTENER_API_TOKEN in Vercel"
+   },
+   {
+    "id": "e2",
+    "state": "CO",
+    "board_drug_id": "c0000000-0000-4000-8000-000000000001",
+    "name": "Amgen Inc. v. Mizner (appeal)",
+    "court": "U.S. Court of Appeals for the Federal Circuit",
+    "court_code": "cafc",
+    "docket_number": "26-2111",
+    "courtlistener_id": 70011223,
+    "url": "https://dockets.justia.com/docket/circuit-courts/cafc/26-2111",
+    "notes": "The state's appeal of the injunction. Opening brief due November 4, 2026.",
+    "last_filing_date": "2026-10-27",
+    "last_checked_at": "2026-10-28T10:15:00Z",
+    "last_error": null
+   }
+  ],
+  "filings": [
+   {
+    "id": "f3",
+    "case_id": "e2",
+    "date_filed": "2026-10-27",
+    "description": "Unopposed motion for a 14-day extension to file the opening brief",
+    "url": "https://www.courtlistener.com/docket/70011223/#entry-24",
+    "baseline": false,
+    "reviewed_at": null,
+    "first_seen_at": "2026-10-28T10:15:00Z"
+   },
+   {
+    "id": "f2",
+    "case_id": "e2",
+    "date_filed": "2026-10-01",
+    "description": "Order granting motion to withdraw counsel",
+    "url": "https://www.courtlistener.com/docket/70011223/#entry-22",
+    "baseline": true,
+    "reviewed_at": null,
+    "first_seen_at": "2026-10-27T10:15:00Z"
+   },
+   {
+    "id": "f1",
+    "case_id": "e2",
+    "date_filed": "2026-08-25",
+    "description": "Order granting extension; opening brief due November 4, 2026",
+    "url": "https://www.courtlistener.com/docket/70011223/#entry-18",
+    "baseline": true,
+    "reviewed_at": null,
+    "first_seen_at": "2026-10-27T10:15:00Z"
+   }
+  ]
+ },
+ "calendarLink": {
+  "url": "https://bill-tracker.example/api/calendar/feed/2b6f0d8e-3c1a-4e5b-9f7a-1d2c3b4a5e6f.ics"
+ }
+}

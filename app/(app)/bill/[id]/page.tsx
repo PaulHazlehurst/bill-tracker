@@ -222,33 +222,39 @@ export default function BillDetailPage() {
 
   async function handleTrack() {
     if (!bill) return;
+    // Show "Tracking" straight away; the real row id arrives with the reload.
     setBusy(true);
+    setTrackedRowId("pending");
     const res = await fetch("/api/bills/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ congress: bill.congress, billType: bill.bill_type, billNumber: bill.bill_number }),
-    });
-    setBusy(false);
-    if (res.ok) {
+    }).catch(() => null);
+    if (res?.ok) {
       toast(`Tracking ${citationFor(billId)}`, "success");
-      load({ quiet: true });
+      await load({ quiet: true });
     } else {
-      const body = await res.json().catch(() => ({}));
+      setTrackedRowId(null);
+      const body = res ? await res.json().catch(() => ({})) : {};
       toast(body.error ?? "Couldn't track that bill.", "error");
     }
+    setBusy(false);
   }
 
   async function handleUntrack() {
     if (!trackedRowId || !bill) return;
     setTrackMenu(false);
     if (!(await confirm(`Stop tracking ${citationFor(billId)}?`, { confirmLabel: "Stop tracking", danger: true }))) return;
+    const rowId = trackedRowId;
+    setTrackedRowId(null);
     setBusy(true);
-    const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(trackedRowId)}`, { method: "DELETE" });
+    const res = await fetch(`/api/bills/track?trackedBillId=${encodeURIComponent(rowId)}`, { method: "DELETE" }).catch(() => null);
     setBusy(false);
-    if (res.ok) {
-      setTrackedRowId(null);
-      toast("Stopped tracking", "info");
-    } else toast("Couldn't stop tracking. Try again.", "error");
+    if (res?.ok) toast("Stopped tracking", "info");
+    else {
+      setTrackedRowId(rowId);
+      toast("Couldn't stop tracking. Try again.", "error");
+    }
   }
 
   async function toggleNotify(field: "email" | "sms", value: boolean) {
@@ -322,7 +328,7 @@ export default function BillDetailPage() {
   const historyRows = historyFilter === "major" ? allActions.filter((a) => MAJOR.test(a.text)) : allActions;
 
   return (
-    <div className="page bill-page">
+    <div className="page bill-page settle">
       <style>{`@media print { [data-billpanel] { display: block !important; } }`}</style>
       <Link href="/dashboard" className="backlink no-print"><ArrowLeft size={15} /> My bills</Link>
 

@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { ArrowLeft, ExternalLink, Phone, Globe, FileText, Star, User, Award, CalendarClock, Scale } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/billMeta";
 import Spinner from "@/components/Spinner";
@@ -55,7 +55,8 @@ const PARTY_COLORS: Record<string, string> = { D: "var(--party-dem)", R: "var(--
 // user's tracked portfolio. The "In your portfolio" badge is the key
 // value-add over just looking at congress.gov — it connects the person
 // to the bills you actually care about.
-export default function LegislatorProfilePage({ params }: { params: { bioguideId: string } }) {
+export default function LegislatorProfilePage(props: { params: Promise<{ bioguideId: string }> }) {
+  const params = use(props.params);
   const { bioguideId } = params;
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [sponsored, setSponsored] = useState<MemberBill[]>([]);

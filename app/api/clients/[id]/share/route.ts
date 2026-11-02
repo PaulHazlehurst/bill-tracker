@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 // POST { enabled: boolean } - turns the client's read-only link on (with a
 // fresh, unguessable address) or off. Turning it off and on again makes a
 // new address, so an old forwarded link stops working.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
