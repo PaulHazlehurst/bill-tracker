@@ -45,3 +45,17 @@ export async function optimistic({
   }
   return ok;
 }
+
+/**
+ * For Undo: puts back just the items with the given ids, in the places they
+ * had in `before`, without disturbing anything else that changed since
+ * (another item dismissed in the meantime stays dismissed).
+ */
+export function restoreItems<T extends { id: string }>(current: T[], before: T[], ids: Iterable<string>): T[] {
+  const back = new Set(ids);
+  const now = new Set(current.map((x) => x.id));
+  const known = new Set(before.map((x) => x.id));
+  const byId = new Map(current.map((x) => [x.id, x]));
+  const restored = before.filter((x) => now.has(x.id) || back.has(x.id)).map((x) => byId.get(x.id) ?? x);
+  return [...restored, ...current.filter((x) => !known.has(x.id))];
+}

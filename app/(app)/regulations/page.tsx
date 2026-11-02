@@ -10,7 +10,7 @@ import { useUI } from "@/components/UIProvider";
 import { Landmark, AlertTriangle, ExternalLink, X, Search } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { formatDate } from "@/lib/billMeta";
-import { optimistic } from "@/lib/motion";
+import { optimistic, restoreItems } from "@/lib/motion";
 import { MotionItem } from "@/components/Motion";
 
 // The /regulations page. Companion to the dashboard: dashboard shows bills
@@ -139,7 +139,13 @@ export default function RegulationsPage() {
       toast("Dismissed", "info", {
         action: {
           label: "Undo",
-          run: () => optimistic({ apply: () => setRows(before), revert: () => {}, save: () => save(false), onError: () => toast("Couldn't bring it back. Refresh to try again.", "error") }),
+          run: () =>
+            optimistic({
+              apply: () => setRows((prev) => restoreItems(prev, before, [prospectiveId])),
+              revert: () => setRows((prev) => prev.filter((r) => r.id !== prospectiveId)),
+              save: () => save(false),
+              onError: () => toast("Couldn't bring it back. Refresh to try again.", "error"),
+            }),
         },
       });
   }

@@ -7,7 +7,7 @@ import { useUI } from "@/components/UIProvider";
 import { useSession } from "@/components/SessionProvider";
 import { citationFor } from "@/lib/billMeta";
 import { Plus, X, RefreshCw, Eye, Sparkles } from "lucide-react";
-import { animated, optimistic } from "@/lib/motion";
+import { animated, optimistic, restoreItems } from "@/lib/motion";
 import { MotionItem } from "@/components/Motion";
 
 type Suggestion = {
@@ -143,7 +143,13 @@ export default function DiscoverPanel({ onTracked }: { onTracked: () => void }) 
       toast(ids.length === 1 ? "Dismissed" : `Dismissed ${ids.length} suggestions`, "info", {
         action: {
           label: "Undo",
-          run: () => optimistic({ apply: () => setItems(before), revert: () => {}, save: () => save(false), onError: () => toast("Couldn't bring them back. Refresh to try again.", "error") }),
+          run: () =>
+            optimistic({
+              apply: () => setItems((prev) => restoreItems(prev ?? [], before ?? [], ids)),
+              revert: () => setItems((prev) => (prev ?? []).filter((i) => !ids.includes(i.id))),
+              save: () => save(false),
+              onError: () => toast("Couldn't bring them back. Refresh to try again.", "error"),
+            }),
         },
       });
   }

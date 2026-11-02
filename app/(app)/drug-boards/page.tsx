@@ -12,7 +12,7 @@ import {
 } from "@/lib/drugBoards";
 import { matchMedicarePrice, formatUsd, checkAge, type MedicarePrice } from "@/lib/boardReading";
 import type { Op } from "@/lib/textDiff";
-import { animated, optimistic } from "@/lib/motion";
+import { animated, optimistic, restoreItems } from "@/lib/motion";
 import { MotionItem, AnimatedNumber } from "@/components/Motion";
 import { Pill, RefreshCw, Plus, Check, ExternalLink, X, Pencil, Bell, BellOff, AlertTriangle, EyeOff, FileText, CalendarPlus, ShieldCheck, Gavel, ChevronDown } from "lucide-react";
 
@@ -120,8 +120,24 @@ export default function DrugBoardsPage() {
         label: "Undo",
         run: () =>
           optimistic({
-            apply: () => setData((d) => d && { ...d, newDocuments: before.newDocuments, pageChanges: before.pageChanges, filings: before.filings }),
-            revert: () => {},
+            apply: () =>
+              setData((d) =>
+                d && {
+                  ...d,
+                  newDocuments: restoreItems(d.newDocuments, before.newDocuments, docs),
+                  pageChanges: restoreItems(d.pageChanges, before.pageChanges, chg),
+                  filings: d.filings.map((x) => (fil.has(x.id) ? { ...x, reviewed_at: null } : x)),
+                },
+              ),
+            revert: () =>
+              setData((d) =>
+                d && {
+                  ...d,
+                  newDocuments: d.newDocuments.filter((x) => !docs.has(x.id)),
+                  pageChanges: d.pageChanges.filter((x) => !chg.has(x.id)),
+                  filings: d.filings.map((x) => (fil.has(x.id) ? { ...x, reviewed_at: now } : x)),
+                },
+              ),
             save: async () => (await Promise.all(groups.map((g) => setReviewed(g.ids, g.type, false)))).every((r) => r.ok),
             onError: () => toast("Couldn't undo that. Refresh to see the latest.", "error"),
           }),
