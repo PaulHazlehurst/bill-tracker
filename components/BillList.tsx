@@ -39,6 +39,7 @@ export const POSITION_LABELS: Record<string, string> = {
 // A bill counts as "gone quiet" after this long without any congressional action.
 export { QUIET_DAYS } from "@/lib/billStage";
 import { QUIET_DAYS } from "@/lib/billStage";
+import { MotionItem } from "@/components/Motion";
 
 export function billOf(row: TableRow): BillDetail | null {
   return (Array.isArray(row.bills) ? row.bills[0] : row.bills) ?? null;
@@ -171,7 +172,8 @@ export default function BillList({
           const isFresh = quietDays !== null && quietDays <= 2;
           const tracker = trackerEmails && row.user_id ? trackerEmails[row.user_id] : undefined;
           return (
-            <li key={row.id} className={`bill-row${selected.has(row.id) ? " is-selected" : ""}`}>
+            <MotionItem key={row.id}>
+            <li className={`bill-row${selected.has(row.id) ? " is-selected" : ""}`}>
               <label className="check">
                 <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`Select ${citationFor(row.bill_id)}`} />
               </label>
@@ -218,6 +220,7 @@ export default function BillList({
                 />
               </div>
             </li>
+            </MotionItem>
           );
         })}
       </ul>

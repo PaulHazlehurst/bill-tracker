@@ -3,6 +3,34 @@ import "./styles/shell.css";
 import "./styles/bills.css";
 import "./styles/pages.css";
 import "./styles/features.css";
+import "./styles/motion.css";
+import localFont from "next/font/local";
+
+// Fonts are served from this app (app/fonts) rather than Google Fonts: one
+// less website to wait on before text shows, and a size-matched stand-in
+// while they load so the page doesn't shift. The CSS picks them up through
+// these variables (see --font-display, --font-ui and --font-mono in globals.css).
+const display = localFont({
+  src: "./fonts/bricolage-grotesque-latin-standard-normal.woff2",
+  variable: "--font-bricolage",
+  weight: "200 800",
+  display: "swap",
+  declarations: [{ prop: "font-stretch", value: "75% 100%" }],
+});
+const ui = localFont({
+  src: "./fonts/instrument-sans-latin-standard-normal.woff2",
+  variable: "--font-instrument",
+  weight: "400 700",
+  display: "swap",
+  declarations: [{ prop: "font-stretch", value: "75% 100%" }],
+});
+const mono = localFont({
+  src: "./fonts/geist-mono-latin-wght-normal.woff2",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+  display: "swap",
+  preload: false,
+});
 
 // Every page depends on a signed-in session that only exists at request
 // time, so nothing is pre-built as static HTML.
@@ -22,14 +50,8 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${ui.variable} ${mono.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Geist+Mono:wght@400..600&display=swap"
-          rel="stylesheet"
-        />
         {/* Runs before paint so the saved theme, text size, and density apply
             immediately instead of flashing the defaults. With no saved
             theme, the operating system's light/dark setting is used. */}

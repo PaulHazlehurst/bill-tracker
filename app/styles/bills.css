@@ -692,3 +692,8 @@
 [data-density="compact"] .bill-row-action { margin-top: 3px; }
 [data-density="compact"] .feed-item { padding: 10px 16px; }
 [data-density="compact"] .catchup-item { padding: 10px 0; }
+
+/* Holds the summary card's place while My bills loads, so nothing below it
+   moves when the real card arrives. Roughly the card's usual height. */
+.catchup-skel { height: 300px; margin-bottom: 30px; border-radius: var(--r-lg); }
+@media (max-width: 720px) { .catchup-skel { height: 420px; } }

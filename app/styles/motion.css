@@ -1,0 +1,73 @@
+/* Motion. One idea throughout: things that arrive settle in from just below,
+   things that leave fade quickly, and anything left behind glides into place.
+   Exits are fast so they never compete with what's new. Built on the
+   browser's View Transitions; see components/Motion.tsx and lib/motion.ts. */
+
+:root {
+  --motion-exit: 140ms;
+  --motion-enter: 220ms;
+  --motion-move: 320ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Clicks pass through while a transition plays. */
+::view-transition { pointer-events: none; }
+
+/* The page as a whole (rail, top bar) doesn't cross-fade; only named parts move. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; }
+
+/* ── Page changes ─────────────────────────────────────────────────── */
+::view-transition-old(.page-out) {
+  animation: var(--motion-exit) var(--motion-ease-in) both mo-fade reverse;
+}
+::view-transition-new(.page-in) {
+  animation:
+    var(--motion-enter) var(--motion-ease-out) 60ms both mo-fade,
+    var(--motion-move) var(--motion-ease-out) both mo-rise;
+}
+::view-transition-group(.page-in),
+::view-transition-group(.page-out) { animation-duration: var(--motion-move); }
+
+/* ── List items ───────────────────────────────────────────────────── */
+::view-transition-old(.item-out) {
+  animation: 110ms var(--motion-ease-in) both mo-fade reverse, 110ms var(--motion-ease-in) both mo-shrink;
+}
+::view-transition-new(.item-in) {
+  animation: var(--motion-enter) var(--motion-ease-out) both mo-fade, var(--motion-move) var(--motion-ease-out) both mo-rise;
+}
+/* Neighbours wait for a leaving item to mostly fade before closing the gap,
+   so the two never sit on top of each other. */
+::view-transition-group(.item-move) {
+  animation-duration: 280ms;
+  animation-delay: 60ms;
+  animation-timing-function: var(--motion-ease-out);
+}
+
+@keyframes mo-fade { from { opacity: 0; } }
+@keyframes mo-rise { from { translate: 0 8px; } }
+@keyframes mo-shrink { to { scale: 0.98; } }
+
+/* ── Content arriving after a skeleton ────────────────────────────────
+   Add .settle to the element that replaces a loading skeleton. Its first
+   few sections arrive in order, 40ms apart: one short sequence, then still. */
+.settle > * { animation: mo-settle 360ms var(--motion-ease-out) both; }
+.settle > *:nth-child(2) { animation-delay: 40ms; }
+.settle > *:nth-child(3) { animation-delay: 80ms; }
+.settle > *:nth-child(4) { animation-delay: 120ms; }
+.settle > *:nth-child(n + 5) { animation-delay: 160ms; }
+@keyframes mo-settle { from { opacity: 0; translate: 0 6px; } }
+
+/* Numbers that count to a new value keep their width steady. */
+.num-anim { font-variant-numeric: tabular-nums; }
+
+/* ── Less motion, when people ask for it ─────────────────────────────
+   Movement goes; quick fades stay, because they still show what changed. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) { animation-duration: 0s !important; }
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: 120ms linear both mo-fade !important; }
+  ::view-transition-old(*) { animation-direction: reverse !important; }
+  .settle > * { animation: none; }
+}

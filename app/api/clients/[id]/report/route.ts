@@ -7,7 +7,8 @@ import { reportSummary } from "@/lib/clientReport";
 export const maxDuration = 30;
 
 // GET - this week's report, built from live data (the preview and PDF page).
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -18,7 +19,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 // POST { test?: boolean } - sends it now. A test goes only to you.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

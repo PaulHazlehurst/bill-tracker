@@ -7,6 +7,8 @@ import { useUI } from "@/components/UIProvider";
 import { useSession } from "@/components/SessionProvider";
 import { citationFor } from "@/lib/billMeta";
 import { Plus, X, RefreshCw, Eye, Sparkles } from "lucide-react";
+import { animated, optimistic, restoreItems } from "@/lib/motion";
+import { MotionItem } from "@/components/Motion";
 
 type Suggestion = {
   id: string;
@@ -119,7 +121,7 @@ export default function DiscoverPanel({ onTracked }: { onTracked: () => void }) 
         toast(body.error ?? "Couldn't track that bill.", "error");
         return;
       }
-      setItems((prev) => (prev ?? []).filter((i) => i.id !== item.id));
+      animated(() => setItems((prev) => (prev ?? []).filter((i) => i.id !== item.id)));
       toast(`Tracking ${citationFor(item.bill_id)}`, "success");
       onTracked();
     } finally {
@@ -127,13 +129,29 @@ export default function DiscoverPanel({ onTracked }: { onTracked: () => void }) 
     }
   }
 
+  // Dismissing is instant, animated and can be undone.
   async function dismiss(ids: string[]) {
-    setItems((prev) => (prev ?? []).filter((i) => !ids.includes(i.id)));
-    const res = await fetch("/api/prospective", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
-    if (!res.ok) {
-      toast("Couldn't dismiss that. Try again.", "error");
-      loadSuggestions();
-    }
+    const before = items;
+    const save = (dismissed: boolean) => fetch("/api/prospective", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, dismissed }) });
+    const ok = await optimistic({
+      apply: () => setItems((prev) => (prev ?? []).filter((i) => !ids.includes(i.id))),
+      revert: () => setItems(before),
+      save: () => save(true),
+      onError: () => toast("Couldn't dismiss that. Try again.", "error"),
+    });
+    if (ok)
+      toast(ids.length === 1 ? "Dismissed" : `Dismissed ${ids.length} suggestions`, "info", {
+        action: {
+          label: "Undo",
+          run: () =>
+            optimistic({
+              apply: () => setItems((prev) => restoreItems(prev ?? [], before ?? [], ids)),
+              revert: () => setItems((prev) => (prev ?? []).filter((i) => !ids.includes(i.id))),
+              save: () => save(false),
+              onError: () => toast("Couldn't bring them back. Refresh to try again.", "error"),
+            }),
+        },
+      });
   }
 
   const counts: Record<string, number> = {};
@@ -250,7 +268,8 @@ export default function DiscoverPanel({ onTracked }: { onTracked: () => void }) 
               const bill = Array.isArray(item.bills) ? item.bills[0] : item.bills;
               if (!bill) return null;
               return (
-                <li key={item.id} className="sugg">
+                <MotionItem key={item.id}>
+                <li className="sugg">
                   <div className="sugg-main">
                     <div className="sugg-meta">
                       <span className="cite">{citationFor(item.bill_id)}</span>
@@ -266,6 +285,7 @@ export default function DiscoverPanel({ onTracked }: { onTracked: () => void }) 
                     <button className="icon-btn" onClick={() => dismiss([item.id])} aria-label={`Not interested in ${citationFor(item.bill_id)}`} title="Not interested"><X size={15} /></button>
                   </div>
                 </li>
+                </MotionItem>
               );
             })}
           </ul>

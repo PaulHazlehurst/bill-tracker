@@ -175,7 +175,7 @@ export default function WeekAheadPage() {
       )}
 
       {data && data.ready && (
-        <>
+        <div className="settle">
           <div className="wk-top">
             {(data.view.floor.length > 0 || (isThisWeek && data.floorFetchedAt)) && <FloorBand items={data.view.floor} bills={data.bills} scope={scope} source={data.floorSource} />}
             <section className="card wk-deadlines-card">
@@ -253,7 +253,7 @@ export default function WeekAheadPage() {
           <p className="wk-source">
             Committee schedules come from congress.gov and the House floor schedule from the Majority Leader&apos;s weekly list. Times are Eastern. The Senate doesn&apos;t publish a floor schedule in advance.
           </p>
-        </>
+        </div>
       )}
 
       {calendarOpen && <CalendarDialog onClose={() => setCalendarOpen(false)} />}

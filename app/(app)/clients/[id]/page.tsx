@@ -14,6 +14,8 @@ import { STAGE_LABELS } from "@/lib/billStage";
 import { POSITION_LABELS, weekOfLabel, type ClientReport, type ReportBill } from "@/lib/clientReport";
 import type { ClientRow } from "@/lib/clientReportData";
 import { ArrowLeft, Printer, Share2, Trash2, Plus, X, Send, Mail, Check, Copy, Pencil } from "lucide-react";
+import { animated, optimistic } from "@/lib/motion";
+import { MotionItem } from "@/components/Motion";
 
 type Recipient = { id: string; email: string; name: string | null };
 type SentReport = { id: string; week_of: string; sent_at: string; sent_to: string[]; sent_by: string | null; is_test: boolean };
@@ -115,10 +117,14 @@ export default function ClientPage() {
 
   async function removeBill(billId: string) {
     if (!(await confirm(`Take ${citationFor(billId)} off this client's list?`, { confirmLabel: "Remove", danger: true }))) return;
-    const res = await fetch(`/api/clients/${id}/bills?billId=${encodeURIComponent(billId)}`, { method: "DELETE" });
-    if (!res.ok) return toast("Couldn't remove it.", "error");
-    setDetail((d) => d && { ...d, bills: d.bills.filter((b) => b.billId !== billId) });
-    loadReport();
+    const before = detail;
+    const ok = await optimistic({
+      apply: () => setDetail((d) => d && { ...d, bills: d.bills.filter((b) => b.billId !== billId) }),
+      revert: () => setDetail(before),
+      save: () => fetch(`/api/clients/${id}/bills?billId=${encodeURIComponent(billId)}`, { method: "DELETE" }),
+      onError: () => toast("Couldn't remove it.", "error"),
+    });
+    if (ok) loadReport();
   }
 
   async function addRecipient(e: React.FormEvent) {
@@ -126,15 +132,19 @@ export default function ClientPage() {
     const res = await fetch(`/api/clients/${id}/recipients`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, name: recipientName }) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) return toast(body.error ?? "Couldn't add that address.", "error");
-    setDetail((d) => d && { ...d, recipients: [...d.recipients, body.recipient] });
+    animated(() => setDetail((d) => d && { ...d, recipients: [...d.recipients, body.recipient] }));
     setEmail("");
     setRecipientName("");
   }
 
   async function removeRecipient(r: Recipient) {
-    const res = await fetch(`/api/clients/${id}/recipients?id=${r.id}`, { method: "DELETE" });
-    if (!res.ok) return toast("Couldn't remove that address.", "error");
-    setDetail((d) => d && { ...d, recipients: d.recipients.filter((x) => x.id !== r.id) });
+    const before = detail;
+    await optimistic({
+      apply: () => setDetail((d) => d && { ...d, recipients: d.recipients.filter((x) => x.id !== r.id) }),
+      revert: () => setDetail(before),
+      save: () => fetch(`/api/clients/${id}/recipients?id=${r.id}`, { method: "DELETE" }),
+      onError: () => toast("Couldn't remove that address.", "error"),
+    });
   }
 
   async function send(test: boolean) {
@@ -187,7 +197,7 @@ export default function ClientPage() {
   const lastReal = reports.find((r) => !r.is_test);
 
   return (
-    <div className="page page-wide client-page">
+    <div className="page page-wide client-page settle">
       <Link href="/clients" className="backlink no-print"><ArrowLeft size={15} /> Clients</Link>
 
       <header className="page-head">
@@ -258,7 +268,9 @@ export default function ClientPage() {
             ) : (
               <ul className="cl-bills">
                 {bills.map((b) => (
-                  <BillRow key={b.billId} b={b} onPosition={setPosition} onNote={saveNote} onRemove={removeBill} />
+                  <MotionItem key={b.billId}>
+                    <BillRow b={b} onPosition={setPosition} onNote={saveNote} onRemove={removeBill} />
+                  </MotionItem>
                 ))}
               </ul>
             )}
@@ -312,10 +324,12 @@ export default function ClientPage() {
               ) : (
                 <ul className="chips">
                   {recipients.map((r) => (
-                    <li key={r.id} className="chip">
-                      {r.name ? `${r.name} (${r.email})` : r.email}
-                      <button className="topic-x" aria-label={`Remove ${r.email}`} onClick={() => removeRecipient(r)}><X size={12} /></button>
-                    </li>
+                    <MotionItem key={r.id}>
+                      <li className="chip">
+                        {r.name ? `${r.name} (${r.email})` : r.email}
+                        <button className="topic-x" aria-label={`Remove ${r.email}`} onClick={() => removeRecipient(r)}><X size={12} /></button>
+                      </li>
+                    </MotionItem>
                   ))}
                 </ul>
               )}

@@ -2,11 +2,13 @@
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 
-type Toast = { id: number; message: string; type: "success" | "error" | "info" };
+type ToastAction = { label: string; run: () => void };
+type Toast = { id: number; message: string; type: "success" | "error" | "info"; action?: ToastAction };
 type ConfirmState = { message: string; confirmLabel: string; danger: boolean; resolve: (v: boolean) => void } | null;
 
 type UIContextType = {
-  toast: (message: string, type?: Toast["type"]) => void;
+  /** With an action (e.g. Undo), the message stays a little longer and shows a button. */
+  toast: (message: string, type?: Toast["type"], opts?: { action?: ToastAction }) => void;
   confirm: (message: string, opts?: { confirmLabel?: string; danger?: boolean }) => Promise<boolean>;
 };
 
@@ -21,11 +23,12 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
   const nextId = useRef(0);
 
-  const toast = useCallback((message: string, type: Toast["type"] = "info") => {
+  const dismiss = useCallback((id: number) => setToasts((prev) => prev.filter((t) => t.id !== id)), []);
+  const toast = useCallback((message: string, type: Toast["type"] = "info", opts?: { action?: ToastAction }) => {
     const id = nextId.current++;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
-  }, []);
+    setToasts((prev) => [...prev, { id, message, type, action: opts?.action }]);
+    setTimeout(() => dismiss(id), opts?.action ? 6500 : 3500);
+  }, [dismiss]);
 
   const confirm = useCallback((message: string, opts?: { confirmLabel?: string; danger?: boolean }) => {
     return new Promise<boolean>((resolve) => {
@@ -44,7 +47,20 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
       <div className="toast-stack" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`}>{t.message}</div>
+          <div key={t.id} className={`toast toast-${t.type}${t.action ? " has-action" : ""}`}>
+            <span>{t.message}</span>
+            {t.action && (
+              <button
+                className="toast-action"
+                onClick={() => {
+                  t.action!.run();
+                  dismiss(t.id);
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
+          </div>
         ))}
       </div>
 

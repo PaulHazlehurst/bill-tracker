@@ -1,0 +1,7 @@
+{
+  "minScore": 75,
+  "maxLcpMs": 2500,
+  "maxLayoutShift": 0.1,
+  "maxBlockingMs": 700,
+  "maxScriptKb": 1200
+}

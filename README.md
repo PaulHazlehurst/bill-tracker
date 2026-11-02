@@ -157,7 +157,14 @@ automatically (`.github/workflows/checks.yml`):
 
 - the typecheck, the unit tests in `tests/`, and a full production build;
 - every SQL file run twice against a throwaway database, plus security checks
-  that one team can never see another team's clients.
+  that one team can never see another team's clients;
+- **Screens and speed**: every main page opened at desktop and phone size,
+  signed in as a made-up user with made-up data. It fails if a page crashes,
+  scrolls sideways on a phone, or goes over the speed limits in
+  `e2e/budgets.json` (Lighthouse's mobile test). Screenshots are also
+  compared with the base branch: the job summary lists the pages that look
+  different, and the **screenshots** download shows before, after and the
+  differences highlighted.
 
 A green tick means it's safe to merge. Vercel also builds a preview link for
 every pull request, so you can click through the change before it goes live.
@@ -165,7 +172,11 @@ Merging is what puts it on the live site.
 
 For developers: `npm test` runs the unit tests, `npm run typecheck` the type
 checker. `supabase/ci/run-all.sh` runs the database checks against any
-Postgres reachable through the usual `PG*` environment variables.
+Postgres reachable through the usual `PG*` environment variables. For the
+screenshots, start `python3 e2e/mock/server.py`, build with
+`NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`, run `next start -p 3100`,
+then `node e2e/shoot.mjs` and `node e2e/speed.mjs` (they need `playwright`,
+`pixelmatch`, `pngjs` and `lighthouse`, which CI installs on the fly).
 
 ## If something breaks
 

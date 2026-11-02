@@ -14,7 +14,8 @@ export const maxDuration = 30;
 // is the key, and it can be reset from the Week ahead page. Only meetings
 // that touch the person's bills, clients or topics are included, for the
 // last week and the next four.
-export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const token = params.token.replace(/\.ics$/i, "");
   if (!/^[0-9a-f-]{36}$/i.test(token)) return new NextResponse("Not found", { status: 404 });
 

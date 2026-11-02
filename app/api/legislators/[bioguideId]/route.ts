@@ -6,7 +6,8 @@ import { getMember, getMemberBills } from "@/lib/congress-api";
 export const maxDuration = 30;
 
 // GET /api/legislators/A000123 — single legislator detail + their bills
-export async function GET(req: NextRequest, { params }: { params: { bioguideId: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ bioguideId: string }> }) {
+  const params = await props.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

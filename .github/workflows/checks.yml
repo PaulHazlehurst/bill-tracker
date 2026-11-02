@@ -1,6 +1,10 @@
 # Automatic checks on every pull request (and every change to main).
-# A pull request shows a green tick only when all three pass, so a change
-# that would break the live site is caught here, before Vercel builds it.
+# A pull request shows a green tick only when all of these pass, so a change
+# that would break the live site is caught here, before Vercel builds it:
+#   - Typecheck, tests and build
+#   - Database updates (every SQL file, run twice, plus security checks)
+#   - Screens and speed (every page screenshotted at desktop and phone size,
+#     compared with the base branch, and a Lighthouse speed check)
 name: Checks
 
 on:
@@ -21,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
@@ -62,3 +66,70 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run every SQL file twice, then the security checks
         run: supabase/ci/run-all.sh
+
+  screens:
+    name: Screens and speed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The app talks to a stand-in database (e2e/mock) filled with made-up data.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: e2e-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: e2e-service-key
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      NEXT_TELEMETRY_DISABLED: 1
+      TZ: America/New_York
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Install the browser and check tools
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.63.0 pixelmatch@8.0.0 pngjs@7.0.0 lighthouse@13.5.0
+          npx playwright install --with-deps chromium
+      - name: Start the stand-in database
+        run: |
+          nohup python3 e2e/mock/server.py 54321 > mock.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:54321/ && break; sleep 1; done
+
+      - name: Build and start this change
+        run: |
+          npm run build
+          nohup npx next start -p 3100 > app.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3100/login && break; sleep 1; done
+      - name: Screenshot every page
+        run: node e2e/shoot.mjs --base-url http://localhost:3100 --out e2e-out/after
+      - name: Speed check
+        run: node e2e/speed.mjs --base-url http://localhost:3100 --out e2e-out/speed
+
+      - name: Build and screenshot the base branch, for comparison
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          git worktree add ../base "origin/${{ github.base_ref }}"
+          cd ../base
+          npm install --no-audit --no-fund
+          npm run build
+          nohup npx next start -p 3101 > ../base-app.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3101/login && break; sleep 1; done
+          cd "$GITHUB_WORKSPACE"
+          node e2e/shoot.mjs --base-url http://localhost:3101 --out e2e-out/before || true
+      - name: Compare with the base branch
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: node e2e/compare.mjs --before e2e-out/before --after e2e-out/after --out e2e-out/diff
+
+      - name: Keep the screenshots and speed reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: |
+            e2e-out
+            app.log
+            mock.log
+          retention-days: 14

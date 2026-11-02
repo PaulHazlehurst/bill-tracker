@@ -12,6 +12,8 @@ import {
 } from "@/lib/drugBoards";
 import { matchMedicarePrice, formatUsd, checkAge, type MedicarePrice } from "@/lib/boardReading";
 import type { Op } from "@/lib/textDiff";
+import { animated, optimistic, restoreItems } from "@/lib/motion";
+import { MotionItem, AnimatedNumber } from "@/components/Motion";
 import { Pill, RefreshCw, Plus, Check, ExternalLink, X, Pencil, Bell, BellOff, AlertTriangle, EyeOff, FileText, CalendarPlus, ShieldCheck, Gavel, ChevronDown } from "lucide-react";
 
 type Board = { state: string; name: string; agency: string | null; status: string; authority: string | null; summary: string | null; summary_source: string | null; website: string | null; email_signup: string | null; updated_at: string; confirmed_at?: string | null };
@@ -84,35 +86,83 @@ export default function DrugBoardsPage() {
     load();
   }
 
-  async function markRead(ids: string[], type: "document" | "change" | "filing" = "document") {
-    if (!ids.length) return;
-    setData((d) =>
-      d && {
-        ...d,
-        newDocuments: type === "document" ? d.newDocuments.filter((x) => !ids.includes(x.id)) : d.newDocuments,
-        pageChanges: type === "change" ? d.pageChanges.filter((x) => !ids.includes(x.id)) : d.pageChanges,
-        filings: type === "filing" ? d.filings.map((x) => (ids.includes(x.id) ? { ...x, reviewed_at: new Date().toISOString() } : x)) : d.filings,
+  // Marking things read is instant, animated, and can be undone.
+  function setReviewed(ids: string[], type: "document" | "change" | "filing", reviewed: boolean) {
+    return fetch("/api/drug-boards/documents", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, reviewed, type }) });
+  }
+  async function markRead(groups: { ids: string[]; type: "document" | "change" | "filing" }[]) {
+    groups = groups.filter((g) => g.ids.length);
+    if (!groups.length || !data) return;
+    const before = data;
+    const all = (t: string) => new Set(groups.filter((g) => g.type === t).flatMap((g) => g.ids));
+    const docs = all("document");
+    const chg = all("change");
+    const fil = all("filing");
+    const now = new Date().toISOString();
+    const ok = await optimistic({
+      apply: () =>
+        setData((d) =>
+          d && {
+            ...d,
+            newDocuments: d.newDocuments.filter((x) => !docs.has(x.id)),
+            pageChanges: d.pageChanges.filter((x) => !chg.has(x.id)),
+            filings: d.filings.map((x) => (fil.has(x.id) ? { ...x, reviewed_at: now } : x)),
+          },
+        ),
+      revert: () => setData(before),
+      save: async () => (await Promise.all(groups.map((g) => setReviewed(g.ids, g.type, true)))).every((r) => r.ok),
+      onError: () => toast("Couldn't mark that as read. Try again.", "error"),
+    });
+    if (!ok) return;
+    const n = docs.size + chg.size + fil.size;
+    toast(n === 1 ? "Marked as read" : `Marked ${n} as read`, "info", {
+      action: {
+        label: "Undo",
+        run: () =>
+          optimistic({
+            apply: () =>
+              setData((d) =>
+                d && {
+                  ...d,
+                  newDocuments: restoreItems(d.newDocuments, before.newDocuments, docs),
+                  pageChanges: restoreItems(d.pageChanges, before.pageChanges, chg),
+                  filings: d.filings.map((x) => (fil.has(x.id) ? { ...x, reviewed_at: null } : x)),
+                },
+              ),
+            revert: () =>
+              setData((d) =>
+                d && {
+                  ...d,
+                  newDocuments: d.newDocuments.filter((x) => !docs.has(x.id)),
+                  pageChanges: d.pageChanges.filter((x) => !chg.has(x.id)),
+                  filings: d.filings.map((x) => (fil.has(x.id) ? { ...x, reviewed_at: now } : x)),
+                },
+              ),
+            save: async () => (await Promise.all(groups.map((g) => setReviewed(g.ids, g.type, false)))).every((r) => r.ok),
+            onError: () => toast("Couldn't undo that. Refresh to see the latest.", "error"),
+          }),
       },
-    );
-    const res = await fetch("/api/drug-boards/documents", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, reviewed: true, type }) });
-    if (!res.ok) {
-      toast("Couldn't mark that as read.", "error");
-      load();
-    }
+    });
   }
 
   async function confirmEntry(kind: "drug" | "board", id: string, label: string) {
-    const res = await fetch("/api/drug-boards/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, id }) });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) return toast(body.error ?? "Couldn't save that.", "error");
-    toast(`Marked ${label} as checked today`, "success");
-    setData((d) =>
-      d && {
-        ...d,
-        drugs: kind === "drug" ? d.drugs.map((x) => (x.id === id ? { ...x, confirmed_at: body.confirmed_at, needs_check: false } : x)) : d.drugs,
-        boards: kind === "board" ? d.boards.map((x) => (x.state === id ? { ...x, confirmed_at: body.confirmed_at } : x)) : d.boards,
-      },
-    );
+    if (!data) return;
+    const before = data;
+    const now = new Date().toISOString();
+    const ok = await optimistic({
+      apply: () =>
+        setData((d) =>
+          d && {
+            ...d,
+            drugs: kind === "drug" ? d.drugs.map((x) => (x.id === id ? { ...x, confirmed_at: now, needs_check: false } : x)) : d.drugs,
+            boards: kind === "board" ? d.boards.map((x) => (x.state === id ? { ...x, confirmed_at: now } : x)) : d.boards,
+          },
+        ),
+      revert: () => setData(before),
+      save: () => fetch("/api/drug-boards/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, id }) }),
+      onError: () => toast("Couldn't save that. Try again.", "error"),
+    });
+    if (ok) toast(`Marked ${label} as checked today`, "success");
   }
 
   async function setAlerts(on: boolean) {
@@ -122,20 +172,42 @@ export default function DrugBoardsPage() {
     toast(on ? (data?.alerts.emailOn ? "You'll get an email when boards post something new" : "Saved. Turn on email in Settings to receive it") : "Drug board emails are off", on && !data?.alerts.emailOn ? "info" : "success");
   }
 
+  function setBillHidden(b: StateBill, hidden: boolean) {
+    return fetch("/api/drug-boards/bills", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.id, hidden }) });
+  }
   async function hideBill(b: StateBill) {
-    setData((d) => d && { ...d, bills: d.bills.filter((x) => x.id !== b.id), hiddenBills: d.hiddenBills + 1 });
-    const res = await fetch("/api/drug-boards/bills", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.id, hidden: true }) });
-    if (!res.ok) {
-      toast("Couldn't hide that bill.", "error");
-      load();
-    }
+    if (!data) return;
+    const before = data;
+    const ok = await optimistic({
+      apply: () => setData((d) => d && { ...d, bills: d.bills.filter((x) => x.id !== b.id), hiddenBills: d.hiddenBills + 1 }),
+      revert: () => setData(before),
+      save: () => setBillHidden(b, true),
+      onError: () => toast("Couldn't hide that bill.", "error"),
+    });
+    if (ok)
+      toast(`${b.identifier} marked not relevant`, "info", {
+        action: {
+          label: "Undo",
+          run: () =>
+            optimistic({
+              apply: () => setData((d) => d && { ...d, bills: [...d.bills, b], hiddenBills: Math.max(0, d.hiddenBills - 1) }),
+              revert: () => setData((d) => d && { ...d, bills: d.bills.filter((x) => x.id !== b.id), hiddenBills: d.hiddenBills + 1 }),
+              save: () => setBillHidden(b, false),
+              onError: () => toast("Couldn't bring it back. Try again.", "error"),
+            }),
+        },
+      });
   }
 
   async function deleteDate(d: DateItem) {
-    if (!(await confirm(`Remove "${d.title}" on ${formatDate(d.date)}?`, { confirmLabel: "Remove", danger: true }))) return;
-    const res = await fetch(`/api/drug-boards/dates?id=${d.id}`, { method: "DELETE" });
-    if (!res.ok) return toast("Couldn't remove it.", "error");
-    load();
+    if (!data || !(await confirm(`Remove "${d.title}" on ${formatDate(d.date)}?`, { confirmLabel: "Remove", danger: true }))) return;
+    const before = data;
+    await optimistic({
+      apply: () => setData((x) => x && { ...x, dates: x.dates.filter((y) => y.id !== d.id) }),
+      revert: () => setData(before),
+      save: () => fetch(`/api/drug-boards/dates?id=${d.id}`, { method: "DELETE" }),
+      onError: () => toast("Couldn't remove it.", "error"),
+    });
   }
 
   const boardsByState = useMemo(() => new Map((data?.boards ?? []).map((b) => [b.state, b])), [data]);
@@ -223,7 +295,7 @@ export default function DrugBoardsPage() {
       {!data ? (
         <div className="db-top"><div className="skel skel-block" style={{ height: 320 }} /><div className="skel skel-block" style={{ height: 320 }} /></div>
       ) : (
-        <>
+        <div className="settle">
           <div className="db-top">
             <section className="card db-map-card" aria-labelledby="map-title">
               <div className="db-map-head">
@@ -272,11 +344,13 @@ export default function DrugBoardsPage() {
                 {feedCount > 1 && (
                   <button
                     className="link-btn"
-                    onClick={() => {
-                      markRead(newDocs.map((d) => d.id));
-                      markRead(changes.map((c) => c.id), "change");
-                      markRead(newFilings.map((f) => f.id), "filing");
-                    }}
+                    onClick={() =>
+                      markRead([
+                        { ids: newDocs.map((d) => d.id), type: "document" },
+                        { ids: changes.map((c) => c.id), type: "change" },
+                        { ids: newFilings.map((f) => f.id), type: "filing" },
+                      ])
+                    }
                   >
                     Mark all read
                   </button>
@@ -293,7 +367,8 @@ export default function DrugBoardsPage() {
                         {newDocs.slice(0, 12).map((d) => {
                           const added = datesFromDoc(d.id);
                           return (
-                            <li key={d.id}>
+                            <MotionItem key={d.id}>
+                            <li>
                               <span className="db-state">{d.state}</span>
                               <div className="db-doc-main">
                                 <a href={d.url} target="_blank" rel="noreferrer" className="db-doc-title">{d.title || d.url}</a>
@@ -308,8 +383,9 @@ export default function DrugBoardsPage() {
                                 {d.text_status === "unreadable" && <span className="db-doc-note">Couldn&apos;t open it: {d.text_note}. Open it yourself to check.</span>}
                                 {d.text_status === "read" && !(d.mentions ?? []).length && !added && <span className="db-doc-note">Doesn&apos;t name a drug on your tracker.</span>}
                               </div>
-                              <button className="icon-btn db-read" onClick={() => markRead([d.id])} aria-label={`Mark ${d.title ?? "document"} as read`} title="Mark as read"><Check size={15} /></button>
+                              <button className="icon-btn db-read" onClick={() => markRead([{ ids: [d.id], type: "document" }])} aria-label={`Mark ${d.title ?? "document"} as read`} title="Mark as read"><Check size={15} /></button>
                             </li>
+                            </MotionItem>
                           );
                         })}
                         {newDocs.length > 12 && <li className="db-more">and {newDocs.length - 12} more</li>}
@@ -318,13 +394,14 @@ export default function DrugBoardsPage() {
                   )}
                   {changes.length > 0 && (
                     <>
-                      <h3 className="db-feed-h">Wording changed on a board page</h3>
+                      <MotionItem><h3 className="db-feed-h">Wording changed on a board page</h3></MotionItem>
                       <ul className="db-docs">
                         {changes.slice(0, 8).map((c) => {
                           const pg = pageById.get(c.page_id);
                           const open = openChange === c.id;
                           return (
-                            <li key={c.id}>
+                            <MotionItem key={c.id}>
+                            <li>
                               <span className="db-state">{c.state}</span>
                               <div className="db-doc-main">
                                 {pg ? <a href={pg.url} target="_blank" rel="noreferrer" className="db-doc-title">{pg.label || pg.url}</a> : <span className="db-doc-title">Board page</span>}
@@ -338,8 +415,9 @@ export default function DrugBoardsPage() {
                                 )}
                                 {open && c.ops && <Redline ops={c.ops} />}
                               </div>
-                              <button className="icon-btn db-read" onClick={() => markRead([c.id], "change")} aria-label={`Mark the change to ${pg?.label ?? "this page"} as read`} title="Mark as read"><Check size={15} /></button>
+                              <button className="icon-btn db-read" onClick={() => markRead([{ ids: [c.id], type: "change" }])} aria-label={`Mark the change to ${pg?.label ?? "this page"} as read`} title="Mark as read"><Check size={15} /></button>
                             </li>
+                            </MotionItem>
                           );
                         })}
                       </ul>
@@ -347,19 +425,21 @@ export default function DrugBoardsPage() {
                   )}
                   {newFilings.length > 0 && (
                     <>
-                      <h3 className="db-feed-h">New court filings</h3>
+                      <MotionItem><h3 className="db-feed-h">New court filings</h3></MotionItem>
                       <ul className="db-docs">
                         {newFilings.slice(0, 8).map((f) => {
                           const c = caseById.get(f.case_id);
                           return (
-                            <li key={f.id}>
+                            <MotionItem key={f.id}>
+                            <li>
                               <span className="db-state">{c?.state}</span>
                               <div className="db-doc-main">
                                 {f.url ? <a href={f.url} target="_blank" rel="noreferrer" className="db-doc-title">{f.description}</a> : <span className="db-doc-title">{f.description}</span>}
                                 <span className="db-doc-meta">{c?.name}{f.date_filed ? `, filed ${formatDate(f.date_filed)}` : ""}.</span>
                               </div>
-                              <button className="icon-btn db-read" onClick={() => markRead([f.id], "filing")} aria-label={`Mark the filing in ${c?.name ?? "this case"} as read`} title="Mark as read"><Check size={15} /></button>
+                              <button className="icon-btn db-read" onClick={() => markRead([{ ids: [f.id], type: "filing" }])} aria-label={`Mark the filing in ${c?.name ?? "this case"} as read`} title="Mark as read"><Check size={15} /></button>
                             </li>
+                            </MotionItem>
                           );
                         })}
                       </ul>
@@ -383,7 +463,7 @@ export default function DrugBoardsPage() {
                     <>
                       {" "}
                       <button className="link-btn" onClick={() => setOnlyToCheck(!onlyToCheck)} aria-pressed={onlyToCheck}>
-                        {onlyToCheck ? "Show every drug" : `${toCheck.length} due for a check`}
+                        {onlyToCheck ? "Show every drug" : <><AnimatedNumber value={toCheck.length} /> due for a check</>}
                       </button>
                     </>
                   )}
@@ -556,7 +636,8 @@ export default function DrugBoardsPage() {
               ) : (
                 <ul className="db-dates">
                   {upcoming.slice(0, 12).map((u) => (
-                    <li key={`${u.source}-${u.id}`}>
+                    <MotionItem key={`${u.source}-${u.id}`}>
+                    <li>
                       <span className="db-date">{formatDate(u.date)}{u.time ? `, ${u.time}` : ""}</span>
                       <span className="db-state">{u.state}</span>
                       <span className="db-date-title">
@@ -565,6 +646,7 @@ export default function DrugBoardsPage() {
                       </span>
                       {u.source !== "website" && <button className="icon-btn" onClick={() => deleteDate(u as DateItem)} aria-label={`Remove ${u.title}`}><X size={14} /></button>}
                     </li>
+                    </MotionItem>
                   ))}
                 </ul>
               )}
@@ -585,7 +667,8 @@ export default function DrugBoardsPage() {
               ) : (
                 <ul className="db-bills">
                   {bills.slice(0, 20).map((b) => (
-                    <li key={b.id}>
+                    <MotionItem key={b.id}>
+                    <li>
                       <div className="db-bill-top">
                         <span className="db-state">{b.state}</span>
                         <span className="cite">{b.identifier}</span>
@@ -595,10 +678,11 @@ export default function DrugBoardsPage() {
                       {b.url ? <a href={b.url} target="_blank" rel="noreferrer" className="db-bill-title">{b.title}</a> : <span className="db-bill-title">{b.title}</span>}
                       {b.latest_action && <span className="db-sub">{b.latest_action}{b.latest_action_date ? `, ${formatDate(b.latest_action_date)}` : ""}</span>}
                     </li>
+                    </MotionItem>
                   ))}
                 </ul>
               )}
-              {data.hiddenBills > 0 && <p className="db-foot">{data.hiddenBills} marked not relevant.</p>}
+              {data.hiddenBills > 0 && <p className="db-foot"><AnimatedNumber value={data.hiddenBills} /> marked not relevant.</p>}
             </section>
           </div>
 
@@ -617,7 +701,7 @@ export default function DrugBoardsPage() {
               {showPrices && <MedicarePrices prices={prices} />}
             </section>
           )}
-        </>
+        </div>
       )}
 
       {editing && data && <DrugDialog drug={editing === "new" ? null : editing} boards={active} defaultState={state} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}

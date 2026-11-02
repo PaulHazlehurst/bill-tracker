@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
+// (Next.js calls this file "proxy"; it was "middleware" before Next 16.)
 // Refreshes the Supabase auth session on every request and blocks
 // unauthenticated access to protected pages before they render.
 //
@@ -17,7 +18,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 // security, so nothing sensitive is exposed by letting the request proceed.
 const AUTH_CHECK_TIMEOUT_MS = 3500;
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

@@ -13,7 +13,8 @@ export const maxDuration = 30;
 // positions and notes your team chose to put in front of this client, and
 // the "what we need from you" line). Never the team's internal notes on the
 // client, recipients, or anything about other clients.
-export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   if (!/^[0-9a-f-]{36}$/i.test(params.token)) return NextResponse.json({ error: "not found" }, { status: 404 });
   const admin = createAdminClient();
   const { data: client } = await admin.from("clients").select(CLIENT_COLUMNS).eq("share_token", params.token).maybeSingle();
