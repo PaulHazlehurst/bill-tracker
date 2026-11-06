@@ -209,6 +209,12 @@ begin
   if tg_op = 'UPDATE' and new.assigned_to is not distinct from old.assigned_to then
     return new;
   end if;
+  -- Only teammates: the assignee must be on the team the task belongs to.
+  if new.organization_id is null or not exists (
+    select 1 from public.profiles where id = new.assigned_to and organization_id = new.organization_id
+  ) then
+    return new;
+  end if;
   select coalesce(nullif(trim(full_name), ''), email) into who from public.profiles where id = auth.uid();
   insert into public.notifications (user_id, kind, title, body, url, dedupe_key)
   values (

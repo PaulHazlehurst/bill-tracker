@@ -152,7 +152,18 @@ begin
     raise exception 'LEAK: created a notification for someone else';
   exception when insufficient_privilege then null;
   end;
+  -- Assigning a task to someone outside your team doesn't reach them.
+  insert into public.bill_workspace_items (organization_id, bill_id, kind, body, assigned_to)
+    values ('10000000-0000-0000-0000-00000000000a', 'hr-1-119', 'task', 'Phish', '00000000-0000-0000-0000-00000000000b');
   reset role;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', true);
+  set local role authenticated;
+  insert into public.bill_workspace_items (user_id, bill_id, kind, body, assigned_to)
+    values ('00000000-0000-0000-0000-00000000000c', 'hr-1-119', 'task', 'Phish', '00000000-0000-0000-0000-00000000000b');
+  reset role;
+  select count(*) into n from public.notifications where user_id = '00000000-0000-0000-0000-00000000000b';
+  if n <> 1 then raise exception 'LEAK: a task assigned across teams notified someone outside the team'; end if;
+  delete from public.bill_workspace_items where body = 'Phish';
 
   -- Once A is an admin (set by the server), A sees the team's invitations.
   update public.profiles set team_role = 'admin' where id = '00000000-0000-0000-0000-00000000000a';

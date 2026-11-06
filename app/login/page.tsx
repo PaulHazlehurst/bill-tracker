@@ -38,7 +38,9 @@ export default function LoginPage() {
     }
     // Back to where they were headed (an invitation link, say), if it's a page on this site.
     const next = new URLSearchParams(window.location.search).get("next");
-    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+    // Only plain paths like /join/abc: browsers read "/\\evil.com" or a path
+    // with a tab in it as another website, so backslashes and spaces are refused.
+    router.push(next && /^\/(?![/\\])[^\s\\]*$/.test(next) ? next : "/dashboard");
   }
 
   return (
