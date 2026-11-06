@@ -10,8 +10,7 @@ import {
 
 // Grouped by what someone is trying to do. Every page is still reachable
 // from search (Ctrl+K); the rail holds the ones people use week to week.
-//  - Insights is one entry for the portfolio view and the statistics (they
-//    link to each other).
+//  - Insights is one page: where bills are going, read against your position.
 //  - Compare lives where it's used: select bills on My bills, then Compare.
 //  - Briefing is a button on My bills (it's a printout of that list).
 //  - Data sources is for whoever manages the app (team admins).
@@ -27,7 +26,7 @@ const NAV_GROUPS = [
       { href: "/week", label: "Week ahead", Icon: CalendarDays },
       { href: "/regulations", label: "Regulations", Icon: Scale },
       { href: "/drug-boards", label: "Drug boards", Icon: Pill },
-      { href: "/impact", label: "Insights", Icon: GitBranch },
+      { href: "/insights", label: "Insights", Icon: GitBranch },
     ],
   },
   {
@@ -49,7 +48,7 @@ const UTILITY_ITEMS = [
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/bill/");
   if (href === "/legislators") return pathname.startsWith("/legislator");
-  if (href === "/impact") return pathname === "/impact" || pathname === "/statistics";
+  if (href === "/insights") return pathname === "/insights" || pathname === "/impact" || pathname === "/statistics";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

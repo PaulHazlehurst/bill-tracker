@@ -10,6 +10,7 @@ import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
 import { sendScheduledClientReports } from "@/lib/clientReportSend";
 import { syncBoardReading } from "@/lib/boardReadingSync";
 import { sendDrugBoardAlerts } from "@/lib/drugBoardAlerts";
+import { sendRegulationReminders } from "@/lib/regulationReminders";
 import { notify, flushPending, pruneNotifications } from "@/lib/notifications";
 import { billNotifications } from "@/lib/billNotifications";
 import { sendSms, smsConfigured } from "@/lib/sms";
@@ -217,6 +218,16 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     console.error("notify: notification upkeep failed", err);
   }
 
+  // Comment deadlines on regulations people are following: a week out and the day before.
+  let regulationReminders: Awaited<ReturnType<typeof sendRegulationReminders>> | null = null;
+  if (clock.remainingMs() > 15_000) {
+    try {
+      regulationReminders = await sendRegulationReminders(admin);
+    } catch (err) {
+      console.error("regulation reminders failed", err);
+    }
+  }
+
   // Anything new from state drug affordability boards (opt-in email).
   let drugBoards: Awaited<ReturnType<typeof sendDrugBoardAlerts>> | null = null;
   if (clock.remainingMs() > 12_000) {
@@ -263,6 +274,7 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     clientReports,
     boardReading,
     drugBoards,
+    regulationReminders,
     notifications,
     discovery,
     regDiscovery,

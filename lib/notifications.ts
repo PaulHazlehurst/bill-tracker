@@ -16,7 +16,7 @@ type Admin = any;
 
 export type NewNotification = {
   userId: string;
-  kind: "bill_update" | "drug_board" | "team" | "task" | "client_report" | "test";
+  kind: "bill_update" | "drug_board" | "regulation" | "team" | "task" | "client_report" | "test";
   title: string;
   body?: string | null;
   url?: string | null;

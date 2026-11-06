@@ -301,13 +301,20 @@
    ]
   },
   "/api/regulations": {
+   "statusReady": true,
    "regulations": [
     {
      "id": "r1",
      "regulation_id": "2026-21001",
      "matched_topic": "telehealth",
-     "discovered_at": "2026-11-02T17:19:07.995344Z",
+     "discovered_at": "@-3d",
      "dismissed": false,
+     "status": "commenting",
+     "status_at": "@-2d",
+     "status_by_profile": {
+      "full_name": "Dana Whitfield",
+      "email": null
+     },
      "regulations": {
       "id": "2026-21001",
       "title": "Medicare Program; Telehealth Services Furnished by Rural Health Clinics and Federally Qualified Health Centers",
@@ -317,8 +324,59 @@
       "agencies": [
        "Centers for Medicare & Medicaid Services"
       ],
-      "publication_date": "2026-10-09",
-      "comment_close_date": "2026-10-28",
+      "publication_date": "@-28d",
+      "comment_close_date": "@5d",
+      "effective_date": null,
+      "html_url": "https://www.federalregister.gov/"
+     }
+    },
+    {
+     "id": "r3",
+     "regulation_id": "2026-22410",
+     "matched_topic": "critical access hospital",
+     "discovered_at": "@-20d",
+     "dismissed": false,
+     "status": "following",
+     "status_at": "@-2d",
+     "status_by_profile": {
+      "full_name": "Ben Hazlehurst",
+      "email": null
+     },
+     "regulations": {
+      "id": "2026-22410",
+      "title": "Request for Information: Critical Access Hospital Conditions of Participation",
+      "abstract": "CMS seeks comment on regulatory burdens affecting critical access hospitals, including staffing, swing beds and emergency services requirements.",
+      "doc_type": "notice",
+      "docket_id": "CMS-2026-0198",
+      "agencies": [
+       "Centers for Medicare & Medicaid Services"
+      ],
+      "publication_date": "@-45d",
+      "comment_close_date": "@15d",
+      "effective_date": null,
+      "html_url": "https://www.federalregister.gov/"
+     }
+    },
+    {
+     "id": "r4",
+     "regulation_id": "2026-23977",
+     "matched_topic": "rural EMS",
+     "discovered_at": "@-1d",
+     "dismissed": false,
+     "status": "new",
+     "status_at": null,
+     "status_by_profile": null,
+     "regulations": {
+      "id": "2026-23977",
+      "title": "Rural Emergency Hospital Designation: Ambulance Services and Transfer Agreements",
+      "abstract": "Proposed changes to how rural emergency hospitals contract for ground ambulance services and document transfer agreements with level I and II trauma centers.",
+      "doc_type": "proposed",
+      "docket_id": "CMS-2026-0211",
+      "agencies": [
+       "Centers for Medicare & Medicaid Services"
+      ],
+      "publication_date": "@-2d",
+      "comment_close_date": "@58d",
       "effective_date": null,
       "html_url": "https://www.federalregister.gov/"
      }
@@ -327,8 +385,11 @@
      "id": "r2",
      "regulation_id": "2026-20117",
      "matched_topic": "340B",
-     "discovered_at": "2026-11-02T17:19:07.995344Z",
+     "discovered_at": "@-30d",
      "dismissed": false,
+     "status": "new",
+     "status_at": null,
+     "status_by_profile": null,
      "regulations": {
       "id": "2026-20117",
       "title": "340B Drug Pricing Program; Administrative Dispute Resolution",
@@ -338,29 +399,59 @@
       "agencies": [
        "Health Resources and Services Administration"
       ],
-      "publication_date": "2026-09-30",
+      "publication_date": "@-37d",
       "comment_close_date": null,
-      "effective_date": "2026-11-29",
+      "effective_date": "@23d",
       "html_url": "https://www.federalregister.gov/"
      }
     },
     {
-     "id": "r3",
-     "regulation_id": "2026-19980",
-     "matched_topic": "critical access hospital",
-     "discovered_at": "2026-11-02T17:19:07.995344Z",
+     "id": "r5",
+     "regulation_id": "2026-18820",
+     "matched_topic": "telehealth",
+     "discovered_at": "@-60d",
      "dismissed": false,
+     "status": "commented",
+     "status_at": "@-2d",
+     "status_by_profile": {
+      "full_name": "Dana Whitfield",
+      "email": null
+     },
      "regulations": {
-      "id": "2026-19980",
-      "title": "Request for Information: Critical Access Hospital Conditions of Participation",
-      "abstract": "CMS seeks comment on regulatory burdens affecting critical access hospitals.",
+      "id": "2026-18820",
+      "title": "Medicare Program; CY 2027 Physician Fee Schedule: Telehealth Originating Sites",
+      "abstract": "Finalizes the list of telehealth originating sites for calendar year 2027, including rural health clinics.",
+      "doc_type": "final",
+      "docket_id": "CMS-2026-0101",
+      "agencies": [
+       "Centers for Medicare & Medicaid Services"
+      ],
+      "publication_date": "@-70d",
+      "comment_close_date": null,
+      "effective_date": "@-10d",
+      "html_url": "https://www.federalregister.gov/"
+     }
+    },
+    {
+     "id": "r6",
+     "regulation_id": "2026-19003",
+     "matched_topic": "critical access hospital",
+     "discovered_at": "@-40d",
+     "dismissed": false,
+     "status": "new",
+     "status_at": null,
+     "status_by_profile": null,
+     "regulations": {
+      "id": "2026-19003",
+      "title": "Agency Information Collection Activities: Critical Access Hospital Cost Report",
+      "abstract": "Notice of a proposed information collection for the critical access hospital cost report form.",
       "doc_type": "notice",
       "docket_id": null,
       "agencies": [
        "Centers for Medicare & Medicaid Services"
       ],
-      "publication_date": "2026-09-22",
-      "comment_close_date": "2026-11-21",
+      "publication_date": "@-41d",
+      "comment_close_date": "@-11d",
       "effective_date": null,
       "html_url": "https://www.federalregister.gov/"
      }

@@ -1,0 +1,64 @@
+/* Regulations: deadlines first, then sections, then team status on each card. */
+
+.rg-notice { margin: 0 0 16px; padding: 10px 14px; border-radius: var(--r-md); background: var(--amber-wash); color: var(--ink); font-size: 0.8125rem; }
+.rg-h2 { font: 700 1rem/1.3 var(--font-ui); margin: 0; display: flex; align-items: baseline; gap: 8px; color: var(--ink); }
+.rg-count { font-size: 0.8125rem; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* Comment deadlines: the soonest open periods, as countdowns */
+.rg-deadlines { margin: 0 0 22px; }
+.rg-dl { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.rg-dl-tile {
+  display: flex; flex-direction: column; gap: 6px; height: 100%;
+  padding: 14px 14px 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); text-decoration: none; transition: border-color 120ms var(--ease);
+}
+.rg-dl-tile:hover { border-color: var(--ink-3); text-decoration: none; }
+.rg-dl-tile:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.rg-dl-days { font-size: 0.8125rem; color: var(--ink-3); font-weight: 600; }
+.rg-dl-days strong { font: 700 1.75rem/1 var(--font-display); color: var(--ink); letter-spacing: -0.02em; margin-right: 2px; font-variant-numeric: tabular-nums; }
+.rg-dl-tile.is-soon { border-color: color-mix(in srgb, var(--red) 40%, var(--line)); background: color-mix(in srgb, var(--red-wash) 55%, var(--surface)); }
+.rg-dl-tile.is-soon .rg-dl-days strong { color: var(--red); }
+.rg-dl-title { font-size: 0.8125rem; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rg-dl-meta { margin-top: auto; font-size: 0.75rem; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .rg-dl { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 78%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; scrollbar-width: none; }
+  .rg-dl li { scroll-snap-align: start; }
+}
+
+.rg-toolbar .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.rg-toolbar .seg button { white-space: nowrap; flex: none; }
+
+/* Sections */
+.rg-section { margin-top: 22px; }
+.rg-section-head { margin-bottom: 10px; }
+.rg-section-desc { margin: 2px 0 0; font-size: 0.8125rem; color: var(--ink-3); }
+
+/* Cards */
+.rg-card { position: relative; scroll-margin-top: 90px; }
+.rg-card.is-following { box-shadow: inset 3px 0 0 var(--blue); }
+.rg-card.is-commenting { box-shadow: inset 3px 0 0 var(--violet); }
+.rg-card.is-commented { box-shadow: inset 3px 0 0 var(--mint); }
+.rg-card.is-focused { outline: 2px solid var(--blue); outline-offset: 2px; }
+.rg-new { font-size: 0.6875rem; font-weight: 700; padding: 2px 8px; border-radius: var(--r-pill); background: var(--blue-wash); color: var(--blue-ink); }
+
+.rg-dates { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 12px 0 0; }
+.rg-dates div { display: flex; flex-direction: column; gap: 1px; }
+.rg-dates dt { font-size: 0.6875rem; font-weight: 600; color: var(--ink-3); }
+.rg-dates dd { margin: 0; font-size: 0.8125rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rg-dates .is-soon dd { color: var(--red); font-weight: 700; }
+.rg-mono { font-family: var(--font-mono); font-size: 0.75rem !important; }
+
+.rg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.rg-spacer { flex: 1; }
+.rg-actions .reg-link { margin-left: 0; font-size: 0.8125rem; }
+.rg-status-select { --sel-h: 32px; height: 32px; padding-top: 0; padding-bottom: 0; font-size: 0.8125rem; font-weight: 600; }
+.rg-status-select.is-following { border-color: color-mix(in srgb, var(--blue) 55%, var(--line)); color: var(--blue-ink); background-color: var(--blue-wash); }
+.rg-status-select.is-commenting { border-color: color-mix(in srgb, var(--violet) 55%, var(--line)); color: var(--violet); background-color: var(--violet-wash); }
+.rg-status-select.is-commented { border-color: color-mix(in srgb, var(--mint) 55%, var(--line)); color: var(--mint); background-color: var(--mint-wash); }
+.rg-who { font-size: 0.75rem; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .rg-spacer { display: none; }
+  .rg-comment { width: 100%; justify-content: center; }
+}
+.rg-card .reg-top { padding-right: 34px; }
+.rg-card .reg-x { position: absolute; top: 12px; right: 12px; margin: 0; }

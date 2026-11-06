@@ -181,6 +181,33 @@ delete from public.push_subscriptions;
 delete from public.team_invites;
 delete from public.app_secrets where key = 'test-secret';
 
+-- Following regulations: the status is shared with the team, and the name
+-- on it is always whoever actually changed it.
+insert into public.regulations (id, title) values ('2026-test', 'Test rule') on conflict do nothing;
+insert into public.prospective_regulations (id, organization_id, regulation_id, matched_topic)
+  values ('30000000-0000-0000-0000-00000000000a', '10000000-0000-0000-0000-00000000000a', '2026-test', 'rural') on conflict do nothing;
+do $$
+declare r record;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  set local role authenticated;
+  update public.prospective_regulations set status = 'following', status_by = '00000000-0000-0000-0000-00000000000b' where id = '30000000-0000-0000-0000-00000000000a';
+  reset role;
+  select status, status_by into r from public.prospective_regulations where id = '30000000-0000-0000-0000-00000000000a';
+  if r.status <> 'following' then raise exception 'a team member should be able to follow a regulation'; end if;
+  if r.status_by is distinct from '00000000-0000-0000-0000-00000000000a'::uuid then raise exception 'LEAK: put someone else''s name on a status change'; end if;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', true);
+  set local role authenticated;
+  update public.prospective_regulations set status = 'commented' where id = '30000000-0000-0000-0000-00000000000a';
+  reset role;
+  select status into r from public.prospective_regulations where id = '30000000-0000-0000-0000-00000000000a';
+  if r.status <> 'following' then raise exception 'LEAK: another team changed our regulation status'; end if;
+end $$;
+delete from public.prospective_regulations where id = '30000000-0000-0000-0000-00000000000a';
+delete from public.regulations where id = '2026-test';
+
 -- Leave the throwaway database as it was.
 delete from public.clients;
 delete from public.calendar_feeds;

@@ -16,6 +16,7 @@ const FILTERS = [
   { id: "all", label: "Everything" },
   { id: "unread", label: "Unread" },
   { id: "bill_update", label: "Bills" },
+  { id: "regulation", label: "Regulations" },
   { id: "drug_board", label: "Drug boards" },
   { id: "team", label: "Team and tasks" },
 ] as const;

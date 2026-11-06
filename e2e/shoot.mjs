@@ -22,8 +22,27 @@ const out = arg("out", "e2e-out/after");
 mkdirSync(out, { recursive: true });
 const F = JSON.parse(readFileSync(path.join(here, "fixtures/app-api.json"), "utf8"));
 
+// Dates in fixtures written as "@5d" or "@-3d" are that many days from today,
+// so deadlines and "new this week" look the same whenever the check runs.
+const shift = (v) => {
+  if (typeof v === "string") {
+    const m = v.match(/^@(-?\d+)d$/);
+    if (!m) return v;
+    const d = new Date();
+    d.setDate(d.getDate() + Number(m[1]));
+    return d.toISOString().slice(0, 10);
+  }
+  if (Array.isArray(v)) return v.map(shift);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, shift(x)]));
+  return v;
+};
+
 // App routes answered from fixtures (they need data the stand-in database doesn't have).
 function fixtureFor(url) {
+  const found = rawFixtureFor(url);
+  return found ? shift(found) : found;
+}
+function rawFixtureFor(url) {
   const u = new URL(url);
   const p = u.pathname;
   if (F.api[p]) return F.api[p];
