@@ -80,10 +80,3 @@
 .set-sub-check { margin: -6px 0 6px 48px; font-size: 0.8125rem; color: var(--ink-2); }
 .set-actions-sticky { position: sticky; bottom: 0; z-index: 5; padding: 12px 0; background: linear-gradient(to top, var(--paper) 70%, transparent); }
 @media (max-width: 640px) { .set-sub-check { margin-left: 0; } }
-
-/* Insights: one sidebar entry, two views */
-.insights-tabs { margin: -8px 0 22px; }
-.insights-tabs { width: fit-content; }
-.insights-tabs a { color: var(--ink-3); font: 600 0.8125rem/1 var(--font-ui); padding: 7px 13px; border-radius: var(--r-pill); text-decoration: none; }
-.insights-tabs a.is-on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-raise); }
-.insights-tabs a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

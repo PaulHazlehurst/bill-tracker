@@ -6,6 +6,8 @@ import "./styles/features.css";
 import "./styles/motion.css";
 import "./styles/notify.css";
 import "./styles/team.css";
+import "./styles/insights.css";
+import "./styles/regulations.css";
 import localFont from "next/font/local";
 
 // Fonts are served from this app (app/fonts) rather than Google Fonts: one

@@ -16,7 +16,7 @@ type Admin = any;
 
 export type NewNotification = {
   userId: string;
-  kind: "bill_update" | "drug_board" | "team" | "task" | "client_report" | "test";
+  kind: "bill_update" | "drug_board" | "regulation" | "team" | "task" | "client_report" | "test";
   title: string;
   body?: string | null;
   url?: string | null;
@@ -130,8 +130,16 @@ export async function notify(admin: Admin, items: NewNotification[], opts: { pus
       .in("dedupe_key", Array.from(new Set(keyed.map((i) => i.dedupeKey!))));
     skip = new Set(((existing as any[]) ?? []).map((e) => `${e.user_id}|${e.dedupe_key}`));
   }
+  // Skips ones already saved, and repeats within this batch (one person can
+  // reach the same alert two ways, say through their team and on their own).
   const rows = items
-    .filter((i) => !i.dedupeKey || !skip.has(`${i.userId}|${i.dedupeKey}`))
+    .filter((i) => {
+      if (!i.dedupeKey) return true;
+      const k = `${i.userId}|${i.dedupeKey}`;
+      if (skip.has(k)) return false;
+      skip.add(k);
+      return true;
+    })
     .map((i) => ({ user_id: i.userId, kind: i.kind, title: i.title.slice(0, 200), body: i.body?.slice(0, 1000) ?? null, url: i.url ?? null, dedupe_key: i.dedupeKey ?? null }));
   if (!rows.length) return { created: 0, pushed: 0 };
   const { data: inserted, error } = await admin.from("notifications").insert(rows).select("id, user_id, title, body, url");

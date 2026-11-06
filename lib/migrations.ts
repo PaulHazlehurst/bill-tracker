@@ -58,6 +58,12 @@ export const MIGRATIONS: Migration[] = [
     name: "Teams and notifications",
     unlocks: "Team admins and email invitations, names on accounts, the notification bell and push alerts, and closes two team security gaps.",
   },
+  {
+    id: "0008",
+    file: "supabase/migrations/0008_regulation_tracking.sql",
+    name: "Following regulations",
+    unlocks: "Follow a regulation as a team (Following, Writing a comment, Comment sent) and get reminded before comment periods close.",
+  },
 ];
 
 /** Splits the list into what's been run and what hasn't, given the ids the database reports. */

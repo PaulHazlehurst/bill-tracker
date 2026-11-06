@@ -11,10 +11,9 @@ export const PAGES = [
   { name: "client", path: "/clients/c1" },
   { name: "bill", path: "/bill/hr-2407-119", speed: true },
   { name: "congress", path: "/legislators" },
-  { name: "statistics", path: "/statistics" },
   { name: "team", path: "/team" },
   { name: "notifications", path: "/notifications" },
-  { name: "insights", path: "/impact" },
+  { name: "insights", path: "/insights" },
   { name: "settings", path: "/settings" },
   { name: "data-sources", path: "/api-usage" },
 ];

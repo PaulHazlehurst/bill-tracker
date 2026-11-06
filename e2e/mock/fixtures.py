@@ -71,3 +71,28 @@ NOTIFICATIONS = [
     dict(id="n4", user_id=UID, kind="team", title="Dana Whitfield joined Pinnacle Strategies", body=None, url="/team", created_at=ts(9), read_at=ts(8)),
 ]
 INVITES = [dict(id="i1", organization_id=ORG, email="sam.ortiz@clienthealth.org", role="member", token="t"*64, invited_by=UID, created_at=ts(2), expires_at="2099-01-01T00:00:00Z", accepted_at=None, revoked_at=None)]
+
+# Older actions spread over the last three months, for the Insights activity chart.
+EVENTS += [ev(100 + i, bill, typ, summ, d(n), ts(n)) for i, (bill, typ, summ, n) in enumerate([
+  ("s-1003-119", "status_change", "Passed Senate with an amendment by Voice Vote.", 12),
+  ("s-1003-119", "new_action", "Message on Senate action sent to the House.", 9),
+  ("hr-5110-119", "status_change", "Passed Senate without amendment by Unanimous Consent.", 16),
+  ("hr-5110-119", "new_action", "Cleared for White House.", 15),
+  ("hr-4206-119", "new_action", "Subcommittee Hearings Held.", 22),
+  ("s-1260-119", "status_change", "Committee on Finance. Ordered to be reported without amendment favorably.", 26),
+  ("hr-2407-119", "new_action", "Ordered to be Reported (Amended) by Voice Vote.", 33),
+  ("hr-2407-119", "status_change", "Reported (Amended) by the Committee on Energy and Commerce.", 40),
+  ("s-1260-119", "new_action", "Committee on Finance. Hearings held.", 47),
+  ("hr-5110-119", "status_change", "Passed House by voice vote.", 54),
+  ("hr-4206-119", "new_action", "Referred to the Subcommittee on Health.", 61),
+  ("s-1003-119", "new_action", "Committee on HELP. Hearings held.", 68),
+  ("hr-5110-119", "new_action", "Markup held.", 75),
+])]
+CLIENT_BILLS = [
+  dict(id="cb1", client_id="c1", bill_id="hr-2407-119", position="support", clients={"name": "Valley Regional Health Network"}),
+  dict(id="cb2", client_id="c1", bill_id="s-1003-119", position="oppose", clients={"name": "Valley Regional Health Network"}),
+  dict(id="cb3", client_id="c1", bill_id="hr-4206-119", position="support", clients={"name": "Valley Regional Health Network"}),
+  dict(id="cb4", client_id="c3", bill_id="hr-5110-119", position="support", clients={"name": "High Plains EMS Coalition"}),
+  dict(id="cb5", client_id="c3", bill_id="s-2016-119", position="watching", clients={"name": "High Plains EMS Coalition"}),
+  dict(id="cb6", client_id="c2", bill_id="s-1260-119", position="support", clients={"name": "Tri-County Clinics Association"}),
+]

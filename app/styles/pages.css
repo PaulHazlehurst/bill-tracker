@@ -268,7 +268,7 @@
 [data-theme="dark"] .share-cta { background: var(--surface-2); }
 
 /* ════════════════════════════════════════════════════════════════════
-   Secondary pages: team, contacts, impact, statistics, compare,
+   Secondary pages: team, contacts, compare,
    briefing, member profiles, and small shared pieces.
    ════════════════════════════════════════════════════════════════════ */
 
@@ -282,12 +282,6 @@
 .confetti-piece { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: confetti-fall 2.4s cubic-bezier(0.25, 0.6, 0.4, 1) forwards; }
 @keyframes confetti-fall { to { transform: translateY(105vh) rotate(720deg); opacity: 0.2; } }
 
-/* Horizontal bars (SimpleBarChart) */
-.simple-bar-row { display: grid; grid-template-columns: minmax(90px, 180px) minmax(0, 1fr) 36px; gap: 12px; align-items: center; padding: 6px 0; font-size: 0.875rem; }
-.simple-bar-label { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.simple-bar-track { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
-.simple-bar-fill { height: 100%; border-radius: 5px; }
-.simple-bar-value { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
 
 /* ── Team ─────────────────────────────────────────────────────────── */
 .team-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
@@ -370,76 +364,11 @@
 .members-card-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: auto; padding-top: 6px; border-top: 1px solid var(--line); }
 .members-card-actions button { --btn-h: 30px; padding: 0 10px; font-size: 0.75rem; }
 
-/* ── Impact ───────────────────────────────────────────────────────── */
-.impact-health-hero { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; padding: 22px 26px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); margin-bottom: 22px; }
-.impact-health-score { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.impact-health-ring { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--health-color) var(--health-pct), var(--surface-2) 0); }
-.impact-health-ring-inner { width: 94px; height: 94px; border-radius: 50%; background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.impact-health-number { font-family: var(--font-display); font-size: 2rem; font-weight: 700; line-height: 1; }
-.impact-health-label { font-size: 0.75rem; color: var(--ink-3); margin-top: 3px; }
-.impact-health-grade { font-weight: 650; font-size: 0.9rem; }
-.impact-health-breakdown { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 12px; flex: 1; }
-.impact-health-metric { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: var(--r-md); background: var(--surface-2); }
-.impact-metric-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 650; line-height: 1; }
-.impact-metric-label { font-size: 0.8125rem; color: var(--ink-3); margin-top: 4px; }
-.impact-view-tabs, .legislator-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+.legislator-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
 .legislator-tab { height: 42px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; font: 600 0.9rem var(--font-ui); color: var(--ink-3); cursor: pointer; }
 .legislator-tab:hover { color: var(--ink); }
 .legislator-tab-active { color: var(--ink); border-bottom-color: var(--ink); }
-.impact-groups { display: flex; flex-direction: column; gap: 10px; }
-.impact-group-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
-.impact-group-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; padding: 14px 18px; border: 0; background: transparent; cursor: pointer; text-align: left; }
-.impact-group-header:hover { background: var(--surface-2); }
-.impact-group-title { display: flex; align-items: center; gap: 8px; font-weight: 650; }
-.impact-group-count { font-size: 0.75rem; font-weight: 600; color: var(--ink-3); background: var(--surface-2); border-radius: var(--r-pill); padding: 1px 8px; }
-.impact-group-progress { display: flex; align-items: center; gap: 10px; }
-.impact-group-progress-track, .impact-mini-track { width: 120px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
-.impact-mini-track { width: 70px; }
-.impact-group-progress-fill, .impact-mini-fill { height: 100%; background: var(--blue); border-radius: 3px; }
-.impact-group-bills { border-top: 1px solid var(--line); }
-.impact-momentum { display: flex; flex-direction: column; gap: 22px; }
-.impact-momentum-title { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin-bottom: 8px; }
-.impact-momentum-section { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); padding: 14px 4px 4px; }
-.impact-momentum-section .impact-momentum-title { padding: 0 14px; }
-.impact-bill-row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--ink); }
-.impact-bill-row:hover { background: var(--surface-2); text-decoration: none; }
-.impact-bill-title { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.impact-bill-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 0.75rem; margin-top: 3px; }
-.impact-bill-progress-mini { display: flex; align-items: center; gap: 8px; }
-.impact-stage { font-weight: 600; padding: 1px 8px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-2); }
-.impact-stage-committee, .impact-stage-reported { background: var(--amber-wash); color: var(--amber); }
-.impact-stage-passed_house, .impact-stage-passed_senate, .impact-stage-passed_both { background: var(--blue-wash); color: var(--blue-ink); }
-.impact-stage-to_president { background: var(--violet-wash); color: var(--violet); }
-.impact-stage-enacted, .impact-stage-agreed { background: var(--mint-wash); color: var(--mint); }
-.impact-stage-vetoed, .impact-stage-failed { background: var(--red-wash); color: var(--red); }
-.impact-position { font-weight: 600; }
-.impact-position-support { color: var(--mint); }
-.impact-position-oppose { color: var(--red); }
-.impact-position-watching { color: var(--amber); }
-.impact-bill-stalled .impact-bill-title { color: var(--ink-2); }
 
-/* ── Statistics ───────────────────────────────────────────────────── */
-.stats-hero { padding: 4px 0 18px; }
-.stats-hero-headline { font-family: var(--font-display); font-size: clamp(1.375rem, 1rem + 1.2vw, 2rem); font-weight: 600; letter-spacing: -0.025em; line-height: 1.25; max-width: 34ch; font-variation-settings: "opsz" 48, "wdth" 92; }
-.stats-hero-headline strong { color: var(--blue); }
-.stats-hero-sub { color: var(--ink-2); margin-top: 8px; max-width: 64ch; }
-.stats-featured { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; padding: 20px 24px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); }
-.stats-quick-facts { display: flex; gap: 32px; flex-wrap: wrap; }
-.stats-quick-fact { display: flex; flex-direction: column; }
-.stats-quick-fact-value { font-family: var(--font-display); font-size: 2rem; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
-.stats-quick-fact-label { font-size: 0.8125rem; color: var(--ink-3); margin-top: 5px; }
-.stats-quick-fact-gold .stats-quick-fact-value { color: var(--mint); }
-.portfolio-scatter { position: relative; padding: 20px 0 4px; }
-.portfolio-scatter-line { position: absolute; left: 0; right: 0; top: 50px; height: 3px; border-radius: 3px; background: var(--line-2); }
-.portfolio-scatter-stages { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
-.portfolio-scatter-stage { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.portfolio-scatter-dots { display: flex; flex-wrap: wrap-reverse; justify-content: center; align-content: flex-start; gap: 4px; min-height: 60px; align-items: flex-end; max-width: 80px; }
-.portfolio-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
-.portfolio-dot:hover { transform: scale(1.35); }
-.portfolio-scatter-label { font-size: 0.75rem; color: var(--ink-3); text-align: center; line-height: 1.25; }
-.stats-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
-.stats-bento-cell { padding: 20px 22px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); min-width: 0; }
-.stats-bento-cell .card { border: 0; padding: 0; margin: 0; }
 
 /* ── Compare ──────────────────────────────────────────────────────── */
 .compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: start; }
@@ -524,13 +453,10 @@
 @media (max-width: 1000px) {
   .team-layout { grid-template-columns: minmax(0, 1fr); }
   .team-rail { position: static; }
-  .impact-health-breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stats-bento { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 640px) {
   .legislator-stats-row { grid-template-columns: minmax(0, 1fr); }
   .briefing-detail-row, .briefing-event-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .portfolio-scatter-label { font-size: 0.625rem; }
 }
 
 /* ── Regulations ──────────────────────────────────────────────────── */
@@ -546,7 +472,4 @@
 .reg-title { font-size: 1.0625rem; font-weight: 650; line-height: 1.3; margin-top: 8px; }
 .reg-title a { color: var(--ink); }
 .reg-abstract { font-size: 0.875rem; color: var(--ink-2); margin-top: 6px; max-width: 80ch; }
-.reg-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 0.8125rem; color: var(--ink-3); }
-.reg-open { color: var(--ink); font-weight: 600; }
-.reg-urgent { display: inline-flex; align-items: center; gap: 5px; color: var(--red); font-weight: 650; }
 .reg-link { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }

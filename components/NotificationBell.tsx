@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCheck, FileText, Pill, Users, ListChecks, Briefcase, BellRing } from "lucide-react";
+import { Bell, CheckCheck, FileText, Pill, Users, ListChecks, Briefcase, BellRing, Scale } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/billMeta";
 
 export type NotificationRow = { id: string; kind: string; title: string; body: string | null; url: string | null; created_at: string; read_at: string | null };
 
-export const KIND_ICON: Record<string, typeof Bell> = { bill_update: FileText, drug_board: Pill, team: Users, task: ListChecks, client_report: Briefcase, test: BellRing };
+export const KIND_ICON: Record<string, typeof Bell> = { bill_update: FileText, drug_board: Pill, team: Users, task: ListChecks, client_report: Briefcase, regulation: Scale, test: BellRing };
 
 // The bell in the top bar: everything that was sent to you (bill changes,
 // drug board news, team invitations and tasks), whether or not push or

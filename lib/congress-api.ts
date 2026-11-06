@@ -3,6 +3,7 @@
 // to do by accident without Next.js throwing at build time.
 
 import { trackedFetch } from "@/lib/apiUsageTracker";
+import { congressForDate } from "@/lib/billMeta";
 import { inferStageFromText, progressForStage as stageProgress } from "@/lib/billStage";
 
 const BASE_URL = "https://api.congress.gov/v3";
@@ -94,7 +95,7 @@ type RecentBill = { congress: number; type: string; number: string; title: strin
 const recentCache = new Map<string, { at: number; bills: RecentBill[] }>();
 const RECENT_TTL_MS = 10 * 60_000;
 
-export async function getRecentlyUpdatedBills(congress = 119, pages = 2): Promise<RecentBill[]> {
+export async function getRecentlyUpdatedBills(congress = congressForDate(), pages = 2): Promise<RecentBill[]> {
   const cacheKey = `${congress}:${pages}`;
   const hit = recentCache.get(cacheKey);
   if (hit && Date.now() - hit.at < RECENT_TTL_MS) return hit.bills;
@@ -204,7 +205,7 @@ export async function searchBillsRanked(
   query: string,
   opts: { congress?: number; recentPages?: number; limit?: number } = {},
 ): Promise<RankedSearch> {
-  const congress = opts.congress ?? 119;
+  const congress = opts.congress ?? congressForDate();
   const limit = opts.limit ?? 40;
   const { cleaned, words } = normalizeQuery(query);
   if (!cleaned) return { results: [], failed: [], passes: 0 };
@@ -297,7 +298,7 @@ export async function searchBillsRanked(
 }
 
 /** Back-compat wrapper: same shape older callers expect. */
-export async function searchBillsSmart(query: string, congress = 119, recentPages = 1): Promise<SearchResult[]> {
+export async function searchBillsSmart(query: string, congress = congressForDate(), recentPages = 1): Promise<SearchResult[]> {
   const { results } = await searchBillsRanked(query, { congress, recentPages, limit: 30 });
   return results;
 }
@@ -658,7 +659,7 @@ function parseMember(m: any): MemberSummary {
   };
 }
 
-export async function searchMembers(query?: string, _congress = 119, _limit = 0): Promise<MemberSummary[]> {
+export async function searchMembers(query?: string, _congress = congressForDate(), _limit = 0): Promise<MemberSummary[]> {
   if (!rosterCache || Date.now() - rosterCache.at > ROSTER_TTL_MS) {
     const pages = await Promise.all(
       [0, 250, 500].map(async (offset) => {
