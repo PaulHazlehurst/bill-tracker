@@ -169,7 +169,7 @@ export default function DrugBoardsPage() {
     const res = await fetch("/api/drug-boards/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: on }) });
     if (!res.ok) return toast("Couldn't change that.", "error");
     setData((d) => d && { ...d, alerts: { ...d.alerts, on } });
-    toast(on ? (data?.alerts.emailOn ? "You'll get an email when boards post something new" : "Saved. Turn on email in Settings to receive it") : "Drug board emails are off", on && !data?.alerts.emailOn ? "info" : "success");
+    toast(on ? (data?.alerts.emailOn ? "You'll be alerted in the bell, by push if it's on, and by email when boards post something new" : "You'll be alerted in the bell (and by push if it's on). Turn on email in Settings to get emails too") : "Drug board alerts are off", "success");
   }
 
   function setBillHidden(b: StateBill, hidden: boolean) {
@@ -276,7 +276,7 @@ export default function DrugBoardsPage() {
           <>
             {data && (
               <button className="btn btn-secondary" onClick={() => setAlerts(!data.alerts.on)} aria-pressed={data.alerts.on}>
-                {data.alerts.on ? <BellOff size={15} /> : <Bell size={15} />} {data.alerts.on ? "Stop emails" : "Email me updates"}
+                {data.alerts.on ? <BellOff size={15} /> : <Bell size={15} />} {data.alerts.on ? "Stop alerts" : "Alert me"}
               </button>
             )}
             <button className="btn btn-primary" onClick={checkNow} disabled={checking || !data}>

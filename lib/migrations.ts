@@ -52,6 +52,12 @@ export const MIGRATIONS: Migration[] = [
     name: "Drug board accuracy",
     unlocks: "Medicare prices beside each drug, what new board documents mention, wording changes on board pages, court cases, and last-checked dates.",
   },
+  {
+    id: "0007",
+    file: "supabase/migrations/0007_team_and_notifications.sql",
+    name: "Teams and notifications",
+    unlocks: "Team admins and email invitations, names on accounts, the notification bell and push alerts, and closes two team security gaps.",
+  },
 ];
 
 /** Splits the list into what's been run and what hasn't, given the ids the database reports. */

@@ -43,6 +43,10 @@ type SessionValue = {
   loading: boolean;
   /** The topics that actually apply to this account: the org's if on a team, otherwise the user's own. */
   effectiveTopics: string[];
+  /** Can manage the team (an admin or its owner), or isn't on a team. Admin-only pages and links check this. */
+  canManage: boolean;
+  /** The person's name if they've set one. */
+  fullName: string | null;
   /** Re-read the profile/org after something changes it (e.g. joining a team, editing topics). */
   refresh: () => Promise<void>;
 };
@@ -56,6 +60,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<SessionProfile | null>(null);
   const [org, setOrg] = useState<SessionOrg | null>(null);
   const [loading, setLoading] = useState(true);
+  const [canManage, setCanManage] = useState(false);
+  const [fullName, setFullName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     // "Keep me logged in" was unchecked and the browser has been closed since.
@@ -80,7 +86,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // several separate profile selects this replaces.
     const { data } = await supabase
       .from("profiles")
-      .select("organization_id, phone, email_notifications_enabled, topics, organizations(id, name, logo_url, topics)")
+      .select("organization_id, phone, email_notifications_enabled, topics, organizations(id, name, logo_url, topics, created_by)")
       .eq("id", user.id)
       .single();
 
@@ -95,6 +101,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // array depending on how it infers the relationship - handle both.
       const o = Array.isArray(data.organizations) ? data.organizations[0] : data.organizations;
       setOrg((o as any) ?? null);
+      // Roles and names arrive with database update 0007; before it, the
+      // team's creator is the only one who can manage it.
+      const { data: extra } = await supabase.from("profiles").select("team_role, full_name").eq("id", user.id).maybeSingle();
+      setFullName((extra as any)?.full_name ?? null);
+      setCanManage(!data.organization_id || (extra as any)?.team_role === "admin" || (o as any)?.created_by === user.id);
     }
     setLoading(false);
   }, [supabase]);
@@ -108,7 +119,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ userId, email, profile, org, loading, effectiveTopics, refresh: load }}
+      value={{ userId, email, profile, org, loading, effectiveTopics, canManage, fullName, refresh: load }}
     >
       {children}
     </SessionContext.Provider>

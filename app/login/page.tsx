@@ -36,7 +36,9 @@ export default function LoginPage() {
       setError(signInError.message === "Invalid login credentials" ? "That email and password don't match. Check them and try again." : signInError.message);
       return;
     }
-    router.push("/dashboard");
+    // Back to where they were headed (an invitation link, say), if it's a page on this site.
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
   }
 
   return (

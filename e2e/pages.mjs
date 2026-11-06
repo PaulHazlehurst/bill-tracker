@@ -12,6 +12,9 @@ export const PAGES = [
   { name: "bill", path: "/bill/hr-2407-119", speed: true },
   { name: "congress", path: "/legislators" },
   { name: "statistics", path: "/statistics" },
+  { name: "team", path: "/team" },
+  { name: "notifications", path: "/notifications" },
+  { name: "insights", path: "/impact" },
   { name: "settings", path: "/settings" },
   { name: "data-sources", path: "/api-usage" },
 ];

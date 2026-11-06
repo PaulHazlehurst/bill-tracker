@@ -122,6 +122,11 @@ export default function BillDetailPage() {
   const [celebrate, setCelebrate] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [tab, setTab] = useState<TabId>("overview");
+  // Links (e.g. from a notification) can open a tab directly: /bill/x?tab=workspace
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("tab");
+    if (wanted && TABS.some((t) => t.id === wanted)) setTab(wanted as TabId);
+  }, []);
   const [trackMenu, setTrackMenu] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<"all" | "major">("all");
   const triedEnsure = useRef(false);

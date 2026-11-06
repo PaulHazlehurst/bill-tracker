@@ -8,6 +8,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Activity, Zap, AlertTriangle, Chev
 import { STAGE_LABELS } from "@/lib/billMeta";
 import { ADVANCED_STAGES, QUIET_DAYS } from "@/lib/billStage";
 import Spinner from "@/components/Spinner";
+import InsightsTabs from "@/components/InsightsTabs";
 
 type ImpactBill = {
   billId: string;
@@ -131,10 +132,11 @@ export default function ImpactDashboardPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
-          <h1>Impact</h1>
+          <h1>Insights</h1>
           <p>How your bills are moving, grouped by policy area, and which ones have stalled.</p>
         </div>
       </div>
+      <InsightsTabs />
 
       {/* Health score hero */}
       <div className="impact-health-hero">

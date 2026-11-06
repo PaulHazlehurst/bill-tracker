@@ -104,6 +104,72 @@ begin
 end $$;
 delete from public.board_drug_changes where summary = 'ok';
 
+-- Teams and notifications: no peeking at other teams or their invite codes,
+-- no joining or promoting yourself, and alerts stay private.
+insert into public.notifications (user_id, kind, title) values ('00000000-0000-0000-0000-00000000000b', 'test', 'for B only');
+insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ('00000000-0000-0000-0000-00000000000b', 'https://push.test/b', 'k', 'a') on conflict do nothing;
+insert into public.team_invites (organization_id, email) values ('10000000-0000-0000-0000-00000000000a', 'new@team-a.test');
+insert into public.app_secrets (key, value) values ('test-secret', 'shh') on conflict do nothing;
+do $$
+declare n int;
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'anon', true);
+  set local role anon;
+  select count(*) into n from public.organizations;  if n <> 0 then raise exception 'LEAK: signed-out visitors can list teams (and their invite codes)'; end if;
+  reset role;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  set local role authenticated;
+  select count(*) into n from public.organizations where id = '10000000-0000-0000-0000-00000000000b';
+  if n <> 0 then raise exception 'LEAK: team A can read team B (and its invite code)'; end if;
+  select count(*) into n from public.organizations;  if n <> 1 then raise exception 'team A should see its own team, saw %', n; end if;
+  select count(*) into n from public.notifications;   if n <> 0 then raise exception 'LEAK: saw someone else''s notifications'; end if;
+  select count(*) into n from public.push_subscriptions; if n <> 0 then raise exception 'LEAK: saw someone else''s devices'; end if;
+  select count(*) into n from public.app_secrets;     if n <> 0 then raise exception 'LEAK: a signed-in user can read server secrets'; end if;
+  select count(*) into n from public.team_invites;    if n <> 0 then raise exception 'LEAK: a non-admin can see the team''s invitations'; end if;
+  begin
+    update public.profiles set organization_id = '10000000-0000-0000-0000-00000000000b' where id = '00000000-0000-0000-0000-00000000000a';
+    raise exception 'LEAK: moved themselves into another team';
+  exception when raise_exception then
+    if sqlerrm like 'LEAK%' then raise; end if;
+  end;
+  begin
+    update public.profiles set team_role = 'admin' where id = '00000000-0000-0000-0000-00000000000a';
+    raise exception 'LEAK: made themselves an admin';
+  exception when raise_exception then
+    if sqlerrm like 'LEAK%' then raise; end if;
+  end;
+  begin
+    update public.organizations set name = 'Renamed by a member' where id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'LEAK: a non-admin renamed the team';
+  exception when raise_exception then
+    if sqlerrm like 'LEAK%' then raise; end if;
+  end;
+  begin
+    insert into public.notifications (user_id, kind, title) values ('00000000-0000-0000-0000-00000000000b', 'test', 'spoofed');
+    raise exception 'LEAK: created a notification for someone else';
+  exception when insufficient_privilege then null;
+  end;
+  reset role;
+
+  -- Once A is an admin (set by the server), A sees the team's invitations.
+  update public.profiles set team_role = 'admin' where id = '00000000-0000-0000-0000-00000000000a';
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  set local role authenticated;
+  select count(*) into n from public.team_invites;    if n <> 1 then raise exception 'an admin should see their team''s invitation, saw %', n; end if;
+  update public.organizations set allow_code_join = false where id = '10000000-0000-0000-0000-00000000000a';
+  reset role;
+  update public.profiles set team_role = 'member' where id = '00000000-0000-0000-0000-00000000000a';
+  update public.organizations set allow_code_join = true where id = '10000000-0000-0000-0000-00000000000a';
+end $$;
+delete from public.notifications;
+delete from public.push_subscriptions;
+delete from public.team_invites;
+delete from public.app_secrets where key = 'test-secret';
+
 -- Leave the throwaway database as it was.
 delete from public.clients;
 delete from public.calendar_feeds;

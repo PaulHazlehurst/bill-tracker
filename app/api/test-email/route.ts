@@ -22,15 +22,20 @@ export async function POST(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const sentAt = new Date().toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" });
     const { error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL,
       to: user.email,
-      subject: "Bill Tracker test email",
-      html: `<div style="font-family: -apple-system, sans-serif; max-width: 480px;">
-        <p style="font-weight: 600; color: #0f7a5c;">Bill Tracker</p>
-        <p>This is a test email - if you're reading this, email notifications are working correctly.</p>
+      subject: "Bill Tracker: test email",
+      html: `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;color:#0e1530;">
+        <div style="padding:24px 0 12px;font-size:15px;font-weight:700;">Bill Tracker</div>
+        <h1 style="font-size:20px;margin:0 0 8px;">Email alerts are working</h1>
+        <p style="font-size:14px;line-height:1.5;margin:0 0 14px;">You asked for this test at ${sentAt} Eastern. Bill changes, drug board news and team invitations will arrive from this same address: <strong>${process.env.RESEND_FROM_EMAIL!.replace(/</g, "&lt;")}</strong>.</p>
+        <p style="font-size:13px;line-height:1.5;color:#5b6478;margin:0 0 20px;">If this landed in spam or promotions, mark it "Not spam" and add the address to your contacts so alerts reach your inbox.</p>
+        ${appUrl ? `<a href="${appUrl}/settings#notifications" style="display:inline-block;background:#2b50f0;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;">Alert settings</a>` : ""}
       </div>`,
-      text: "This is a test email from Bill Tracker. If you're reading this, email notifications are working correctly.",
+      text: `Email alerts are working. You asked for this test at ${sentAt} Eastern. Alerts will come from ${process.env.RESEND_FROM_EMAIL}. If it landed in spam, mark it "Not spam".`,
     });
     if (error) {
       console.error("test email failed", error);

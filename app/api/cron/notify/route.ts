@@ -10,6 +10,9 @@ import { startJobRun, finishJobRun, checkAndAlert } from "@/lib/jobLog";
 import { sendScheduledClientReports } from "@/lib/clientReportSend";
 import { syncBoardReading } from "@/lib/boardReadingSync";
 import { sendDrugBoardAlerts } from "@/lib/drugBoardAlerts";
+import { notify, flushPending, pruneNotifications } from "@/lib/notifications";
+import { billNotifications } from "@/lib/billNotifications";
+import { sendSms, smsConfigured } from "@/lib/sms";
 
 export const maxDuration = 60;
 
@@ -53,7 +56,7 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
   const watchdog = await checkAndAlert(admin, "poll").catch(() => null);
 
   const emailConfigured = !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM_EMAIL;
-  const smsConfigured = !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN && !!process.env.TWILIO_FROM_NUMBER;
+  const smsOn = smsConfigured();
   const resend = emailConfigured ? new Resend(process.env.RESEND_API_KEY) : null;
 
   // Try to read the real action date; fall back if the migration hasn't run.
@@ -141,19 +144,28 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
       }
     }
 
-    if (bundle.sms.length > 0 && profile.phone && smsConfigured) {
+    if (bundle.sms.length > 0 && profile.phone && smsOn) {
       const body =
         bundle.sms.length === 1
           ? bundle.sms[0]
           : `${bundle.sms.length} bills moved: ${bundle.sms.slice(0, 3).join(" | ")}${bundle.sms.length > 3 ? " | ..." : ""}`;
       try {
-        await sendSms(profile.phone, `Bill Tracker - ${body}`.slice(0, 320));
+        await sendSms(profile.phone, `Bill Tracker: ${body}`.slice(0, 290) + " Reply STOP to stop.");
         smsSent++;
       } catch (err) {
         sendFailures++;
         console.error("notify: sms send failed", err);
       }
     }
+  }
+
+  // The bell (and push, for people who turned it on): one notification per
+  // person per bill that moved, for everyone following it.
+  let notifications: { created: number; pushed: number } | null = null;
+  try {
+    notifications = await notify(admin, billNotifications(trackers ?? [], eventsByBill));
+  } catch (err) {
+    console.error("notify: notifications failed", err);
   }
 
   // Close out the whole batch in one write.
@@ -194,6 +206,15 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     } catch (err) {
       console.error("drug board reading failed", err);
     }
+  }
+
+  // Anything queued since (task assignments made after hours, say), then
+  // clear out notifications older than 90 days.
+  try {
+    await flushPending(admin, { withinMinutes: 24 * 60 });
+    await pruneNotifications(admin);
+  } catch (err) {
+    console.error("notify: notification upkeep failed", err);
   }
 
   // Anything new from state drug affordability boards (opt-in email).
@@ -237,11 +258,12 @@ async function runNotify(admin: ReturnType<typeof createAdminClient>, clock: Ret
     emailsSkippedNoOptIn,
     sendFailures,
     emailConfigured,
-    smsConfigured,
+    smsConfigured: smsOn,
     digest,
     clientReports,
     boardReading,
     drugBoards,
+    notifications,
     discovery,
     regDiscovery,
     ms: clock.elapsedMs(),
@@ -252,17 +274,3 @@ function isMondayInWashington(d: Date) {
   return new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(d) === "Mon";
 }
 
-async function sendSms(to: string, body: string) {
-  const sid = process.env.TWILIO_ACCOUNT_SID!;
-  const token = process.env.TWILIO_AUTH_TOKEN!;
-  const from = process.env.TWILIO_FROM_NUMBER!;
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({ To: to, From: from, Body: body }),
-  });
-  if (!res.ok) throw new Error(`twilio send failed: ${res.status}`);
-}
