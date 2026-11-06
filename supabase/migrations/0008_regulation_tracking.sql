@@ -26,7 +26,9 @@ begin
   if new.status is distinct from old.status then
     new.status_by := auth.uid();
     new.status_at := now();
-  else
+  elsif current_user in ('authenticated', 'anon') then
+    -- People can't edit the stamp directly. (The database itself still can,
+    -- for example clearing it when that person's account is deleted.)
     new.status_by := old.status_by;
     new.status_at := old.status_at;
   end if;

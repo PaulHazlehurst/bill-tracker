@@ -83,6 +83,12 @@ describe("push alerts", () => {
     expect(await notify(db, items)).toEqual({ created: 0, pushed: 0 });
   });
 
+  it("records an alert once when one person is reached two ways in the same batch", async () => {
+    const db = fakeDb({ profiles: [{ id: "u1", notify_push: false }] });
+    const one = { userId: "u1", kind: "regulation" as const, title: "Comments close in 7 days", dedupeKey: "reg:1:week" };
+    expect(await notify(db, [one, { ...one }])).toEqual({ created: 1, pushed: 0 });
+  });
+
   it("forgets a device the browser says is gone", async () => {
     const db = fakeDb({ profiles: [{ id: "u1", notify_push: true }], push_subscriptions: [{ id: "s1", user_id: "u1", endpoint: "https://fcm.googleapis.com/a", p256dh: "k", auth: "a", failures: 0 }] });
     failWith = 410;
