@@ -73,11 +73,11 @@ here needs a terminal - just type the name, paste the value.
 | `COURTLISTENER_API_TOKEN` | Optional. Free token from a courtlistener.com account (Profile, API). Lets the Drug boards page check court cases about the boards for new filings. |
 | `ALERT_EMAIL` | Optional. Who gets an email if a scheduled run fails or stops running. Leave blank to alert team owners. Several addresses can be separated by commas. |
 | `CRON_SECRET` | Make this up yourself - any long random string, e.g. mash your keyboard for 40+ characters. It's just a password nothing else needs to guess. |
-| `RESEND_API_KEY` | Optional for now - leave blank, see "Adding email" below |
+| `RESEND_API_KEY` | Optional for now - leave blank, see "Turning on email" below |
 | `RESEND_FROM_EMAIL` | Optional for now |
-| `TWILIO_ACCOUNT_SID` | Optional for now - leave blank, see "Adding text messages" below |
+| `TWILIO_ACCOUNT_SID` | Optional for now - leave blank, see "Turning on text messages" below |
 | `TWILIO_AUTH_TOKEN` | Optional for now |
-| `TWILIO_FROM_NUMBER` | Optional for now |
+| `TWILIO_FROM_NUMBER` | Optional for now (or `TWILIO_MESSAGING_SERVICE_SID`) |
 
 Leaving the Resend/Twilio ones blank is fine - the site still works, tracking
 and progress bars work, notifications just won't send until you fill those in.
@@ -128,17 +128,70 @@ https://your-app.vercel.app/api/cron/poll?secret=YOUR_CRON_SECRET
 
 You should see a small JSON response like `{"polled":1,"changed":0}`.
 
-## Adding email later
+## Turning on email
 
-1. Sign up at resend.com (free tier available), verify a sending domain or use their test address.
-2. Grab your API key from their dashboard.
-3. In Vercel → your project → **Settings** → **Environment Variables**, add `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
-4. Go to **Deployments**, click the **...** menu on the latest one, click **Redeploy** (env var changes need a redeploy to take effect).
+1. Sign up at resend.com (the free tier is plenty to start).
+2. In Resend → **Domains**, add the domain you'll send from (for example
+   `pinnaclestrategies.com`) and add the DNS records it shows you. Until the
+   domain says **Verified**, Resend will only deliver to your own address.
+3. In Resend → **API Keys**, create a key with "Sending access".
+4. In Vercel → your project → **Settings** → **Environment Variables**, add
+   `RESEND_API_KEY` (mark it **Sensitive**) and `RESEND_FROM_EMAIL`, for example
+   `Bill Tracker <alerts@pinnaclestrategies.com>`. The address must be on the
+   verified domain.
+5. **Deployments** → the **...** menu on the latest one → **Redeploy**.
+6. In the app, go to **Settings → Notifications** and press **Send a test** next
+   to Email. If it doesn't arrive in a minute, check spam, then **Data sources**,
+   which says whether the key and domain look right.
 
-## Adding text messages later
+Team invitations are sent by email too, so this is worth doing before you
+invite a client's team. (Without it, invitations still work: copy the link from
+the Team page and send it yourself.)
 
-Same idea: sign up at twilio.com, get `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
-and a `TWILIO_FROM_NUMBER`, add them in Vercel's Environment Variables, redeploy.
+## Turning on text messages
+
+Texting from a US business number takes a few days, because carriers require
+every business that texts to register first (this is called "A2P 10DLC"). Until
+that's approved, texts are blocked or never arrive.
+
+1. Sign up at twilio.com. A trial account can only text phone numbers you've
+   verified with Twilio, and adds "Sent from your Twilio trial account" to every
+   message. Upgrade (add a payment method) before anyone else needs texts.
+2. **Phone Numbers → Buy a number**: pick a local number with SMS.
+3. **Messaging → Regulatory compliance → A2P 10DLC**: register your business
+   (a "Brand") and then a "Campaign". Use these answers:
+   - Use case: *Account notifications*.
+   - Description: *Alerts to staff and clients of Pinnacle Strategies when
+     legislation they follow changes status.*
+   - Sample message: *Bill Tracker: H.R. 1234 (Rural Health Access Act) passed
+     the House. Reply STOP to stop.*
+   - How people opt in: *Users add their own mobile number in the app's
+     Settings and tick "Text me". They can untick it or reply STOP at any time.*
+   Approval usually takes a few days. Add your number to the campaign once it's
+   approved (Twilio makes a "Messaging Service" for this).
+4. In Vercel, add `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` (Sensitive), and
+   either `TWILIO_MESSAGING_SERVICE_SID` (the Messaging Service from step 3,
+   preferred) or `TWILIO_FROM_NUMBER` (the number, like `+14105550123`). Redeploy.
+5. In the app, **Settings → Notifications**: add your mobile number, then
+   **Send a test** next to Text. If Twilio refuses, the message says why in plain
+   words (still on trial, registration not finished, number replied STOP, and so on).
+
+## Push notifications (phone and computer alerts)
+
+These need no setup or accounts: the app makes its own signing keys the first
+time someone turns them on (kept in the database, readable only by the server).
+Each person turns them on for each device in **Settings → Notifications**.
+
+- Computers (Chrome, Edge, Firefox, Safari): press **Turn on** and allow
+  notifications when the browser asks.
+- iPhone and iPad (iOS 16.4 or newer): open the site in Safari, tap **Share →
+  Add to Home Screen**, open the app from the new icon, then press **Turn on**.
+  Apple only allows web alerts for apps added to the Home Screen.
+- Android: press **Turn on** in Chrome. Adding it to the Home Screen is optional.
+
+Alerts arrive even when the app isn't open. Each morning a person gets up to
+three individual alerts and then one "N more updates" summary, so a busy day
+doesn't buzz their phone twenty times. Everything also lands in the bell.
 
 ## Security checklist
 
@@ -148,7 +201,7 @@ and a `TWILIO_FROM_NUMBER`, add them in Vercel's Environment Variables, redeploy
 - [x] `/api/cron/*` routes require `CRON_SECRET`, so a stranger can't trigger your poller (and burn your congress.gov quota) by hitting the URL directly.
 - [x] Nothing in this repo ever contains real secrets - they only ever live in Vercel's and Supabase's dashboards.
 - [ ] **Before inviting real users**: turn on Supabase email confirmation (Auth → Providers → Email) so unverified addresses can't receive notifications.
-- [ ] **Before inviting real users**: validate phone number format before saving - a malformed number just fails silently at Twilio otherwise.
+- [x] Phone numbers are checked and put in +1 format when saved (`lib/phone.ts`).
 
 ## Making changes safely
 

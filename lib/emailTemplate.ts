@@ -339,6 +339,22 @@ export function drugBoardEmail(input: DrugBoardEmailInput) {
   return { html, text, subject };
 }
 
+export function teamInviteEmail(input: { teamName: string; inviterName: string; role: "admin" | "member"; joinUrl: string; expiresOn: string }) {
+  const role = input.role === "admin" ? "an admin" : "a member";
+  const html = `
+<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;color:#0e1530;">
+  <div style="padding:24px 0 14px;"><span style="font-size:15px;font-weight:700;">Bill Tracker</span></div>
+  <h1 style="font-size:22px;font-weight:700;margin:0 0 10px;line-height:1.25;">${escapeHtml(input.inviterName)} invited you to join ${escapeHtml(input.teamName)}</h1>
+  <p style="font-size:14px;line-height:1.55;margin:0 0 18px;">You'll join as ${role}. The team follows federal bills, state drug affordability boards and regulations together, and shares notes, tasks and alerts.</p>
+  <a href="${escapeHtml(input.joinUrl)}" style="display:inline-block;background:#2b50f0;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:999px;font-size:15px;font-weight:600;">Join ${escapeHtml(input.teamName)}</a>
+  <p style="font-size:12px;color:#5b6478;line-height:1.5;margin:22px 0 4px;">This link works until ${escapeHtml(input.expiresOn)} and only for this email address. If the button doesn't work, paste this into your browser:</p>
+  <p style="font-size:12px;color:#5b6478;word-break:break-all;margin:0 0 24px;">${escapeHtml(input.joinUrl)}</p>
+  <p style="font-size:12px;color:#5b6478;margin:0 0 24px;">Weren't expecting this? You can ignore it; nothing happens unless you click.</p>
+</div>`.trim();
+  const text = `${input.inviterName} invited you to join ${input.teamName} on Bill Tracker as ${role}.\n\nJoin: ${input.joinUrl}\n\nThe link works until ${input.expiresOn} and only for this email address. Weren't expecting this? Ignore it; nothing happens unless you click.`;
+  return { html, text, subject: `${input.inviterName} invited you to ${input.teamName} on Bill Tracker` };
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")

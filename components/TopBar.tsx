@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/billMeta";
 import { useTicker } from "@/lib/useTicker";
 import { Search, Plus, Menu, Moon, Sun, LogOut, Settings, Keyboard } from "lucide-react";
 import Link from "next/link";
+import NotificationBell from "@/components/NotificationBell";
 
 // Sticky bar across the top of every signed-in page: search everything,
 // track a new bill, see when Congress was last checked, and the account menu.
@@ -86,6 +87,7 @@ export default function TopBar() {
             Checked {timeAgo(lastChecked)}
           </span>
         )}
+        <NotificationBell />
         <button className="btn btn-primary topbar-track" onClick={() => openFindBill()}>
           <Plus size={16} strokeWidth={2.4} /> <span>Track a bill</span>
         </button>

@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { ldaFetch } from "@/lib/lda-api";
 import { MIGRATIONS, migrationStatus } from "@/lib/migrations";
 import { assessJob, JOB_LABELS, type JobRun } from "@/lib/jobLog";
+import { twilioAccount } from "@/lib/sms";
 
 export const maxDuration = 30;
 
@@ -226,14 +227,18 @@ export async function GET() {
 
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     checks.push((async (): Promise<Check> => {
-      const c = await httpCheck("twilio", "Alerts", "Text messages (Twilio)", `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}.json`, {
-        headers: { Authorization: `Basic ${Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64")}` },
-      }, "Account credentials work");
-      if (c.status === "ok" && !env.TWILIO_FROM_NUMBER) return { ...c, status: "warn", detail: "Credentials work, but TWILIO_FROM_NUMBER is missing", fix: "Add TWILIO_FROM_NUMBER in Vercel." };
-      return c;
+      const base = { id: "twilio", group: "Alerts", name: "Text messages (Twilio)" } as const;
+      const r = await timed(() => twilioAccount());
+      if (r.error) return { ...base, status: "fail", detail: `Couldn't reach Twilio: ${r.error}`, ms: r.ms };
+      const acct = r.value!;
+      if (!acct.ok) return { ...base, status: "fail", detail: acct.detail ?? "Twilio rejected the account details", ms: r.ms, fix: "Check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in Vercel." };
+      if (!env.TWILIO_FROM_NUMBER && !env.TWILIO_MESSAGING_SERVICE_SID) return { ...base, status: "warn", detail: "Account works, but there's no number to send from", ms: r.ms, fix: "Add TWILIO_FROM_NUMBER (or TWILIO_MESSAGING_SERVICE_SID) in Vercel." };
+      if (acct.trial) return { ...base, status: "warn", detail: "Trial account: texts only reach numbers verified in Twilio, and start with a trial notice", ms: r.ms, fix: "Upgrade the Twilio account and register the number for US texting (A2P 10DLC) before clients rely on texts." };
+      if (acct.status !== "active") return { ...base, status: "warn", detail: `Twilio account is "${acct.status}"`, ms: r.ms };
+      return { ...base, status: "ok", detail: `Sending from ${env.TWILIO_MESSAGING_SERVICE_SID ? "a Messaging Service" : env.TWILIO_FROM_NUMBER}. US texting also needs the number registered (A2P 10DLC)`, ms: r.ms };
     })());
   } else {
-    config.push({ id: "twilio", group: "Alerts", name: "Text messages (Twilio)", status: "skip", detail: "Not set up. Text alerts are off." });
+    config.push({ id: "twilio", group: "Alerts", name: "Text messages (Twilio)", status: "skip", detail: "Not set up. Text alerts are off.", fix: "See README, \"Turning on text messages\"." });
   }
 
   const results = [...config, ...(await Promise.all(checks))];

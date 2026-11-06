@@ -61,5 +61,13 @@ PROSPECTIVE = [
   dict(id="p3", bill_id="hr-5901-119", matched_topic="340B", discovered_at=ts(1), dismissed=False, match_reason='Title mentions "340B" · Recently active in Congress', match_score=9, organization_id=ORG, user_id=None, bills={"title": "340B Pharmaceutical Access and Transparency Act", "status_stage": "introduced", "latest_action_date": d(1), "bill_type": "hr", "latest_action": "Introduced", "progress_pct": 8}),
   dict(id="p4", bill_id="hr-4810-119", matched_topic="telehealth", discovered_at=ts(2), dismissed=False, match_reason='Bill text mentions "telehealth"', match_score=4, organization_id=ORG, user_id=None, bills={"title": "Behavioral Health Workforce Expansion and Telemental Health Act", "status_stage": "committee", "latest_action_date": d(30), "bill_type": "hr", "latest_action": "Referred", "progress_pct": 20}),
 ]
-PROFILE = dict(id=UID, email="ben@pinnaclestrategies.com", organization_id=ORG, phone=None, email_notifications_enabled=True, default_notify_email=True, default_notify_sms=False, topics=[], organizations=dict(id=ORG, name="Pinnacle Strategies", logo_url=None, topics=["telehealth", "critical access hospital", "340B", "rural EMS"], invite_code="PNCL24XQ", created_by=UID))
-PROFILE2 = dict(id=UID2, email="dana@pinnaclestrategies.com", organization_id=ORG, phone=None, email_notifications_enabled=False, topics=[])
+PROFILE = dict(id=UID, email="ben@pinnaclestrategies.com", full_name="Ben Hazlehurst", job_title="Principal", team_role="admin", notify_push=True, created_at="2025-01-01T00:00:00Z", organization_id=ORG, phone=None, email_notifications_enabled=True, default_notify_email=True, default_notify_sms=False, topics=[], organizations=dict(id=ORG, name="Pinnacle Strategies", logo_url=None, topics=["telehealth", "critical access hospital", "340B", "rural EMS"], invite_code="PNCL24XQ", allow_code_join=True, created_by=UID))
+PROFILE2 = dict(id=UID2, email="dana@pinnaclestrategies.com", full_name="Dana Whitfield", job_title="Policy associate", team_role="member", notify_push=True, created_at="2025-03-01T00:00:00Z", organization_id=ORG, phone=None, email_notifications_enabled=False, topics=[])
+
+NOTIFICATIONS = [
+    dict(id="n1", user_id=UID, kind="bill_update", title="H.R. 2407: Rural Hospital Closure Relief Act", body="Passed the House (and 1 more change)", url="/bill/hr-2407-119", created_at=ts(0), read_at=None),
+    dict(id="n2", user_id=UID, kind="task", title="Dana assigned you a task", body="Draft one-pager for the Maryland delegation", url="/bill/hr-2407-119?tab=workspace", created_at=ts(1), read_at=None),
+    dict(id="n3", user_id=UID, kind="drug_board", title="Drug boards: 2 new documents", body="Mentions Ozempic. From CO, MD.", url="/drug-boards", created_at=ts(3), read_at=ts(2)),
+    dict(id="n4", user_id=UID, kind="team", title="Dana Whitfield joined Pinnacle Strategies", body=None, url="/team", created_at=ts(9), read_at=ts(8)),
+]
+INVITES = [dict(id="i1", organization_id=ORG, email="sam.ortiz@clienthealth.org", role="member", token="t"*64, invited_by=UID, created_at=ts(2), expires_at="2099-01-01T00:00:00Z", accepted_at=None, revoked_at=None)]

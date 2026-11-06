@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/components/SessionProvider";
 import { citationFor } from "@/lib/billMeta";
 import {
-  LayoutGrid, Users, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact, Columns3, Scale, BarChart3, Plus, ArrowRight, Gauge, CalendarDays, Briefcase, Pill,
+  LayoutGrid, Users, Activity, Settings, FileText, Search, Landmark, GitBranch, ClipboardList, Contact, Columns3, Scale, BarChart3, Plus, ArrowRight, Gauge, CalendarDays, Briefcase, Pill, Bell,
 } from "lucide-react";
 
 type Item = { id: string; group: string; label: string; hint?: string; icon: any; run: () => void };
@@ -18,14 +18,15 @@ const PAGES = [
   { label: "Drug boards", href: "/drug-boards", icon: Pill, words: "pdab prescription drug affordability board state upper payment limit" },
   { label: "Clients", href: "/clients", icon: Briefcase, words: "client report monday weekly customers" },
   { label: "Regulations", href: "/regulations", icon: Scale, words: "federal register rules" },
-  { label: "Impact", href: "/impact", icon: GitBranch, words: "health portfolio momentum" },
-  { label: "Statistics", href: "/statistics", icon: BarChart3, words: "charts analytics" },
+  { label: "Insights: portfolio health", href: "/impact", icon: GitBranch, words: "impact health portfolio momentum stalled" },
+  { label: "Insights: statistics", href: "/statistics", icon: BarChart3, words: "charts analytics numbers" },
   { label: "Compare bills", href: "/compare", icon: Columns3, words: "side by side" },
   { label: "Congress", href: "/legislators", icon: Landmark, words: "legislators members senators representatives" },
   { label: "Contacts", href: "/members", icon: Contact, words: "stakeholders crm" },
-  { label: "Team", href: "/team", icon: Users, words: "teammates tasks" },
+  { label: "Team", href: "/team", icon: Users, words: "teammates tasks invite people roles admin" },
+  { label: "Notifications", href: "/notifications", icon: Bell, words: "alerts bell inbox push" },
   { label: "Briefing", href: "/briefing", icon: ClipboardList, words: "report print client" },
-  { label: "Settings", href: "/settings", icon: Settings, words: "notifications email account" },
+  { label: "Settings", href: "/settings", icon: Settings, words: "notifications email text push phone account name" },
   { label: "Data sources", href: "/api-usage", icon: Gauge, words: "api usage quota" },
 ];
 

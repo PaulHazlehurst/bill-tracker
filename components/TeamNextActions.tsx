@@ -33,7 +33,7 @@ type Task = {
 };
 
 type BillOption = { bill_id: string; title: string };
-type Member = { id: string; email: string };
+type Member = { id: string; email: string; name?: string };
 
 function billTitle(t: Task): string | null {
   const b = Array.isArray(t.bills) ? t.bills[0] : t.bills;
@@ -129,6 +129,10 @@ export default function TeamNextActions({ members }: { members: Member[] }) {
       toast(`Couldn't add that: ${error.message}`, "error");
       return;
     }
+    // Someone else was assigned: their bell and devices hear about it now.
+    if (assignee && assignee !== userId) {
+      fetch("/api/notifications/flush", { method: "POST" }).catch(() => {});
+    }
     setBody(""); setBillId(""); setAssignee(""); setDue("");
     load();
   }
@@ -156,7 +160,7 @@ export default function TeamNextActions({ members }: { members: Member[] }) {
     }
   }
 
-  const emailById = new Map(members.map((m) => [m.id, m.email]));
+  const emailById = new Map(members.map((m) => [m.id, m.name || m.email]));
   const all = tasks ?? [];
   const open = all.filter((t) => !t.done);
   const done = all.filter((t) => t.done);
@@ -210,7 +214,7 @@ export default function TeamNextActions({ members }: { members: Member[] }) {
             {members.length > 0 && (
               <select className="toolbar-select" value={assignee} onChange={(e) => setAssignee(e.target.value)} aria-label="Assign to">
                 <option value="">Anyone</option>
-                {members.map((m) => <option key={m.id} value={m.id}>{m.email}</option>)}
+                {members.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
               </select>
             )}
             <input

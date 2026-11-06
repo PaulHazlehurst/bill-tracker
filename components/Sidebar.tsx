@@ -5,13 +5,19 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import {
-  LayoutGrid, Activity, Scale, Landmark, GitBranch, Columns3, BarChart3, Users, Contact, ClipboardList, Settings, Gauge, X, CalendarDays, Briefcase, Pill,
+  LayoutGrid, Activity, Scale, Landmark, GitBranch, Users, Contact, Settings, Gauge, X, CalendarDays, Briefcase, Pill,
 } from "lucide-react";
 
-// Grouped by what someone is trying to do. "Clients" = the organizations
-// you represent; "Congress" = the official directory of members of
-// Congress; "Contacts" = your own stakeholder list; "Team" = teammates with
-// logins.
+// Grouped by what someone is trying to do. Every page is still reachable
+// from search (Ctrl+K); the rail holds the ones people use week to week.
+//  - Insights is one entry for the portfolio view and the statistics (they
+//    link to each other).
+//  - Compare lives where it's used: select bills on My bills, then Compare.
+//  - Briefing is a button on My bills (it's a printout of that list).
+//  - Data sources is for whoever manages the app (team admins).
+// "Clients" = organizations you represent; "Congress" = the official
+// directory of members; "Contacts" = your own stakeholder list; "Team" =
+// teammates with logins.
 const NAV_GROUPS = [
   {
     label: "Follow",
@@ -21,14 +27,7 @@ const NAV_GROUPS = [
       { href: "/week", label: "Week ahead", Icon: CalendarDays },
       { href: "/regulations", label: "Regulations", Icon: Scale },
       { href: "/drug-boards", label: "Drug boards", Icon: Pill },
-    ],
-  },
-  {
-    label: "Understand",
-    items: [
-      { href: "/impact", label: "Impact", Icon: GitBranch },
-      { href: "/statistics", label: "Statistics", Icon: BarChart3 },
-      { href: "/compare", label: "Compare", Icon: Columns3 },
+      { href: "/impact", label: "Insights", Icon: GitBranch },
     ],
   },
   {
@@ -40,26 +39,23 @@ const NAV_GROUPS = [
       { href: "/team", label: "Team", Icon: Users },
     ],
   },
-  {
-    label: "Share",
-    items: [{ href: "/briefing", label: "Briefing", Icon: ClipboardList }],
-  },
 ];
 
 const UTILITY_ITEMS = [
-  { href: "/settings", label: "Settings", Icon: Settings },
-  { href: "/api-usage", label: "Data sources", Icon: Gauge },
+  { href: "/settings", label: "Settings", Icon: Settings, adminOnly: false },
+  { href: "/api-usage", label: "Data sources", Icon: Gauge, adminOnly: true },
 ];
 
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/bill/");
   if (href === "/legislators") return pathname.startsWith("/legislator");
+  if (href === "/impact") return pathname === "/impact" || pathname === "/statistics";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { org } = useSession();
+  const { org, canManage } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // The top bar's menu button opens the rail on small screens.
@@ -112,7 +108,7 @@ export default function Sidebar() {
         </nav>
 
         <div className="rail-foot">
-          {UTILITY_ITEMS.map((item) => {
+          {UTILITY_ITEMS.filter((item) => !item.adminOnly || canManage).map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <Link key={item.href} href={item.href} prefetch className={`rail-link${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>

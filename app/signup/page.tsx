@@ -7,12 +7,13 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, setRememberMe } from "@/lib/supabase/client";
 import AuthShell from "@/components/auth/AuthShell";
 
-type TeamMode = "none" | "create" | "join";
+type TeamMode = "none" | "create" | "join" | "invite";
+type Invite = { teamName: string; email: string; role: string; inviter: string | null };
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,6 +27,25 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [fullName, setFullName] = useState("");
+  // Arriving from an invitation email (/signup?invite=...): the team and
+  // email are already decided.
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [invite, setInvite] = useState<Invite | null>(null);
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token) return;
+    setInviteToken(token);
+    fetch(`/api/team/invite-info?token=${encodeURIComponent(token)}`)
+      .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
+      .then(({ ok, b }) => {
+        if (!ok) return setError(b.error ?? "That invitation link doesn't work any more.");
+        setInvite(b);
+        setEmail(b.email);
+        setTeamMode("invite");
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,8 +70,10 @@ export default function SignupPage() {
         email,
         phone: phone.trim() || null,
         teamMode,
+        fullName: fullName.trim() || null,
         newOrgName: teamMode === "create" ? newOrgName.trim() : null,
         inviteCode: teamMode === "join" ? inviteCode.trim() : null,
+        inviteToken: teamMode === "invite" ? inviteToken : null,
       }),
     });
 
@@ -72,19 +94,25 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(teamMode === "invite" ? "/team" : "/dashboard");
   }
 
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="Track bills, set positions, and get alerted when they move. Free to start."
+      title={invite ? `Join ${invite.teamName}` : "Create your account"}
+      subtitle={invite ? `${invite.inviter ?? "Your team"} invited you as ${invite.role === "admin" ? "an admin" : "a member"}. Create your account to join.` : "Track bills, set positions, and get alerted when they move. Free to start."}
       footer={<>Already have an account? <Link href="/login">Log in</Link></>}
     >
       <form onSubmit={handleSubmit} className="auth-form">
         <div className="field">
+          <label htmlFor="fullName">Your name</label>
+          <input id="fullName" autoComplete="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <span className="field-hint">Shown to your teammates.</span>
+        </div>
+        <div className="field">
           <label htmlFor="email">Work email</label>
-          <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} readOnly={!!invite} />
+          {invite && <span className="field-hint">The invitation was sent to this address.</span>}
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>
@@ -96,6 +124,7 @@ export default function SignupPage() {
           <input id="phone" type="tel" autoComplete="tel" placeholder="+1 410 555 0123" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
 
+        {!invite && (
         <div className="field">
           <label>Team</label>
           <div className="seg seg-full" role="group" aria-label="Team">
@@ -104,6 +133,7 @@ export default function SignupPage() {
             <button type="button" className={teamMode === "join" ? "is-on" : ""} onClick={() => setTeamMode("join")}>Join a team</button>
           </div>
         </div>
+        )}
 
         {teamMode === "create" && (
           <div className="field">

@@ -4,6 +4,8 @@ import "./styles/bills.css";
 import "./styles/pages.css";
 import "./styles/features.css";
 import "./styles/motion.css";
+import "./styles/notify.css";
+import "./styles/team.css";
 import localFont from "next/font/local";
 
 // Fonts are served from this app (app/fonts) rather than Google Fonts: one
@@ -39,6 +41,8 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Bill Tracker",
   description: "Follow federal bills through Congress, see what changed overnight, and get alerted when they move.",
+  appleWebApp: { capable: true, title: "Bill Tracker", statusBarStyle: "default" as const },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport = {

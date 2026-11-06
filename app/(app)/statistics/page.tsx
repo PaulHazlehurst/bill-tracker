@@ -17,6 +17,7 @@ import Reveal from "@/components/Reveal";
 import { STAGE_LABELS, extractMeta } from "@/lib/billMeta";
 import { STAGE_ORDER as BASE_STAGE_ORDER } from "@/lib/billStage";
 import { BarChart3 } from "lucide-react";
+import InsightsTabs from "@/components/InsightsTabs";
 
 // Matches the exact stage-pill color language from the bill detail page,
 // so a color here means the same thing it means everywhere else in the
@@ -145,7 +146,7 @@ export default function StatisticsPage() {
     <div className="container-wide">
       <div className="page-header">
         <div>
-          <h1>Statistics</h1>
+          <h1>Insights</h1>
           <p className="muted" style={{ marginTop: 4 }}>A portfolio view across everything tracked.</p>
         </div>
         {hasTeam && (
@@ -155,6 +156,7 @@ export default function StatisticsPage() {
           </div>
         )}
       </div>
+      <InsightsTabs />
 
       {loading ? (
         <Spinner label="Crunching numbers…" />

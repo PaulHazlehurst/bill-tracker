@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { inviteProblem } from "@/lib/team";
 
 // Finishes account setup (organization + profile row) right after
 // supabase.auth.signUp() on the client. Runs with the admin client, which
@@ -17,9 +18,10 @@ import { createAdminClient } from "@/lib/supabase/server";
 //   create -> makes a brand new team, this user becomes its owner
 //   join   -> requires a valid inviteCode, found via exact match (not
 //             guessable from a public list - there's no "browse teams" UI)
+//   invite -> requires a valid invitation token sent to this same email
 //   none   -> no team, can join or create one later from Settings
 export async function POST(req: NextRequest) {
-  const { userId, email, phone, teamMode, newOrgName, inviteCode } = await req.json();
+  const { userId, email, phone, teamMode, newOrgName, inviteCode, inviteToken, fullName } = await req.json();
 
   if (!userId || !email) {
     return NextResponse.json({ error: "Missing userId or email" }, { status: 400 });
@@ -42,6 +44,8 @@ export async function POST(req: NextRequest) {
   }
 
   let finalOrgId: string | null = null;
+  let role: "admin" | "member" = "member";
+  let acceptInviteId: string | null = null;
 
   if (teamMode === "create" && newOrgName && String(newOrgName).trim()) {
     const { data: newOrg, error: orgErr } = await supabase
@@ -54,14 +58,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Could not create team: " + message }, { status: 400 });
     }
     finalOrgId = newOrg.id;
+    role = "admin";
+  } else if (teamMode === "invite" && typeof inviteToken === "string" && inviteToken) {
+    const { data: inv } = await supabase.from("team_invites").select("id, organization_id, email, role, expires_at, accepted_at, revoked_at").eq("token", inviteToken).maybeSingle();
+    const problem = inviteProblem(inv as any);
+    if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+    if (String(inv!.email).toLowerCase() !== String(email).toLowerCase()) {
+      return NextResponse.json({ error: `This invitation is for ${inv!.email}. Sign up with that address, or ask for a new invitation.` }, { status: 400 });
+    }
+    finalOrgId = inv!.organization_id;
+    role = inv!.role === "admin" ? "admin" : "member";
+    acceptInviteId = inv!.id;
   } else if (teamMode === "join" && inviteCode && String(inviteCode).trim()) {
     const { data: org, error: findErr } = await supabase
       .from("organizations")
-      .select("id")
+      .select("id, allow_code_join")
       .eq("invite_code", String(inviteCode).trim().toUpperCase())
       .maybeSingle();
     if (findErr || !org) {
       return NextResponse.json({ error: "That invite code doesn't match any team." }, { status: 400 });
+    }
+    if (org.allow_code_join === false) {
+      return NextResponse.json({ error: "That team only accepts people by email invitation. Ask an admin to invite you." }, { status: 400 });
     }
     finalOrgId = org.id;
   }
@@ -72,10 +90,16 @@ export async function POST(req: NextRequest) {
     email,
     phone: phone?.trim() || null,
     organization_id: finalOrgId,
+    team_role: role,
+    ...(typeof fullName === "string" && fullName.trim() ? { full_name: fullName.trim().slice(0, 120) } : {}),
   });
 
   if (profileErr) {
     return NextResponse.json({ error: "Could not create profile: " + profileErr.message }, { status: 400 });
+  }
+
+  if (acceptInviteId) {
+    await supabase.from("team_invites").update({ accepted_at: new Date().toISOString(), accepted_by: userId }).eq("id", acceptInviteId);
   }
 
   return NextResponse.json({ ok: true });

@@ -20,7 +20,7 @@ import { daysSince, citationFor } from "@/lib/billMeta";
 import { fetchEvents, readAndMarkVisit, type BillEventRow } from "@/lib/events";
 import { getRecentlyViewed, RecentBill } from "@/lib/recentlyViewed";
 import { useTicker } from "@/lib/useTicker";
-import { Download, BarChart3, Search } from "lucide-react";
+import { Download, ClipboardList, Search } from "lucide-react";
 import { animated, optimistic } from "@/lib/motion";
 
 const SORTS: Record<string, string> = {
@@ -175,7 +175,7 @@ export default function DashboardPage() {
         actions={
           !isEmpty && (
             <>
-              <Link href="/statistics" className="btn btn-ghost"><BarChart3 size={16} /> Statistics</Link>
+              <Link href="/briefing" className="btn btn-ghost" title="A printable summary of your bills for a meeting or a client"><ClipboardList size={16} /> Briefing</Link>
               <button className="btn btn-secondary" onClick={() => downloadCsv(tracked, "my-bills.csv")} disabled={tracked.length === 0}><Download size={16} /> Export</button>
             </>
           )

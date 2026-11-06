@@ -6,6 +6,7 @@
 
 import { Resend } from "resend";
 import { drugBoardEmail } from "@/lib/emailTemplate";
+import { notify } from "@/lib/notifications";
 
 type Admin = any;
 
@@ -79,10 +80,40 @@ export async function sendDrugBoardAlerts(admin: Admin): Promise<{ documents: nu
     }
   }
 
+  // Everyone who follows drug boards also gets it in their bell (and on
+  // their devices if push is on), whether or not they take email.
+  try {
+    const { data: followers } = await admin.from("profiles").select("id").eq("drug_board_alerts", true);
+    const ids = ((followers as any[]) ?? []).map((p) => p.id);
+    if (ids.length) {
+      const msg = drugBoardNotification({ documents: d, pageChanges: c, filings: f, bills: b });
+      await notify(admin, ids.map((userId) => ({ userId, kind: "drug_board" as const, title: msg.title, body: msg.body, url: "/drug-boards", dedupeKey: `drug-boards:${msg.key}` })));
+    }
+  } catch (err) {
+    console.error("drug board notifications failed", err);
+  }
+
   const now = new Date().toISOString();
   if (d.length) await admin.from("board_documents").update({ notified_at: now }).in("id", d.map((x) => x.id));
   if (b.length) await admin.from("state_bills").update({ notified_at: now }).in("id", b.map((x) => x.id));
   if (c.length) await admin.from("board_page_changes").update({ notified_at: now }).in("id", c.map((x) => x.id));
   if (f.length) await admin.from("board_case_filings").update({ notified_at: now }).in("id", f.map((x) => x.id));
   return { documents: d.length, bills: b.length, pageChanges: c.length, filings: f.length, recipients, sent };
+}
+
+/** One bell notification summing up a morning's drug board news. Pure; tested. */
+export function drugBoardNotification(x: { documents: any[]; pageChanges: any[]; filings: any[]; bills: any[] }) {
+  const parts = [
+    x.documents.length && `${x.documents.length} new document${x.documents.length === 1 ? "" : "s"}`,
+    x.pageChanges.length && `${x.pageChanges.length} page change${x.pageChanges.length === 1 ? "" : "s"}`,
+    x.filings.length && `${x.filings.length} court filing${x.filings.length === 1 ? "" : "s"}`,
+    x.bills.length && `${x.bills.length} state bill${x.bills.length === 1 ? "" : "s"}`,
+  ].filter(Boolean) as string[];
+  const states = Array.from(new Set([...x.documents, ...x.pageChanges, ...x.bills].map((i) => i.state).filter(Boolean))).sort();
+  const named = Array.from(new Set(x.documents.flatMap((i) => i.mentions ?? [])));
+  const body = [named.length ? `Mentions ${named.slice(0, 4).join(", ")}.` : "", states.length ? `From ${states.join(", ")}.` : ""].filter(Boolean).join(" ");
+  const ids = [...x.documents, ...x.pageChanges, ...x.filings, ...x.bills].map((i) => i.id).sort().join(",");
+  let h = 0;
+  for (let i = 0; i < ids.length; i++) h = (Math.imul(h, 31) + ids.charCodeAt(i)) | 0;
+  return { title: `Drug boards: ${parts.join(", ")}`, body: body || null, key: (h >>> 0).toString(16) };
 }
