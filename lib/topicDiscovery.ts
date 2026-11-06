@@ -23,8 +23,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { searchBillsRanked, getRelatedBills, RESOLUTION_TYPES, type SearchResult } from "@/lib/congress-api";
 import { buildNewBillRow } from "@/lib/billRefresh";
 import { mapLimit, deadline, rotateByDay } from "@/lib/batch";
+import { congressForDate } from "@/lib/billMeta";
 
-const CURRENT_CONGRESS = 119;
 // New suggestions per topic per run. Bounded so a broad topic can't flood
 // the list - the next run picks up the next-best matches.
 const MAX_NEW_PER_TOPIC = 8;
@@ -158,7 +158,7 @@ export async function runDiscoveryForOwner(opts: {
 
     let results: SearchResult[];
     try {
-      ({ results } = await searchBillsRanked(topic, { congress: CURRENT_CONGRESS, recentPages: 2, limit: 60 }));
+      ({ results } = await searchBillsRanked(topic, { congress: congressForDate(), recentPages: 2, limit: 60 }));
     } catch (err: any) {
       report.failed = true;
       if (!result.firstError) result.firstError = String(err?.message ?? err);

@@ -6,7 +6,7 @@
 // Pure functions: the API route gathers rows, this shapes them. Tested in
 // tests/insights.test.ts. Safe on server and client.
 
-import { citationFor, daysSince } from "@/lib/billMeta";
+import { citationFor, congressForDate, daysSince } from "@/lib/billMeta";
 import { QUIET_DAYS, stageRank } from "@/lib/billStage";
 
 export type Stance = "support" | "oppose" | "watching" | "none" | "split";
@@ -72,9 +72,15 @@ export function stanceFor(positions: (string | null | undefined)[]): Stance {
   return set.size === 1 ? ([...set][0] as Stance) : "split";
 }
 
-export function momentumFor(stage: string | null | undefined, latestActionDate: string | null | undefined): Momentum {
+/**
+ * How a bill is moving. A bill from a Congress that has ended and never
+ * became law has died, however recently it last moved.
+ */
+export function momentumFor(stage: string | null | undefined, latestActionDate: string | null | undefined, billId?: string, now = new Date()): Momentum {
   if (stage === "enacted" || stage === "agreed") return "law";
   if (stage === "vetoed" || stage === "failed") return "stopped";
+  const congress = Number(billId?.split("-").pop());
+  if (Number.isFinite(congress) && congress > 0 && congress < congressForDate(now)) return "stopped";
   const days = daysSince(latestActionDate);
   if (days === null || days > QUIET_DAYS) return "quiet";
   return days <= MOVING_DAYS ? "moving" : "slowing";
@@ -128,7 +134,7 @@ export function buildInsights(input: { trackers: TrackerRow[]; bills: BillRow[];
         title: b.title,
         stance: stanceFor(positions.get(b.id)!),
         stage: b.status_stage ?? "introduced",
-        momentum: momentumFor(b.status_stage, b.latest_action_date),
+        momentum: momentumFor(b.status_stage, b.latest_action_date, b.id, input.now),
         daysSinceAction: daysSince(b.latest_action_date),
         latestAction: b.latest_action,
         latestActionDate: b.latest_action_date,

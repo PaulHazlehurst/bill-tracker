@@ -26,6 +26,10 @@ describe("where you stand", () => {
     expect(momentumFor("committee", day(45))).toBe("slowing");
     expect(momentumFor("committee", day(200))).toBe("quiet");
     expect(momentumFor("introduced", null)).toBe("quiet");
+    // The 119th Congress ends January 3, 2027: what didn't pass by then has died.
+    expect(momentumFor("passed_house", day(3), "hr-2407-119", new Date("2026-12-28T12:00:00Z"))).toBe("moving");
+    expect(momentumFor("passed_house", "2026-12-20", "hr-2407-119", new Date("2027-01-10T12:00:00Z"))).toBe("stopped");
+    expect(momentumFor("enacted", "2026-12-20", "hr-2407-119", new Date("2027-01-10T12:00:00Z"))).toBe("law");
   });
 });
 

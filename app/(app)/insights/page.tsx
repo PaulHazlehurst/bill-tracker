@@ -131,7 +131,7 @@ function StanceGrid({ data }: { data: Insights }) {
   return (
     <section className="card ins-grid-card" aria-labelledby="ins-grid-title">
       <h2 className="card-title" id="ins-grid-title">Your position against each bill's momentum</h2>
-      <p className="card-sub">Each bill appears once. "Moved this month" means any action in the last 30 days.</p>
+      <p className="card-sub">Each bill appears once. "Moved this month" means any action in the last 30 days. "Stopped" includes vetoed and failed bills, and bills that died when their Congress ended.</p>
       <table className="ins-grid">
         <thead>
           <tr>

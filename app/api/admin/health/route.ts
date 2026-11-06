@@ -1,3 +1,4 @@
+import { congressForDate } from "@/lib/billMeta";
 import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { ldaFetch } from "@/lib/lda-api";
@@ -156,13 +157,13 @@ export async function GET() {
 
   // ── External data sources ──
   if (env.CONGRESS_API_KEY) {
-    checks.push(httpCheck("congress", "Data sources", "congress.gov (bills, votes, members)", `https://api.congress.gov/v3/bill/119?format=json&limit=1&api_key=${env.CONGRESS_API_KEY}`));
+    checks.push(httpCheck("congress", "Data sources", "congress.gov (bills, votes, members)", `https://api.congress.gov/v3/bill/${congressForDate()}?format=json&limit=1&api_key=${env.CONGRESS_API_KEY}`));
   }
   const govKey = env.GOVINFO_API_KEY || env.CONGRESS_API_KEY || "DEMO_KEY";
   checks.push(httpCheck("govinfo", "Data sources", "GovInfo (full-text bill search, Congressional Record)", `https://api.govinfo.gov/search?api_key=${govKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: "health collection:BILLS congress:119", pageSize: "1", offsetMark: "*", resultLevel: "package" }),
+    body: JSON.stringify({ query: `health collection:BILLS congress:${congressForDate()}`, pageSize: "1", offsetMark: "*", resultLevel: "package" }),
   }));
   checks.push((async (): Promise<Check> => {
     const r = await timed(() => ldaFetch("https://lda.gov/api/v1/filings/?page_size=1"));
